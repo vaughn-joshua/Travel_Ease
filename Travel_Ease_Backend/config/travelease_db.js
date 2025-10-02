@@ -19,6 +19,11 @@ export async function initDB(){
 
     try {
         con.query(`
+            CREATE TABLE IF NOT EXISTS category(
+            category_id SERIAL PRIMARY KEY,
+            category_name VARCHAR(100) NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS "user" (
             user_id SERIAL PRIMARY KEY,
             first_name VARCHAR(100) NOT NULL,
@@ -44,7 +49,7 @@ export async function initDB(){
             name VARCHAR(200) NOT NULL,
             address VARCHAR(300),
             description TEXT,
-            rating ,
+            rating DECIMAL(3,1),
             business_hours VARCHAR(100),
             category_id INT REFERENCES category(category_id) ON DELETE SET NULL,
             google_authenticator VARCHAR(100),
@@ -69,14 +74,14 @@ export async function initDB(){
             CREATE TABLE IF NOT EXISTS business_favorite(
             favorite_id SERIAL PRIMARY KEY,
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
-            business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
+            business_id INT REFERENCES business(business_id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS business_review(
             review_id SERIAL PRIMARY KEY,
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
-            rating ,
+            rating DECIMAL(3,1),
             content TEXT,
             review_date DATE DEFAULT CURRENT_DATE
             );
@@ -85,13 +90,13 @@ export async function initDB(){
             favorite_id SERIAL PRIMARY KEY,
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE
-            )
+            );
 
             CREATE TABLE IF NOT EXISTS travel_plan_review(
             review_id SERIAL PRIMARY KEY,
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE,
-            rating ,
+            rating DECIMAL(3,1),
             content TEXT,
             review_date DATE DEFAULT CURRENT_DATE
             );
@@ -101,12 +106,7 @@ export async function initDB(){
             business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
             name VARCHAR(200) NOT NULL,
             description TEXT,
-            price_range VARCHAR(100),
-            );
-
-            CREATE TABLE IF NOT EXISTS category(
-            category_id SERIAL PRIMARY KEY,
-            category_name VARCHAR(100) NOT NULL
+            price_range VARCHAR(100)
             );
 
             CREATE TABLE IF NOT EXISTS activity(
@@ -116,7 +116,7 @@ export async function initDB(){
             notes TEXT,
             target_date DATE,
             budget_range VARCHAR(100),
-            user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE
+            user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             is_priority BOOLEAN DEFAULT FALSE
             );
 
