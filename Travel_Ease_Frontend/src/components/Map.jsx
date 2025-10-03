@@ -1,37 +1,37 @@
 import { GoogleMap, Marker } from "@react-google-maps/api";
-import { useMemo } from "react";
-import Map_Routes from "./Map_Routes";
+import { useMemo, useState, useRef } from "react";
+import Places from "./Places.jsx";
 
 const TAGAYTAY_COORDINATES = { lat: 14.117, lng: 120.949 };
 
-const stops_json = {
-  origin: { lat: 14.1122, lng: 120.9331 },
-  destination: { lat: 14.1233, lng: 121.0023 },
-  waypoints: [
-    { location: { lat: 14.1181, lng: 120.9363 }, stopover: true },
-    { location: { lat: 14.1173, lng: 120.9302 }, stopover: true },
-    { location: { lat: 14.1347, lng: 121.0222 }, stopover: true },
-  ],
-  travelMode: "DRIVING",
-};
-
 function Map() {
   const center = useMemo(() => TAGAYTAY_COORDINATES, []);
+  const map_ref = useRef();
   const options = useMemo(() => ({}), []);
+  const [office, setOffice] = useState();
 
   return (
-    <>
-      <h1>maps</h1>
-      <GoogleMap
-        zoom={12}
-        center={center}
-        mapContainerClassName="map-container"
-        options={options}
-      >
-        <Marker position={center} />
-        <Map_Routes stops_json={stops_json} />
-      </GoogleMap>
-    </>
+    <div className="container">
+      <div className="map_controls">
+        <h1>maps</h1>
+        <Places
+          setOffice={(position) => {
+            setOffice(position);
+            map_ref.current?.panTo(position);
+          }}
+        />
+      </div>
+      <div className="map">
+        <GoogleMap
+          zoom={12}
+          center={center}
+          mapContainerClassName="map-container"
+          options={options}
+        >
+          <Marker position={center} />
+        </GoogleMap>
+      </div>
+    </div>
   );
 }
 
