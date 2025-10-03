@@ -4,7 +4,7 @@
   "main": "Travel_Ease_Backend/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon travelease-backend/server.js"
+    "dev": "nodemon Travel_Ease_Backend/server.js"
   },
   "keywords": [],
   "type": "module",
