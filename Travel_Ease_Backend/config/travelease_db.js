@@ -1,24 +1,25 @@
-import {Client} from 'pg';
+import { Client } from "pg";
 
 export const con = new Client({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'travelease_db',
-    password: 'password',
-    port: 5433,
+  user: "postgres",
+  host: "localhost",
+  database: "travelease_db",
+  password: "123",
+  port: 5432,
 });
 
-con.connect().then(()=> {
-    console.log('Connected to the database 1');
-}).catch((err) => {
-    console.error('Connection error', err.stack);
-});
+con
+  .connect()
+  .then(() => {
+    console.log("Connected to the database 1");
+  })
+  .catch((err) => {
+    console.error("Connection error", err.stack);
+  });
 
-
-export async function initDB(){
-
-    try {
-        con.query(`
+export async function initDB() {
+  try {
+    con.query(`
             CREATE TABLE IF NOT EXISTS category(
             category_id SERIAL PRIMARY KEY,
             category_name VARCHAR(100) NOT NULL
@@ -30,7 +31,8 @@ export async function initDB(){
             last_name VARCHAR(100) NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
             contact_no VARCHAR(20),
-            password VARCHAR NOT NULL
+            password VARCHAR NOT NULL,
+            picture TEXT
             );
 
             CREATE TABLE IF NOT EXISTS blog (
@@ -39,7 +41,7 @@ export async function initDB(){
             title VARCHAR(200) NOT NULL,
             description TEXT,
             content TEXT,
-            category INT,
+            category INT REFERENCES category(category_id) ON DELETE SET NULL,
             blog_date DATE DEFAULT CURRENT_DATE
             );
 
@@ -68,7 +70,9 @@ export async function initDB(){
             description TEXT,
             visibility BOOLEAN DEFAULT TRUE,
             visibility_end_date DATE,
-            status status_enum NOT NULL 
+            status status_enum NOT NULL,
+            max_slots INT, 
+            location text
             );
 
             CREATE TABLE IF NOT EXISTS business_favorite(
@@ -101,12 +105,14 @@ export async function initDB(){
             review_date DATE DEFAULT CURRENT_DATE
             );
 
+            CREATE TYPE prices AS ENUM ('0-150', '150-400', '400-700', '700-1000', '1000-1500', '1500+');
+
             CREATE TABLE IF NOT EXISTS product_service(
             product_service_id SERIAL PRIMARY KEY,
             business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
             name VARCHAR(200) NOT NULL,
             description TEXT,
-            price_range VARCHAR(100)
+            price_range prices NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS activity(
@@ -115,7 +121,7 @@ export async function initDB(){
             business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
             notes TEXT,
             target_date DATE,
-            budget_range VARCHAR(100),
+            budget_range prices NOT NULL,
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             is_priority BOOLEAN DEFAULT FALSE
             );
@@ -132,9 +138,8 @@ export async function initDB(){
             );
 
             `);
-        console.log('Tables are created or already exist.');    
-    } catch (error) {
-        console.error('Error creating tables', error);
-    }
-
+    console.log("Tables are created or already exist.");
+  } catch (error) {
+    console.error("Error creating tables", error);
+  }
 }
