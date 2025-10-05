@@ -1,26 +1,23 @@
-import express from 'express';
-import {con} from './config/travelease_db.js';
-import { initDB } from './config/travelease_db.js';
+import express from "express";
+import {
+  travel_plan_routes,
+  user_routes,
+  config_routes,
+} from "./routes/index.js";
 const app = express();
 
 app.use(express.json()); // parse application/json
 
-app.get('/', async (req, res) => {
-    try {
-        const result = await con.query('SELECT * FROM "User"');
-        res.json({
-            message: 'Hello World!',
-            users: result.rows
-        });
-    } catch (error) {
-        console.error('Error executing query', error.stack);
-        res.status(500).send('Internal Server Error');
-    }
-});
+//routes
 
+app.use("/api/travel_plan", travel_plan_routes);
 
-initDB().then(()=> {
-    app.listen(3000, () =>{
-        console.log('Server is running on port 3000');
-    })
+app.use("/api/user", user_routes);
+
+app.use("/api/config", config_routes);
+
+//server
+
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
 });
