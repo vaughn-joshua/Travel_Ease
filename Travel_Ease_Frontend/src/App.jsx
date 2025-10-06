@@ -1,13 +1,13 @@
 import { Routes, Route } from "react-router-dom";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import Main_Page from "./pages/Main_Page.jsx";
+
 import "./App.css";
 
 function App() {
   return (
     <main>
       <Routes>
-        <Route />
+        <Route path="/" element={<Main_Page />} />
         <Route />
       </Routes>
     </main>

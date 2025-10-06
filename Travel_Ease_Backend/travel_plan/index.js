@@ -34,7 +34,7 @@ function plans_id(req, res) {
 
 function create_plan(req, res) {
   try {
-    res.send("here are at the create_plan");
+    res.json({ messageg: "you are at create plan" });
   } catch (e) {
     res.send({ error: e });
   }

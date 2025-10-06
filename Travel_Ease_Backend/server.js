@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import {
   travel_plan_routes,
   user_routes,
@@ -7,6 +8,8 @@ import {
 const app = express();
 
 app.use(express.json()); // parse application/json
+
+app.use(cors()); //for testing
 
 //routes
 
