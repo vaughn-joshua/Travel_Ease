@@ -1,6 +1,6 @@
 import { con } from "../travelease_db.js";
 
-export async function model_db() {
+export async function model_db(req, res) {
   try {
     con.query(`
             CREATE TABLE IF NOT EXISTS category(
@@ -23,7 +23,7 @@ export async function model_db() {
             title VARCHAR(200) NOT NULL,
             description TEXT,
             content TEXT,
-            category INT,
+            category_id INT REFERENCES category(category_id) ON DELETE SET NULL,
             blog_date DATE DEFAULT CURRENT_DATE
             );
 
@@ -37,7 +37,7 @@ export async function model_db() {
             business_hours VARCHAR(100),
             category_id INT REFERENCES category(category_id) ON DELETE SET NULL,
             google_authenticator VARCHAR(100),
-            status BOOLEAN DEFAULT TRUE,
+            status BOOLEAN DEFAULT FALSE,
             picture TEXT
             );
 
@@ -50,9 +50,11 @@ export async function model_db() {
             start_date DATE,
             end_date DATE,
             description TEXT,
-            visibility BOOLEAN DEFAULT TRUE,
+            visibility BOOLEAN DEFAULT FALSE,
             visibility_end_date DATE,
-            status status_enum NOT NULL 
+            status status_enum NOT NULL DEFAULT 'Draft',
+            max_slots INT,
+            location TEXT
             );
 
             CREATE TABLE IF NOT EXISTS business_favorite(
@@ -85,12 +87,14 @@ export async function model_db() {
             review_date DATE DEFAULT CURRENT_DATE
             );
 
+            CREATE TYPE range AS ENUM ('0-100', '100-200', '200-400', '400-700', '700-1000', '1000-1500', '1500+');
+
             CREATE TABLE IF NOT EXISTS product_service(
             product_service_id SERIAL PRIMARY KEY,
             business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
             name VARCHAR(200) NOT NULL,
             description TEXT,
-            price_range VARCHAR(100)
+            price_range range NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS activity(
@@ -99,7 +103,7 @@ export async function model_db() {
             business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
             notes TEXT,
             target_date DATE,
-            budget_range VARCHAR(100),
+            budget_range range,
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             is_priority BOOLEAN DEFAULT FALSE
             );
@@ -112,11 +116,14 @@ export async function model_db() {
             user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
             role participant_role NOT NULL DEFAULT 'Viewer',
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status BOOLEAN DEFAULT TRUE
+            status BOOLEAN DEFAULT FALSE
             );
 
             `);
     console.log("Tables are created or already exist.");
+    res
+      .status(200)
+      .json({ message: "good job, created database successfully" });
   } catch (error) {
     console.error("Error creating tables", error);
   }
