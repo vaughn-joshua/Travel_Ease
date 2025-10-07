@@ -44,13 +44,17 @@ function Create_Plan() {
           </label>{" "}
           <br />
           <label>
-            Max Slots:
-            <input {...register("slots")} />
+            End Date:
+            <input {...register("end_date")} />
           </label>
         </>
       )}
       {counter === 3 && (
         <>
+          <label>
+            Max Slots:
+            <input {...register("slots")} />
+          </label>
           <label>
             Collaborators:
             <input {...register("collaborators")} />
