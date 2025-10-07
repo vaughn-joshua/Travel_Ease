@@ -40,3 +40,149 @@
 .read-the-docs {
   color: #888;
 }
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+  }
+  
+  body {
+    background-color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 90%;
+    max-width: 1000px;
+  }
+  
+  /* LEFT SIDE LOGO AND TEXT */
+  .left-side {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .logo {
+    width: 180px;
+    height: auto;
+    margin-bottom: 10px;
+  }
+  
+  .left-side h1 {
+    font-size: 28px;
+    color: #222;
+    margin-bottom: 5px;
+  }
+  
+  .left-side p {
+    font-size: 16px;
+    color: #555;
+  }
+  
+  .right-side {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .form-box {
+    background-color: #fff;
+    padding: 40px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 350px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  }
+  
+  .form-box h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #222;
+  }
+  
+  .form-box form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-box input[type="text"],
+  .form-box input[type="email"],
+  .form-box input[type="password"],
+  .form-box input[type="file"] {
+    padding: 10px;
+    margin: 6px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+  
+  label {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #444;
+  }
+  
+  .btn {
+    background-color: #ff0015;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  
+  .btn:hover {
+    background-color: #ff0000;
+  }
+  
+  .link {
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: left;
+  }
+  
+  .link a {
+    color: #ff0015;
+    text-decoration: none;
+  }
+  
+  .link a:hover {
+    text-decoration: underline;
+  }
+  
+  /* FORM SWITCH VISIBILITY */
+  .form-section {
+    display: block;
+  }
+  
+  .form-section.active {
+    display: flex;
+  }
+  
+  /* RESPONSIVE */
+  @media (max-width: 800px) {
+    .container {
+      flex-direction: column;
+      text-align: center;
+    }
+  
+    .right-side {
+      margin-top: 30px;
+    }
+  
+    .link {
+      text-align: center;
+    }
+  }  
