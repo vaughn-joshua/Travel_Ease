@@ -1,3 +1,5 @@
+import { create_plan } from "./controller/create_plan.js";
+
 function travel_plan(req, res) {
   try {
     console.log("hello, your in travel-plan, index.js");
@@ -32,13 +34,13 @@ function plans_id(req, res) {
   }
 }
 
-function create_plan(req, res) {
-  try {
-    res.json({ messageg: "you are at create plan" });
-  } catch (e) {
-    res.send({ error: e });
-  }
-}
+// function create_plan(req, res) {
+//   try {
+//     res.status(201).json({ messageg: "you are at create plan" });
+//   } catch (e) {
+//     res.send({ error: e });
+//   }
+// }
 
 function plan_edit(req, res) {
   try {

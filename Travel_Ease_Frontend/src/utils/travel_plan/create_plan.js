@@ -12,7 +12,10 @@ export async function create_plan(input) {
     );
 
     const data = await result.json();
-    console.log(data);
+
+    if (result.status === 201) {
+      console.log({ message: "created successfully", status: result.status });
+    }
   } catch (e) {
     console.log(e);
   }

@@ -52,7 +52,7 @@ export async function model_db() {
             description TEXT,
             visibility BOOLEAN DEFAULT TRUE,
             visibility_end_date DATE,
-            status status_enum NOT NULL 
+            status status_enum NOT NULL DEFAULT "Draft""
             );
 
             CREATE TABLE IF NOT EXISTS business_favorite(
