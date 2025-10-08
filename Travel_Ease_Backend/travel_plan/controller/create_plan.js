@@ -18,7 +18,7 @@ export async function create_plan(req, res) {
 
     console.log({ result });
 
-    console.log("created user");
+    console.log("created plan successfully");
 
     res.status(201).json({ messageg: "you are at create plan" });
   } catch (e) {

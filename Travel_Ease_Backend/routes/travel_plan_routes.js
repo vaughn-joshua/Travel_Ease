@@ -28,12 +28,16 @@ import {
   plans_id,
   public_plans,
   specific_plans,
+  fetch_plans,
+  ongoing_plan,
+  previous_plans,
 } from "../travel_plan/index.js";
 
 const router = Router();
 
-router.get("/plans", plans);
-router.get("/finished_plan", finished_plan);
+router.get("/ongoing_plan", ongoing_plan);
+router.get("/plans", fetch_plans);
+router.get("/previous_plans", previous_plans);
 router.get("/plans/:id", plans_id);
 
 router.post("/create_plan", create_plan);
