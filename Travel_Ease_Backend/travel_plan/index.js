@@ -3,6 +3,7 @@ import { fetch_plans } from "./controller/fetch_plans.js";
 import { ongoing_plan } from "./controller/ongoing_plans.js";
 import { previous_plans } from "./controller/previous_plans.js";
 import { public_plans } from "./controller/public_plans.js";
+import { plans_id } from "./controller/plans_id.js";
 
 function travel_plan(req, res) {
   try {
@@ -30,13 +31,13 @@ function finished_plan(req, res) {
   }
 }
 
-function plans_id(req, res) {
-  try {
-    res.send("here are at the plans_id");
-  } catch (e) {
-    res.send({ error: e });
-  }
-}
+// function plans_id(req, res) {
+//   try {
+//     res.send("here are at the plans_id");
+//   } catch (e) {
+//     res.send({ error: e });
+//   }
+// }
 
 // function create_plan(req, res) {
 //   try {

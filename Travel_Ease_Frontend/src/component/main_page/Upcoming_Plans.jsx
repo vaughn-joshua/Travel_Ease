@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetch_plans } from "../../utils/travel_plan/fetch_plans";
 
 function Upcoming_Plans() {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState();
   useEffect(() => {
     const load_plans = async () => {
@@ -13,6 +14,11 @@ function Upcoming_Plans() {
     load_plans();
   }, []);
 
+  const handle_click = (key) => {
+    console.log({ key });
+    navigate(`/planner/${key}`);
+  };
+
   return (
     <>
       <h3>your on upcoming_plans</h3>
@@ -20,9 +26,14 @@ function Upcoming_Plans() {
         {!plans && <p>loading...</p>}
 
         {plans &&
-          plans.map((plan, index) => {
+          plans.map((plan) => {
             return (
-              <div key={index} className="plans">
+              <div
+                key={plan.travel_plan_id}
+                className="plans"
+                onClick={() => handle_click(plan.travel_plan_id)}
+              >
+                <h1>{plan.travel_plan_id}</h1>
                 <h1>{plan.name}</h1>
                 <p>{plan.description}</p>
                 <p>{plan.start_date}</p>
