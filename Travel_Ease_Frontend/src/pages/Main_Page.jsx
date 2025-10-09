@@ -18,18 +18,25 @@ function Main_Page() {
 
   return (
     <>
-      <div className="public_plans">
-        <Public_Plans />
+      <div className="container">
+        <div className="main_left_side">
+          <div className="ongoing_plans">
+            <Ongoing_Plans />
+          </div>
+          <div className="upcoming_plans">
+            <Upcoming_Plans />
+          </div>
+        </div>
+        <div className="main_right_side">
+          <div className="public_plans">
+            <Public_Plans />
+          </div>
+          <div className="previous_plans">
+            <Previous_Plans />
+          </div>
+        </div>
       </div>
-      <div className="ongoing_plans">
-        <Ongoing_Plans />
-      </div>
-      <div className="upcoming_plans">
-        <Upcoming_Plans />
-      </div>
-      <div className="previous_plans">
-        <Previous_Plans />
-      </div>
+
       <button onClick={handle_click}>create plan</button>
       {clicked && <Create_Plan on_close={handle_close} />}
     </>

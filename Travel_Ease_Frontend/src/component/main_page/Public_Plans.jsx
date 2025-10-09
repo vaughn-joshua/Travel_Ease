@@ -16,15 +16,15 @@ function Public_Plans() {
   return (
     <>
       <h3>Suggested Plans</h3>
-      <div className="plans_container">
+      <div className="public_plans_container">
         {!plans && <p>loading...</p>}
 
         {plans &&
           plans.map((plan, index) => {
             return (
-              <div key={index} className="plans">
-                <h1>{plan.name}</h1>
-                <p>{plan.description}</p>
+              <div key={index} className="public_plans">
+                <h3>{plan.name}</h3>
+                <p>{plan.max_slots}</p>
                 <p>{plan.start_date}</p>
                 <p>{plan.end_date}</p>
                 <p>{plan.location}</p>

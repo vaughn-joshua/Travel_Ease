@@ -16,7 +16,7 @@ function Previous_Plans() {
   return (
     <>
       <h3>your previous plans</h3>
-      <div className="plans_container">
+      <div className="previous_plans_container">
         {!plans && <p>loading...</p>}
 
         {plans &&

@@ -57,6 +57,24 @@
   opacity: 90%;
 }
 
+.container {
+  display: flex;
+}
+
+.main_right_side {
+  width: 20%;
+}
+
+.main_left_side {
+  width: 80%;
+  padding: 1em;
+}
+
+.public_plans {
+  /* background-color: rgb(191, 191, 191); */
+  margin: 1em;
+}
+
 .upcoming_plans {
   background-color: rgb(197, 197, 197);
   padding: 1em;
@@ -66,6 +84,16 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1em;
+}
+
+.public_plans_container {
+  max-height: 40vh;
+  overflow: scroll;
+}
+
+.previous_plans_container {
+  max-height: 40vh;
+  overflow: scroll;
 }
 
 .plans {
