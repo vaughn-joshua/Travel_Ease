@@ -21,6 +21,10 @@ function Main_Page() {
       <div className="container">
         <div className="main_left_side">
           <div className="ongoing_plans">
+            <div className="ongoing_title">
+              <h3>ongoing plan</h3>
+              <button onClick={handle_click}>create plan</button>
+            </div>
             <Ongoing_Plans />
           </div>
           <div className="upcoming_plans">
@@ -29,6 +33,10 @@ function Main_Page() {
         </div>
         <div className="main_right_side">
           <div className="public_plans">
+            <div className="public_plan_title">
+              <h3>Suggested Plans</h3>
+              <button>Quick Join</button>
+            </div>
             <Public_Plans />
           </div>
           <div className="previous_plans">
@@ -37,7 +45,6 @@ function Main_Page() {
         </div>
       </div>
 
-      <button onClick={handle_click}>create plan</button>
       {clicked && <Create_Plan on_close={handle_close} />}
     </>
   );

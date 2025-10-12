@@ -15,7 +15,6 @@ function Ongoing_Plans() {
 
   return (
     <>
-      <h3>ongoing plan</h3>
       <div className="plans_container">
         {!plans && <p>loading...</p>}
 

@@ -4,6 +4,7 @@ import { ongoing_plan } from "./controller/ongoing_plans.js";
 import { previous_plans } from "./controller/previous_plans.js";
 import { public_plans } from "./controller/public_plans.js";
 import { plans_id } from "./controller/plans_id.js";
+import { create_activity } from "./controller/create_activity.js";
 
 function travel_plan(req, res) {
   try {
@@ -102,6 +103,7 @@ export {
   plans_id,
   create_plan,
   plan_edit,
+  create_activity,
   activity_edit,
   collaborators_edit,
   specific_plans,

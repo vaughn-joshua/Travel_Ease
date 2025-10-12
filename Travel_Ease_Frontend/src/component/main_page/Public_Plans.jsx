@@ -15,7 +15,6 @@ function Public_Plans() {
 
   return (
     <>
-      <h3>Suggested Plans</h3>
       <div className="public_plans_container">
         {!plans && <p>loading...</p>}
 

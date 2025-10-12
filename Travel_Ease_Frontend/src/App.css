@@ -70,6 +70,16 @@
   padding: 1em;
 }
 
+.ongoing_title {
+  display: flex;
+  gap: 66vw;
+}
+
+.public_plan_title {
+  display: flex;
+  gap: 4vw;
+}
+
 .public_plans {
   /* background-color: rgb(191, 191, 191); */
   margin: 1em;
@@ -100,4 +110,18 @@
   border-style: solid;
   border-color: black;
   padding: 1em;
+}
+
+/* planner */
+
+.planner_top {
+  display: flex;
+  gap: 1em;
+}
+
+.map_containers {
+  background-color: rgb(206, 206, 206);
+  width: 70vw;
+  height: 60vh;
+  border-radius: 20px;
 }
