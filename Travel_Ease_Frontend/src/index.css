@@ -66,3 +66,19 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 } */
+#root{
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1em;
+  font-family: sans-serif;
+  color: #333;
+  background-color: #f3e4d7;
+}
+
+.leaflet-container {
+  height: 100vh !important;
+  width: 100% !important;
+}
