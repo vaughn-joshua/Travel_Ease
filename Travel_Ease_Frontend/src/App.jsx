@@ -1,14 +1,12 @@
 import { Routes, Route } from "react-router-dom";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import Blogs from "./pages/Blogs";
 import "./App.css";
 
 function App() {
   return (
     <main>
       <Routes>
-        <Route />
-        <Route />
+        <Route path="/blogs" element={<Blogs />} />
       </Routes>
     </main>
   );

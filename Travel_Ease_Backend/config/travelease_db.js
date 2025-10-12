@@ -4,7 +4,7 @@ export const con = new Client({
   user: "postgres",
   host: "localhost",
   database: "travelease_db",
-  password: "123",
+  password: "1234",
   port: 5432,
 });
 
