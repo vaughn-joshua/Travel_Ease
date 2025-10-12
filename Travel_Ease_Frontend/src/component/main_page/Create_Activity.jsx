@@ -1,17 +1,16 @@
 import { useForm } from "react-hook-form";
 import { create_activity } from "../../utils/travel_plan/create_activity";
 
-function Create_Activity({ id }) {
+function Create_Activity({ id, business }) {
   const { register, handleSubmit, reset } = useForm();
 
   const on_submit = async (data) => {
     try {
       // ADD "id" to data
       data.travel_plan_id = id;
-      data.business_id = 1;
-      // console.log(data);
+      data.business_id = 1; //remove if available na yung business.id
       create_activity(data);
-      // reset();
+      reset();
     } catch (e) {
       console.log({ e });
     }
@@ -33,6 +32,19 @@ function Create_Activity({ id }) {
         </label>{" "}
         <br />
         <label>
+          Business:
+          <select id="cars">
+            {business.map((b) => {
+              return (
+                <option key={b.business_id} value={b.business_id}>
+                  {b.name}
+                </option>
+              );
+            })}
+          </select>
+        </label>{" "}
+        <br />
+        <label>
           Target Date:
           <input {...register("target_date")} />
         </label>{" "}
@@ -40,11 +52,6 @@ function Create_Activity({ id }) {
         <label>
           Budget Range:
           <input {...register("budget_range")} />
-        </label>{" "}
-        <br />
-        <label>
-          Priority:
-          <input {...register("priority")} />
         </label>{" "}
         <br />
         <input type="submit" value="submit" />

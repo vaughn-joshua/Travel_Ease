@@ -1,21 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetch_plan_id } from "../utils/travel_plan/fetch_plan_id";
 import Create_Activity from "../component/main_page/Create_Activity";
+import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
 
 function Planner() {
   const { id } = useParams();
   const [plan, setPlan] = useState();
+  const [businesses, setBusinesses] = useState();
   const [activity, setActivity] = useState(false);
 
   useEffect(() => {
-    const load_plan = async () => {
-      const data = await fetch_plan_id(id);
-      setPlan(data);
+    const load_data = async () => {
+      try {
+        const business_data = await fetch_businesses();
+        const plan_data = await fetch_plan_id(id);
+        setPlan(plan_data);
+        setBusinesses(business_data);
+      } catch (e) {
+        console.log({ e });
+      }
     };
 
-    load_plan();
-  }, []);
+    load_data();
+  }, [id]);
 
   const handle_click = () => {
     setActivity(true);
@@ -43,7 +51,7 @@ function Planner() {
         <p>{plan[0].max_slots}</p>
       </div>
 
-      {activity && <Create_Activity id={id} />}
+      {activity && <Create_Activity id={id} business={businesses} />}
     </>
   );
 }

@@ -4,6 +4,7 @@ import {
   travel_plan_routes,
   user_routes,
   config_routes,
+  business_routes,
 } from "./routes/index.js";
 const app = express();
 
@@ -18,6 +19,8 @@ app.use("/api/travel_plan", travel_plan_routes);
 app.use("/api/user", user_routes);
 
 app.use("/api/config", config_routes);
+
+app.use("/api/business", business_routes);
 
 //server
 
