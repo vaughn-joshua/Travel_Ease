@@ -8,10 +8,10 @@ interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle }) => {
   return (
     <div className="bg-white py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="border-t-2 border-secondary-blue w-24 mx-auto mb-6"></div>
-        <h1 className="text-5xl font-bold text-secondary-blue mb-6">{title}</h1>
-        <div className="border-t-2 border-secondary-blue w-24 mx-auto mb-6"></div>
+      <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+        <div className="mx-auto mb-6 w-24 border-t-2 border-primary-red" />
+        <h1 className="mb-6 text-5xl font-bold text-primary-red">{title}</h1>
+        <div className="mx-auto mb-6 w-24 border-t-2 border-primary-red" />
         {subtitle && (
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">{subtitle}</p>
         )}

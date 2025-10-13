@@ -34,7 +34,7 @@ describe("BlogCard", () => {
         "This is a test blog post excerpt that describes the content."
       )
     ).toBeInTheDocument();
-    expect(screen.getByText("Test Author")).toBeInTheDocument();
+    expect(screen.getByText(/By Test Author/i)).toBeInTheDocument();
     expect(screen.getByText("5 min read")).toBeInTheDocument();
   });
 

@@ -5,13 +5,17 @@ import BlogCard from "./BlogCard";
 interface CarouselProps {
   blogs: Blog[];
   title: string;
+  description?: string;
   className?: string;
+  id?: string;
 }
 
 const Carousel: React.FC<CarouselProps> = ({
   blogs,
   title,
+  description,
   className = "",
+  id,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerView, setItemsPerView] = useState(3);
@@ -71,17 +75,29 @@ const Carousel: React.FC<CarouselProps> = ({
   }
 
   return (
-    <section className={`py-16 ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold text-white text-center mb-12">
-          {title}
-        </h2>
+    <section
+      id={id}
+      className={`relative overflow-hidden py-20 text-white ${className}`}
+    >
+      <div className="absolute inset-0 bg-primary-red/90" aria-hidden="true" />
 
-        <div className="relative" ref={carouselRef}>
-          {/* Carousel Container */}
-          <div className="overflow-hidden">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="mb-4 inline-flex items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
+            Featured Collection
+          </p>
+          <h2 className="text-3xl font-bold sm:text-4xl">{title}</h2>
+          {description && (
+            <p className="mt-4 text-base text-white/90 sm:text-lg">
+              {description}
+            </p>
+          )}
+        </div>
+
+        <div className="relative mt-12" ref={carouselRef}>
+          <div className="overflow-hidden" aria-live="polite">
             <div
-              className="flex transition-transform duration-300 ease-in-out"
+              className="flex transition-transform duration-500 ease-out"
               style={{
                 transform: `translateX(-${
                   currentIndex * (100 / itemsPerView)
@@ -94,22 +110,21 @@ const Carousel: React.FC<CarouselProps> = ({
                   className="flex-shrink-0 px-4"
                   style={{ width: `${100 / itemsPerView}%` }}
                 >
-                  <BlogCard blog={blog} />
+                  <BlogCard variant="dark" blog={blog} />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Navigation Arrows */}
           {blogs.length > itemsPerView && (
             <>
               <button
                 onClick={prevSlide}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2"
+                className="group absolute left-0 top-1/2 flex h-12 w-12 -translate-y-1/2 -translate-x-4 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-red"
                 aria-label="Previous slide"
               >
                 <svg
-                  className="w-6 h-6 text-primary-red"
+                  className="h-6 w-6 text-primary-red transition group-hover:translate-x-[-2px]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -117,7 +132,7 @@ const Carousel: React.FC<CarouselProps> = ({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={1.75}
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
@@ -125,11 +140,11 @@ const Carousel: React.FC<CarouselProps> = ({
 
               <button
                 onClick={nextSlide}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2"
+                className="group absolute right-0 top-1/2 flex h-12 w-12 -translate-y-1/2 translate-x-4 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-red"
                 aria-label="Next slide"
               >
                 <svg
-                  className="w-6 h-6 text-primary-red"
+                  className="h-6 w-6 text-primary-red transition group-hover:translate-x-[2px]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -137,7 +152,7 @@ const Carousel: React.FC<CarouselProps> = ({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={1.75}
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
@@ -145,17 +160,16 @@ const Carousel: React.FC<CarouselProps> = ({
             </>
           )}
 
-          {/* Pagination Dots */}
           {blogs.length > itemsPerView && (
-            <div className="flex justify-center mt-8 space-x-2">
+            <div className="mt-10 flex justify-center space-x-2">
               {Array.from({ length: maxIndex + 1 }, (_, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
-                  className={`w-3 h-3 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-red ${
+                  className={`h-2 w-10 rounded-full transition focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-red ${
                     index === currentIndex
                       ? "bg-white"
-                      : "bg-white/50 hover:bg-white/75"
+                      : "bg-white/40 hover:bg-white/70"
                   }`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
