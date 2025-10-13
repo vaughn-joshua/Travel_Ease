@@ -32,3 +32,4 @@ export const blogQuerySchema = z.object({
 export type CreateBlogInput = z.infer<typeof createBlogSchema>;
 export type UpdateBlogInput = z.infer<typeof updateBlogSchema>;
 export type BlogQueryInput = z.infer<typeof blogQuerySchema>;
+
