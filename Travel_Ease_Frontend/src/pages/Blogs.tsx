@@ -17,6 +17,7 @@ export default function Blogs() {
     const fetchBlogs = async () => {
       try {
         setLoading(true);
+        setError(null);
 
         // Fetch featured blogs
         const featured = await blogApi.getFeaturedBlogs();
@@ -32,9 +33,21 @@ export default function Blogs() {
         setDestinationsBlogs(destinations.items);
         setTipsBlogs(tips.items);
         setClientEducationBlogs(clientEducation.items);
-      } catch (err) {
-        setError("Failed to load blogs");
+      } catch (err: any) {
         console.error("Error fetching blogs:", err);
+
+        // More specific error messages
+        if (err.response?.status === 500) {
+          setError("Server error: Please try again later or contact support.");
+        } else if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
+          setError(
+            "Cannot connect to server. Please check your connection and try again."
+          );
+        } else if (err.response?.status === 404) {
+          setError("Blog data not found. Please try again later.");
+        } else {
+          setError("Failed to load blogs. Please try again later.");
+        }
       } finally {
         setLoading(false);
       }
