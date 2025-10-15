@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import Map_Page from "./map_components/Map_Page.jsx";
-import "./App.css";
+import Main_Map_Page from "./map_components/Main_Map_Page.jsx";
+// import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0);
+
 
   return (
     <>
-      <Map_Page />
+      <Main_Map_Page />
     </>
   );
 }

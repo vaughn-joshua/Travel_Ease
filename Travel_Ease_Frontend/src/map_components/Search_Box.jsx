@@ -2,18 +2,16 @@ import React, {useState} from "react";
 
 
 function Search_Box({ onSearch }){
-const [search_result, set_search_result] = useState(null);
+const [query, set_query] = useState("");
 
-function Handle_Search(event){
-    const [query, set_query] = useState("");
+const  Handle_Search = async (e)=>{
+    e.preventDefault();
 
-    const search = async (e)=> {
-        e.preventDefault();
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query},Marikina&countrycodes=ph&bounded=1&viewbox=121.06,14.71,121.14,14.58`);
-        const data = await response.json();
-        if (data[0]){
-            const lat = parseFloat(data[0].lat);
-            const lon = parseFloat(data[0].lon);
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=120.92,14.15,120.97,14.07`);
+    const data = await response.json();
+    if (data[0]){
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
             onSearch([lat,lon]);
         }else{
             alert("Location not found");
@@ -33,16 +31,7 @@ function Handle_Search(event){
         </form>
 
     )
-}
-return(
-<>
-  <div className = "search-bar" style = {{padding: "10px"}}>
-    <Search_Box onSearch = {set_search_result}/> 
-  </div>
-</>
 
-
-)    
 
 }
 

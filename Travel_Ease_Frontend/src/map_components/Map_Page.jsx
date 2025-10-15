@@ -7,7 +7,8 @@ import L, { Icon } from "leaflet";
 
 import { Map_Mover } from "./Map_Mover.jsx";
 
-function Map_Page(){
+
+function Map_Page({ search_result }){
 
     
 const Tagaytay_Center = [14.1154, 120.9620];
@@ -41,7 +42,7 @@ const custom_icon = new Icon({
                     <Popup>📍 You searched here!</Popup>
                     </Marker>
                 )}
-
+            <Map_Mover position = {search_result} />
             </MapContainer>
         </>
 
