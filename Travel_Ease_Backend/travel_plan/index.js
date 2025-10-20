@@ -5,6 +5,8 @@ import { previous_plans } from "./controller/previous_plans.js";
 import { public_plans } from "./controller/public_plans.js";
 import { plans_id } from "./controller/plans_id.js";
 import { create_activity } from "./controller/create_activity.js";
+import { fetch_activities } from "./controller/fetch_activities.js";
+import { activity_edit } from "./controller/activity_edit.js";
 
 function travel_plan(req, res) {
   try {
@@ -12,14 +14,6 @@ function travel_plan(req, res) {
     res.send("hello");
   } catch (e) {
     console.log({ error: e });
-    res.send({ error: e });
-  }
-}
-
-function plans(req, res) {
-  try {
-    res.send("here are at the plans");
-  } catch (e) {
     res.send({ error: e });
   }
 }
@@ -32,33 +26,9 @@ function finished_plan(req, res) {
   }
 }
 
-// function plans_id(req, res) {
-//   try {
-//     res.send("here are at the plans_id");
-//   } catch (e) {
-//     res.send({ error: e });
-//   }
-// }
-
-// function create_plan(req, res) {
-//   try {
-//     res.status(201).json({ messageg: "you are at create plan" });
-//   } catch (e) {
-//     res.send({ error: e });
-//   }
-// }
-
 function plan_edit(req, res) {
   try {
     res.send("here are at the plan_edit");
-  } catch (e) {
-    res.send({ error: e });
-  }
-}
-
-function activity_edit(req, res) {
-  try {
-    res.send("here are at the activity_edit");
   } catch (e) {
     res.send({ error: e });
   }
@@ -71,14 +41,6 @@ function collaborators_edit(req, res) {
     res.send({ error: e });
   }
 }
-
-// function public_plans(req, res) {
-//   try {
-//     res.send("here are at the public_plans");
-//   } catch (e) {
-//     res.send({ error: e });
-//   }
-// }
 
 function specific_plans(req, res) {
   try {
@@ -98,7 +60,6 @@ function join_plan(req, res) {
 
 export {
   travel_plan,
-  plans,
   finished_plan,
   plans_id,
   create_plan,
@@ -112,4 +73,5 @@ export {
   ongoing_plan,
   previous_plans,
   public_plans,
+  fetch_activities,
 };

@@ -3,18 +3,24 @@ import { useParams } from "react-router-dom";
 import { fetch_plan_id } from "../utils/travel_plan/fetch_plan_id";
 import Create_Activity from "../component/main_page/Create_Activity";
 import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
+import Activities from "../component/main_page/Activities";
 
 function Planner() {
   const { id } = useParams();
   const [plan, setPlan] = useState();
+  const [days, setDays] = useState(0);
+  const [start_date, setStart_date] = useState(0);
   const [businesses, setBusinesses] = useState();
-  const [activity, setActivity] = useState(false);
+  const [clicked, setClicked] = useState(false);
+  const [loadActivity, setLoadActivity] = useState(false);
+  const [daySelected, setDaySelected] = useState(1);
 
   useEffect(() => {
     const load_data = async () => {
       try {
         const business_data = await fetch_businesses();
         const plan_data = await fetch_plan_id(id);
+
         setPlan(plan_data);
         setBusinesses(business_data);
       } catch (e) {
@@ -23,10 +29,39 @@ function Planner() {
     };
 
     load_data();
-  }, [id]);
+  }, [id, clicked]);
+
+  useEffect(() => {
+    if (plan) {
+      const start = new Date(plan[0].start_date);
+      const end = new Date(plan[0].end_date);
+
+      const months = end - start;
+
+      const days = Math.ceil(months / (1000 * 60 * 60 * 24)) + 1;
+
+      setDays(days);
+      setStart_date(start.toISOString());
+    }
+  }, [plan]);
 
   const handle_click = () => {
-    setActivity(true);
+    setClicked(true);
+  };
+
+  const handle_close = () => {
+    setClicked(false);
+  };
+
+  const load_activity = () => {
+    setClicked(false);
+    setLoadActivity((prev) => !prev);
+    setDaySelected(1);
+  };
+
+  const click_day = (i) => {
+    setLoadActivity((prev) => !prev);
+    setDaySelected(i);
   };
 
   if (!plan) {
@@ -37,9 +72,26 @@ function Planner() {
     <>
       <div className="planner_top">
         <div className="map_containers"></div>
-        <div className="activity_container">
-          <h1>activities</h1>
+        <div className="activities">
+          <div className="travel_plan_days">
+            {Array.from({ length: days }, (_, i) => (
+              <h4 key={i} onClick={() => click_day(i + 1)}>
+                Day {i + 1}
+              </h4>
+            ))}
+          </div>
+
           <button onClick={handle_click}>Add Activity</button>
+          <div className="activities">
+            {start_date && (
+              <Activities
+                reference_id={id}
+                load_state={loadActivity}
+                start_date={start_date}
+                day_selected={daySelected}
+              />
+            )}
+          </div>
         </div>
       </div>
       <div className="plan_detail_container">
@@ -51,7 +103,14 @@ function Planner() {
         <p>{plan[0].max_slots}</p>
       </div>
 
-      {activity && <Create_Activity id={id} business={businesses} />}
+      {clicked && (
+        <Create_Activity
+          id={id}
+          business={businesses}
+          on_close={handle_close}
+          load_activities={load_activity}
+        />
+      )}
     </>
   );
 }

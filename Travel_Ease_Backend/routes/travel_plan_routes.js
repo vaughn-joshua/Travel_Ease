@@ -24,7 +24,6 @@ import {
   finished_plan,
   join_plan,
   plan_edit,
-  plans,
   plans_id,
   public_plans,
   specific_plans,
@@ -32,6 +31,7 @@ import {
   ongoing_plan,
   previous_plans,
   create_activity,
+  fetch_activities,
 } from "../travel_plan/index.js";
 
 const router = Router();
@@ -40,6 +40,7 @@ router.get("/ongoing_plan", ongoing_plan);
 router.get("/plans", fetch_plans);
 router.get("/previous_plans", previous_plans);
 router.get("/plans/:id", plans_id);
+router.get("/activities/:id", fetch_activities);
 
 router.post("/create_plan", create_plan);
 router.post("/create_activity", create_activity);
