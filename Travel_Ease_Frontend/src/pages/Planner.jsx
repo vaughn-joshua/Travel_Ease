@@ -4,9 +4,11 @@ import { fetch_plan_id } from "../utils/travel_plan/fetch_plan_id";
 import Create_Activity from "../component/main_page/Create_Activity";
 import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
 import Activities from "../component/main_page/Activities";
+import Edit_Plan from "../component/main_page/Edit_Plan";
 
 function Planner() {
   const { id, status } = useParams();
+
   const [plan, setPlan] = useState();
   const [days, setDays] = useState(0);
   const [start_date, setStart_date] = useState(0);
@@ -15,6 +17,8 @@ function Planner() {
   const [clicked, setClicked] = useState(false);
   const [loadActivity, setLoadActivity] = useState(false);
   const [daySelected, setDaySelected] = useState(1);
+
+  const [edit, setEdit] = useState(false);
 
   useEffect(() => {
     const load_data = async () => {
@@ -66,6 +70,10 @@ function Planner() {
     setDaySelected(i);
   };
 
+  const edit_plan = () => {
+    setEdit((prev) => !prev);
+  };
+
   if (!plan) {
     return <p>loading...</p>;
   }
@@ -102,7 +110,7 @@ function Planner() {
 
         {status === "join" && <button>join now</button>}
         {status === "start" && <button>start now</button>}
-        {status === "view" && <button>edit</button>}
+        {status === "view" && <button onClick={edit_plan}>edit</button>}
 
         <p>{plan[0].description}</p>
         <p>{plan[0].location}</p>
@@ -118,6 +126,7 @@ function Planner() {
           load_activities={load_activity}
         />
       )}
+      {edit && <Edit_Plan data={plan} on_close={edit_plan} />}
     </>
   );
 }
