@@ -3,7 +3,13 @@ import { useEffect } from "react";
 import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
 import Edit_Activity from "./Edit_Activity";
 
-function Activities({ reference_id, load_state, start_date, day_selected }) {
+function Activities({
+  reference_id,
+  load_state,
+  start_date,
+  end_date,
+  day_selected,
+}) {
   const [plans, setPlans] = useState();
   const [clicked, setClicked] = useState(false);
   const [data, setData] = useState();
@@ -67,7 +73,14 @@ function Activities({ reference_id, load_state, start_date, day_selected }) {
           })}
       </div>
 
-      {clicked && <Edit_Activity on_close={handle_click} data={data} />}
+      {clicked && (
+        <Edit_Activity
+          on_close={handle_click}
+          data={data}
+          start_date={start_date}
+          end_date={end_date}
+        />
+      )}
     </>
   );
 }

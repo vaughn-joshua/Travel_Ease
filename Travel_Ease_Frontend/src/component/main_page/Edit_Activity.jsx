@@ -2,18 +2,22 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { edit_activity } from "../../utils/travel_plan/edit_activity";
 
-function Edit_Activity({ on_close, data }) {
-  const { register, handleSubmit, reset } = useForm({
+function Edit_Activity({ on_close, data, start_date, end_date }) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
-      notes: data?.notes || "",
-      target_date: data?.target_date || "",
-      budget_range: data?.budget_range || "",
-      is_priority: data?.is_priority || false,
+      notes: data.notes,
+      target_date: data.target_date,
+      budget_range: data.budget_range,
+      is_priority: data.is_priority,
     },
   });
 
   useEffect(() => {
-    // Whenever data changes (like when modal opens with a new activity), reset form values
     reset({
       notes: data?.notes || "",
       target_date: data?.target_date || "",
@@ -22,10 +26,18 @@ function Edit_Activity({ on_close, data }) {
     });
   }, [data, reset]);
 
-  const on_submit = async (submit_data) => {
-    console.log("submitted");
+  const validateDate = (value) => {
+    const normalize = (d) => new Date(d).toISOString().split("T")[0];
+    const val = normalize(value);
+    const start = normalize(start_date);
+    const end = normalize(end_date);
 
-    // Replace unchanged fields with the original data
+    return val >= start && val <= end
+      ? true
+      : `Date must be between ${start} and ${end}.`;
+  };
+
+  const on_submit = async (submit_data) => {
     const final_data = {
       activity_id: data.activity_id,
       notes: submit_data.notes || data.notes,
@@ -37,7 +49,6 @@ function Edit_Activity({ on_close, data }) {
           : data.is_priority,
     };
 
-    console.log("final data to update:", final_data);
     await edit_activity(final_data);
     on_close();
   };
@@ -58,20 +69,78 @@ function Edit_Activity({ on_close, data }) {
       <form onSubmit={handleSubmit(on_submit)}>
         <label>
           Notes:
-          <input {...register("notes")} />
+          <input
+            {...register("notes", {
+              required: "Notes are required.",
+              maxLength: {
+                value: 200,
+                message: "Notes cannot exceed 200 characters.",
+              },
+            })}
+          />
         </label>
+        {errors.notes && <p className="error">{errors.notes.message}</p>}
         <br />
 
         <label>
           Target Date:
-          <input {...register("target_date")} type="date" />
+          <input
+            type="date"
+            {...register("target_date", {
+              required: "Please select a target date.",
+              validate: validateDate,
+            })}
+          />
         </label>
+        {errors.target_date && (
+          <p className="error">{errors.target_date.message}</p>
+        )}
         <br />
 
         <label>
           Budget Range:
-          <input {...register("budget_range")} />
+          <select
+            {...register("budget_range", {
+              required: "Please select a budget range.",
+              validate: (value) => {
+                const validValues = [
+                  "0-100",
+                  "100-200",
+                  "200-400",
+                  "400-700",
+                  "700-1000",
+                  "1000-1500",
+                  "1500+",
+                ];
+                return validValues.includes(value)
+                  ? true
+                  : "Invalid budget range.";
+              },
+            })}
+          >
+            <option value="">--Select--</option>
+            {[
+              "0-100",
+              "100-200",
+              "200-400",
+              "400-700",
+              "700-1000",
+              "1000-1500",
+              "1500+",
+            ].map((range) => (
+              <option key={range} value={range}>
+                {range.includes("+")
+                  ? `₱${range.replace("+", "+")}`
+                  : `₱${range.split("-")[0]} - ₱${range.split("-")[1]}`}
+              </option>
+            ))}
+          </select>
         </label>
+
+        {errors.budget_range && (
+          <p className="error">{errors.budget_range.message}</p>
+        )}
+
         <br />
 
         <label>

@@ -10,6 +10,7 @@ function Planner() {
   const [plan, setPlan] = useState();
   const [days, setDays] = useState(0);
   const [start_date, setStart_date] = useState(0);
+  const [end_date, setEnd_date] = useState(0);
   const [businesses, setBusinesses] = useState();
   const [clicked, setClicked] = useState(false);
   const [loadActivity, setLoadActivity] = useState(false);
@@ -42,6 +43,7 @@ function Planner() {
 
       setDays(days);
       setStart_date(start.toISOString());
+      setEnd_date(end.toISOString());
     }
   }, [plan]);
 
@@ -88,6 +90,7 @@ function Planner() {
                 reference_id={id}
                 load_state={loadActivity}
                 start_date={start_date}
+                end_date={end_date}
                 day_selected={daySelected}
               />
             )}

@@ -10,8 +10,8 @@ export async function fetch_plans(req, res) {
 
     const result = await con.query(query);
 
-    // console.log("users: ", result.rows);
     console.log("successful fetch plans");
+    console.log(result.rows);
     res.send(result.rows);
   } catch (e) {
     res.send({ error: e });

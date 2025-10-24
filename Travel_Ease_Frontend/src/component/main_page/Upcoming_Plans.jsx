@@ -15,7 +15,6 @@ function Upcoming_Plans() {
   }, []);
 
   const handle_click = (key) => {
-    console.log({ key });
     navigate(`/planner/${key}`);
   };
 
