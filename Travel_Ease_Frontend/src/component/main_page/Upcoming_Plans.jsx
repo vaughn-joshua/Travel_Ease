@@ -5,6 +5,7 @@ import { fetch_plans } from "../../utils/travel_plan/fetch_plans";
 function Upcoming_Plans() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState();
+
   useEffect(() => {
     const load_plans = async () => {
       const data = await fetch_plans();
@@ -15,7 +16,7 @@ function Upcoming_Plans() {
   }, []);
 
   const handle_click = (key) => {
-    navigate(`/planner/${key}`);
+    navigate(`/planner/start/${key}`);
   };
 
   return (

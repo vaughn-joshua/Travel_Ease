@@ -6,7 +6,7 @@ import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
 import Activities from "../component/main_page/Activities";
 
 function Planner() {
-  const { id } = useParams();
+  const { id, status } = useParams();
   const [plan, setPlan] = useState();
   const [days, setDays] = useState(0);
   const [start_date, setStart_date] = useState(0);
@@ -99,13 +99,17 @@ function Planner() {
       </div>
       <div className="plan_detail_container">
         <h1>{plan[0].name}</h1>
+
+        {status === "join" && <button>join now</button>}
+        {status === "start" && <button>start now</button>}
+        {status === "view" && <button>edit</button>}
+
         <p>{plan[0].description}</p>
         <p>{plan[0].location}</p>
         <p>{plan[0].start_date}</p>
         <p>{plan[0].end_date}</p>
         <p>{plan[0].max_slots}</p>
       </div>
-
       {clicked && (
         <Create_Activity
           id={id}

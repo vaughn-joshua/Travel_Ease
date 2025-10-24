@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useEffect } from "react";
 import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
+import { useNavigate } from "react-router-dom";
 
 function Ongoing_Plans() {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState();
+
   useEffect(() => {
     const load_plans = async () => {
       const data = await fetch_ongoing_plans();
@@ -13,6 +16,10 @@ function Ongoing_Plans() {
     load_plans();
   }, []);
 
+  const handle_click = (key) => {
+    navigate(`/planner/view/${key}`);
+  };
+
   return (
     <>
       <div className="plans_container">
@@ -21,7 +28,11 @@ function Ongoing_Plans() {
         {plans &&
           plans.map((plan, index) => {
             return (
-              <div key={index} className="plans">
+              <div
+                key={index}
+                className="plans"
+                onClick={() => handle_click(plan.travel_plan_id)}
+              >
                 <h1>{plan.name}</h1>
                 <p>{plan.description}</p>
                 <p>{plan.start_date}</p>
