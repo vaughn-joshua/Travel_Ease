@@ -1,6 +1,5 @@
 import React, {useState} from "react";
 
-
 function Search_Box({ onSearch }){
 const [query, set_query] = useState("");
 const [suggestions, set_suggestions] = useState([]);
@@ -53,13 +52,14 @@ const  Handle_Search = async (e)=>{
           value={query}
           onChange={handleInputChange}
           style={{
-            padding: "10px",
-            width: "100%",
-            borderRadius: "8px",
-            border: "1px solid #ccc",
+            // padding: "10px",
+            // width: "100%",
+            // borderRadius: "8px",
+            // border: "1px solid #ccc",
           }}
+          className = "p-2 w-full rounded-md border border-gray-300"
         />
-        <button type="submit" style={{ marginLeft: "5px" }}>
+        <button type="submit" className = "m-2 p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
           🔍
         </button>
       </form>

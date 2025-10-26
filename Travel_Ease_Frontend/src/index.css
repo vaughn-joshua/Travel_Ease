@@ -66,6 +66,8 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 } */
+@import "tailwindcss";
+
 #root{
   height: 100vh;
   display: flex;

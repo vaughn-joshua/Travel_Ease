@@ -1,7 +1,7 @@
 import React, {useState} from "react";
 import Pin_Icon from "../assets/pin.png";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, Marker, TileLayer, Popup, useMap, GeoJSON } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, Popup, useMap, GeoJSON, ZoomControl} from "react-leaflet";
 import L, { Icon } from "leaflet";
 //import MarkerClusterGroup from "";
 
@@ -23,6 +23,7 @@ const custom_icon = new Icon({
     iconSize:[30,30] 
 })
 
+
     return(
         <>
             <MapContainer center = {Tagaytay_Center} 
@@ -30,13 +31,15 @@ const custom_icon = new Icon({
                           style = {{height: "90vh", width: "100%"}}
                           maxBounds = {Max_Bounds}
                           maxBoundsViscosity = {1.0}
-                          minZoom = {Max_Zoom}>
-
+                          minZoom = {Max_Zoom}
+                          zoomControl = {false}
+                          >
+                            
                 <TileLayer 
                     attribution= '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url = 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
                 />
-           
+                <ZoomControl position="bottomright" />
                 {search_result && (
                     <Marker position = {search_result} icon = {custom_icon}> 
                     <Popup>📍 You searched here!</Popup>
