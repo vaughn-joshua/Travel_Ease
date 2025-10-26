@@ -33,6 +33,7 @@ const custom_icon = new Icon({
                           maxBoundsViscosity = {1.0}
                           minZoom = {Max_Zoom}
                           zoomControl = {false}
+                          className = "static"
                           >
                             
                 <TileLayer 

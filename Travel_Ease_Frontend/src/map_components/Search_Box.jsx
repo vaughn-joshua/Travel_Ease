@@ -8,7 +8,7 @@ const handleInputChange = async (e)=> {
     const value = e.target.value;
     set_query(value);
 
-    if(value.length > 3){
+    if(value.length < 3){
         set_suggestions([]);
         return;
     }
@@ -45,7 +45,7 @@ const  Handle_Search = async (e)=>{
 
     return(
     <div style={{ position: "relative", width: "300px" }}>
-      <form onSubmit={Handle_Search}>
+      <form onSubmit={Handle_Search} className = " z-[1001] flex">
         <input
           type="text"
           placeholder="Search for a place..."

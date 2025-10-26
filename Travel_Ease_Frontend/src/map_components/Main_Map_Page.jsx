@@ -11,13 +11,15 @@ const [search_result, set_search_result] = useState(null);
 
     return(
         <>
-        <div> 
+        <div className="relative z-[1000]"> 
+        <div className="absolute top-3 left-3"> 
             <Search_Box onSearch = {set_search_result} />
         </div>
         <div className = "current-location">
             <input 
+            className = "p-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-100 cursor-pointer absolute bottom-25 right-2 z-1000 shadow-md"
             type = "button"
-            value = "📍 Current Location"
+            value = "📍"
             onClick = {()=> {
                 navigator.geolocation.getCurrentPosition((success) => {
                     const { latitude, longitude } = success.coords;
@@ -26,7 +28,10 @@ const [search_result, set_search_result] = useState(null);
             }}
             />
         </div>
+        </div> 
         <Map_Page search_result = {search_result}></Map_Page>
+
+      
         </>
 
 

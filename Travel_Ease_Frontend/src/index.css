@@ -74,7 +74,6 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 1em;
   font-family: sans-serif;
   color: #333;
   background-color: #f3e4d7;
