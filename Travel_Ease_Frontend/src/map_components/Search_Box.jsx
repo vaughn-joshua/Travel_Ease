@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-
+import Button_Route from "./Button_Route.jsx";
 function Search_Box({ onSearch }){
 const [query, set_query] = useState("");
 const [suggestions, set_suggestions] = useState([]);
@@ -44,8 +44,8 @@ const  Handle_Search = async (e)=>{
     };
 
     return(
-    <div style={{ position: "relative", width: "300px" }}>
-      <form onSubmit={Handle_Search} className = " z-[1001] flex">
+    <div style={{ width: "300px" }}>
+      <form onSubmit={Handle_Search} className = "flex bg-white rounded-md shadow-md relative z-[9999]">
         <input
           type="text"
           placeholder="Search for a place..."
@@ -113,6 +113,8 @@ const  Handle_Search = async (e)=>{
           ))}
         </ul>
       )}
+
+      <Button_Route />
     </div>
 
     )

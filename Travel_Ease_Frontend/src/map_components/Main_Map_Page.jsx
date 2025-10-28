@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 // import "./App.css";
 import Map_Page from "./Map_Page.jsx";
 import Search_Box from "./Search_Box.jsx";
-
 function Main_Map_Page(){
 
 const [search_result, set_search_result] = useState(null);
@@ -11,8 +10,8 @@ const [search_result, set_search_result] = useState(null);
 
     return(
         <>
-        <div className="relative z-[1000]"> 
-        <div className="absolute top-3 left-3"> 
+        <div className="relative z-[1000] w-full"> 
+        <div className="absolute top-3 left-3 z-[9999]"> 
             <Search_Box onSearch = {set_search_result} />
         </div>
         <div className = "current-location">
@@ -28,7 +27,9 @@ const [search_result, set_search_result] = useState(null);
             }}
             />
         </div>
+        
         </div> 
+ 
         <Map_Page search_result = {search_result}></Map_Page>
 
       
