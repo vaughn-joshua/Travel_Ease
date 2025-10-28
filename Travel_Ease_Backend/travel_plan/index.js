@@ -7,6 +7,7 @@ import { plans_id } from "./controller/plans_id.js";
 import { create_activity } from "./controller/create_activity.js";
 import { fetch_activities } from "./controller/fetch_activities.js";
 import { activity_edit } from "./controller/activity_edit.js";
+import { plan_edit } from "./controller/plan_edit.js";
 
 function travel_plan(req, res) {
   try {
@@ -21,14 +22,6 @@ function travel_plan(req, res) {
 function finished_plan(req, res) {
   try {
     res.send("here are at the finished_plan");
-  } catch (e) {
-    res.send({ error: e });
-  }
-}
-
-function plan_edit(req, res) {
-  try {
-    res.send("here are at the plan_edit");
   } catch (e) {
     res.send({ error: e });
   }

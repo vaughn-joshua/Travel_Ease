@@ -2,8 +2,9 @@ import { useForm } from "react-hook-form";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useEffect, useState } from "react";
+import { edit_plan } from "../../utils/travel_plan/edit_plan";
 
-function Edit_Plan({ data, on_close }) {
+function Edit_Plan({ data, on_close, travel_plan }) {
   const {
     register,
     handleSubmit,
@@ -34,6 +35,7 @@ function Edit_Plan({ data, on_close }) {
   };
 
   useEffect(() => {
+    console.log(data);
     const formatDate = (number) => {
       return (
         dateRange[number] &&
@@ -56,13 +58,16 @@ function Edit_Plan({ data, on_close }) {
   };
 
   const on_submit = (submit_data) => {
-    console.log(submit_data);
+    submit_data.travel_plan = travel_plan;
+    edit_plan(submit_data);
+    on_close();
   };
 
   if (!data) return <p>Loading...</p>;
 
   return (
     <div className="modal">
+      <h1>Edit Plan</h1>
       <form onSubmit={handleSubmit(on_submit)}>
         <label>
           Name:
@@ -119,7 +124,7 @@ function Edit_Plan({ data, on_close }) {
         <Flatpickr
           options={{
             mode: "multiple",
-            dateFormat: "F j, Y",
+            dateFormat: "Y-m-d",
           }}
           value={dateRange}
           onChange={handle_change}

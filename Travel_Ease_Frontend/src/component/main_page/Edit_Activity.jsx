@@ -1,8 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { edit_activity } from "../../utils/travel_plan/edit_activity";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/flatpickr.css";
 
-function Edit_Activity({ on_close, data, start_date, end_date }) {
+function Edit_Activity({ on_close, data, dates }) {
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "long", // full name
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   const {
     register,
     handleSubmit,
@@ -17,40 +28,49 @@ function Edit_Activity({ on_close, data, start_date, end_date }) {
     },
   });
 
+  const budget_range = [
+    "0-100",
+    "100-200",
+    "200-400",
+    "400-700",
+    "700-1000",
+    "1000-1500",
+    "1500+",
+  ];
+
+  const [value, setValue] = useState(dates.start);
+
+  const handle_change = (selectedDates, instance) => {
+    setValue(selectedDates);
+
+    reset({ target_date: formatDate(selectedDates) });
+  };
+
   useEffect(() => {
     reset({
-      notes: data?.notes || "",
-      target_date: data?.target_date || "",
-      budget_range: data?.budget_range || "",
-      is_priority: data?.is_priority || false,
+      notes: data.notes,
+      target_date: data.target_date,
+      budget_range: data.budget_range,
+      is_priority: data.is_priority,
     });
   }, [data, reset]);
 
-  const validateDate = (value) => {
-    const normalize = (d) => new Date(d).toISOString().split("T")[0];
-    const val = normalize(value);
-    const start = normalize(start_date);
-    const end = normalize(end_date);
+  const on_submit = (submit_data) => {
+    console.log(submit_data);
 
-    return val >= start && val <= end
-      ? true
-      : `Date must be between ${start} and ${end}.`;
-  };
-
-  const on_submit = async (submit_data) => {
-    const final_data = {
-      activity_id: data.activity_id,
-      notes: submit_data.notes || data.notes,
-      target_date: submit_data.target_date || data.target_date,
-      budget_range: submit_data.budget_range || data.budget_range,
-      is_priority:
-        submit_data.is_priority !== undefined && submit_data.is_priority !== ""
-          ? submit_data.is_priority
-          : data.is_priority,
-    };
-
-    await edit_activity(final_data);
-    on_close();
+    if (
+      submit_data.budget_range == data.budget_range &&
+      submit_data.is_priority == data.is_priority &&
+      submit_data.notes == data.notes &&
+      submit_data.target_date == data.target_date
+    ) {
+      console.log("nothing edited");
+      on_close();
+    } else {
+      submit_data.activity_id = data.activity_id;
+      edit_activity(submit_data);
+      on_close();
+    }
   };
 
   return (
@@ -72,10 +92,6 @@ function Edit_Activity({ on_close, data, start_date, end_date }) {
           <input
             {...register("notes", {
               required: "Notes are required.",
-              maxLength: {
-                value: 200,
-                message: "Notes cannot exceed 200 characters.",
-              },
             })}
           />
         </label>
@@ -85,13 +101,24 @@ function Edit_Activity({ on_close, data, start_date, end_date }) {
         <label>
           Target Date:
           <input
-            type="date"
             {...register("target_date", {
               required: "Please select a target date.",
-              validate: validateDate,
             })}
           />
         </label>
+        <Flatpickr
+          options={{
+            dateFormat: "Y-m-d",
+            enable: [
+              {
+                from: new Date(dates.start).toLocaleDateString("en-CA"), // "YYYY-MM-DD"
+                to: new Date(dates.end).toLocaleDateString("en-CA"),
+              },
+            ],
+          }}
+          value={value}
+          onChange={handle_change}
+        />
         {errors.target_date && (
           <p className="error">{errors.target_date.message}</p>
         )}
@@ -101,33 +128,11 @@ function Edit_Activity({ on_close, data, start_date, end_date }) {
           Budget Range:
           <select
             {...register("budget_range", {
-              required: "Please select a budget range.",
-              validate: (value) => {
-                const validValues = [
-                  "0-100",
-                  "100-200",
-                  "200-400",
-                  "400-700",
-                  "700-1000",
-                  "1000-1500",
-                  "1500+",
-                ];
-                return validValues.includes(value)
-                  ? true
-                  : "Invalid budget range.";
-              },
+              required: "Please select a budget range",
             })}
           >
             <option value="">--Select--</option>
-            {[
-              "0-100",
-              "100-200",
-              "200-400",
-              "400-700",
-              "700-1000",
-              "1000-1500",
-              "1500+",
-            ].map((range) => (
+            {budget_range.map((range) => (
               <option key={range} value={range}>
                 {range.includes("+")
                   ? `₱${range.replace("+", "+")}`
@@ -136,11 +141,9 @@ function Edit_Activity({ on_close, data, start_date, end_date }) {
             ))}
           </select>
         </label>
-
         {errors.budget_range && (
           <p className="error">{errors.budget_range.message}</p>
         )}
-
         <br />
 
         <label>
@@ -151,6 +154,7 @@ function Edit_Activity({ on_close, data, start_date, end_date }) {
 
         <input type="submit" value="Save" />
       </form>
+      <button onClick={on_close}>Exit</button>
     </div>
   );
 }

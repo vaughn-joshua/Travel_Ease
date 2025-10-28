@@ -3,21 +3,16 @@ import { useEffect } from "react";
 import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
 import Edit_Activity from "./Edit_Activity";
 
-function Activities({
-  reference_id,
-  load_state,
-  start_date,
-  end_date,
-  day_selected,
-}) {
+function Activities({ reference_id, load_state, day_selected, dates, status }) {
   const [plans, setPlans] = useState();
   const [clicked, setClicked] = useState(false);
   const [data, setData] = useState();
+  const [refresh, setRefresh] = useState(false);
 
   useEffect(() => {
     const load_plans = async () => {
       const data = await fetch_activities(reference_id);
-      const starting_date = new Date(start_date);
+      const starting_date = new Date(dates.start);
       let current_day;
 
       if (day_selected == 1) {
@@ -36,13 +31,18 @@ function Activities({
     };
 
     load_plans();
-  }, [load_state]);
+  }, [load_state, refresh]);
 
   const handle_click = (data) => {
-    setClicked((prev) => !prev);
+    setClicked(true);
     if (data) {
       setData(data);
     }
+  };
+
+  const handle_close = (data) => {
+    setClicked(false);
+    setRefresh((prev) => !prev);
   };
 
   return (
@@ -61,25 +61,22 @@ function Activities({
                 <p>{plan.target_date}</p>
                 <p>{plan.budget_range}</p>
 
-                <button
-                  onClick={() => {
-                    handle_click(plan);
-                  }}
-                >
-                  edit
-                </button>
+                {status !== "join" && (
+                  <button
+                    onClick={() => {
+                      handle_click(plan);
+                    }}
+                  >
+                    edit
+                  </button>
+                )}
               </div>
             );
           })}
       </div>
 
       {clicked && (
-        <Edit_Activity
-          on_close={handle_click}
-          data={data}
-          start_date={start_date}
-          end_date={end_date}
-        />
+        <Edit_Activity on_close={handle_close} data={data} dates={dates} />
       )}
     </>
   );

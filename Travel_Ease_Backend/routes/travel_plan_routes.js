@@ -45,7 +45,7 @@ router.get("/activities/:id", fetch_activities);
 router.post("/create_plan", create_plan);
 router.post("/create_activity", create_activity);
 
-router.put("/plan_edit/:id", plan_edit);
+router.put("/edit_plan/:id", plan_edit);
 router.put("/activity_edit/:id", activity_edit);
 router.put("/collaborators_edit/:id", collaborators_edit);
 

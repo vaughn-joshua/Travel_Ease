@@ -1,24 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetch_plan_id } from "../utils/travel_plan/fetch_plan_id";
-import Create_Activity from "../component/main_page/Create_Activity";
 import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
 import Activities from "../component/main_page/Activities";
 import Edit_Plan from "../component/main_page/Edit_Plan";
+import Create_Activity from "../component/main_page/Create_Activity";
 
 function Planner() {
   const { id, status } = useParams();
 
   const [plan, setPlan] = useState();
   const [days, setDays] = useState(0);
-  const [start_date, setStart_date] = useState(0);
-  const [end_date, setEnd_date] = useState(0);
   const [businesses, setBusinesses] = useState();
-  const [clicked, setClicked] = useState(false);
   const [loadActivity, setLoadActivity] = useState(false);
   const [daySelected, setDaySelected] = useState(1);
 
-  const [edit, setEdit] = useState(false);
+  const [activeModal, setActiveModal] = useState("");
+
+  const [dates, setDates] = useState({
+    start: 0,
+    end: 0,
+  });
 
   useEffect(() => {
     const load_data = async () => {
@@ -34,7 +36,7 @@ function Planner() {
     };
 
     load_data();
-  }, [id, clicked]);
+  }, [id, activeModal]);
 
   useEffect(() => {
     if (plan) {
@@ -46,32 +48,14 @@ function Planner() {
       const days = Math.ceil(months / (1000 * 60 * 60 * 24)) + 1;
 
       setDays(days);
-      setStart_date(start.toISOString());
-      setEnd_date(end.toISOString());
+
+      setDates({ start: start.toISOString(), end: end.toISOString() });
     }
   }, [plan]);
-
-  const handle_click = () => {
-    setClicked(true);
-  };
-
-  const handle_close = () => {
-    setClicked(false);
-  };
-
-  const load_activity = () => {
-    setClicked(false);
-    setLoadActivity((prev) => !prev);
-    setDaySelected(1);
-  };
 
   const click_day = (i) => {
     setLoadActivity((prev) => !prev);
     setDaySelected(i);
-  };
-
-  const edit_plan = () => {
-    setEdit((prev) => !prev);
   };
 
   if (!plan) {
@@ -91,15 +75,20 @@ function Planner() {
             ))}
           </div>
 
-          <button onClick={handle_click}>Add Activity</button>
+          {status !== "join" && (
+            <button onClick={() => setActiveModal("activity")}>
+              Add Activity
+            </button>
+          )}
+
           <div className="activities">
-            {start_date && (
+            {dates.start && (
               <Activities
+                status={status}
                 reference_id={id}
                 load_state={loadActivity}
-                start_date={start_date}
-                end_date={end_date}
                 day_selected={daySelected}
+                dates={dates}
               />
             )}
           </div>
@@ -110,7 +99,9 @@ function Planner() {
 
         {status === "join" && <button>join now</button>}
         {status === "start" && <button>start now</button>}
-        {status === "view" && <button onClick={edit_plan}>edit</button>}
+        {status === "view" && (
+          <button onClick={() => setActiveModal("plan")}>edit</button>
+        )}
 
         <p>{plan[0].description}</p>
         <p>{plan[0].location}</p>
@@ -118,15 +109,25 @@ function Planner() {
         <p>{plan[0].end_date}</p>
         <p>{plan[0].max_slots}</p>
       </div>
-      {clicked && (
+
+      {activeModal === "activity" && (
         <Create_Activity
-          id={id}
           business={businesses}
-          on_close={handle_close}
-          load_activities={load_activity}
+          dates={dates}
+          id={id}
+          on_close={() => {
+            setLoadActivity((prev) => !prev);
+            setActiveModal("");
+          }}
         />
       )}
-      {edit && <Edit_Plan data={plan} on_close={edit_plan} />}
+      {activeModal === "plan" && (
+        <Edit_Plan
+          data={plan}
+          travel_plan={id}
+          on_close={() => setActiveModal("")}
+        />
+      )}
     </>
   );
 }
