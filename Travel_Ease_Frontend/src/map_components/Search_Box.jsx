@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import Button_Route from "./Button_Route.jsx";
+import Button_Route from "./Route_Form.jsx";
 function Search_Box({ onSearch }){
 const [query, set_query] = useState("");
 const [suggestions, set_suggestions] = useState([]);
@@ -82,6 +82,7 @@ const  Handle_Search = async (e)=>{
             listStyle: "none",
             margin: 0,
             padding: 0,
+      
           }}
         >
           {suggestions.map((place, index) => (
@@ -114,9 +115,8 @@ const  Handle_Search = async (e)=>{
         </ul>
       )}
 
-      <Button_Route />
     </div>
-
+  
     )
 
 

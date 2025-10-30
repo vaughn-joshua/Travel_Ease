@@ -2,21 +2,30 @@ import React, { useState, useEffect } from "react";
 // import "./App.css";
 import Map_Page from "./Map_Page.jsx";
 import Search_Box from "./Search_Box.jsx";
+import Route_Form from "./Route_Form.jsx";
+
 function Main_Map_Page(){
+    const [search_result, set_search_result] = useState(null);
+    const [start, setStart] = useState(null);
+    const [end, setEnd] = useState(null);
 
-const [search_result, set_search_result] = useState(null);
-
-
+    const handleRouteSubmit = ({start, end}) => {
+        setStart(start);
+        setEnd(end);
+    }
 
     return(
         <>
+        {/* Search bar + Route form */}
         <div className="relative z-[1000] w-full"> 
-        <div className="absolute top-3 left-3 z-[9999]"> 
+        <div className="absolute top-3 left-3 z-[9999] flex flex-col gap-2"> 
             <Search_Box onSearch = {set_search_result} />
+            <Route_Form onRouteSubmit = {handleRouteSubmit} />
         </div>
-        <div className = "current-location">
+        {/* Current location button */}
+        <div className = "absolute current-location">
             <input 
-            className = "p-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-100 cursor-pointer absolute bottom-25 right-2 z-1000 shadow-md"
+            className = "p-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-100 cursor-pointer fixed bottom-25 right-2 z-[9999] shadow-md"
             type = "button"
             value = "📍"
             onClick = {()=> {
@@ -30,7 +39,7 @@ const [search_result, set_search_result] = useState(null);
         
         </div> 
  
-        <Map_Page search_result = {search_result}></Map_Page>
+        <Map_Page search_result = {search_result} start = {start} end = {end}></Map_Page>
 
       
         </>
