@@ -2,12 +2,15 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
 import Edit_Activity from "./Edit_Activity";
+import { delete_activity } from "../../utils/travel_plan/delete_activity";
 
 function Activities({ reference_id, load_state, day_selected, dates, status }) {
   const [plans, setPlans] = useState();
   const [clicked, setClicked] = useState(false);
   const [data, setData] = useState();
   const [refresh, setRefresh] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState("");
+  const [toDelete, setToDelete] = useState("");
 
   useEffect(() => {
     const load_plans = async () => {
@@ -33,6 +36,13 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
     load_plans();
   }, [load_state, refresh]);
 
+  useEffect(() => {
+    if (confirmDelete === "confirmed") {
+      delete_activity(toDelete);
+      setRefresh((prev) => !prev);
+    }
+  }, [confirmDelete]);
+
   const handle_click = (data) => {
     setClicked(true);
     if (data) {
@@ -43,6 +53,11 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
   const handle_close = (data) => {
     setClicked(false);
     setRefresh((prev) => !prev);
+  };
+
+  const handle_delete = (plan) => {
+    setConfirmDelete("verify");
+    setToDelete(plan.activity_id);
   };
 
   return (
@@ -62,13 +77,17 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
                 <p>{plan.budget_range}</p>
 
                 {status !== "join" && (
-                  <button
-                    onClick={() => {
-                      handle_click(plan);
-                    }}
-                  >
-                    edit
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        handle_click(plan);
+                      }}
+                    >
+                      edit
+                    </button>
+
+                    <button onClick={() => handle_delete(plan)}>delete</button>
+                  </>
                 )}
               </div>
             );
@@ -77,6 +96,21 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
 
       {clicked && (
         <Edit_Activity on_close={handle_close} data={data} dates={dates} />
+      )}
+
+      {confirmDelete === "verify" && (
+        <div className="modal">
+          <h1>are you sure?</h1>
+          <button onClick={() => setConfirmDelete("confirmed")}>yes</button>
+          <button
+            onClick={() => {
+              setConfirmDelete("");
+              setToDelete("");
+            }}
+          >
+            no
+          </button>
+        </div>
       )}
     </>
   );

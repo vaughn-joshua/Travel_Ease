@@ -8,6 +8,8 @@ import { create_activity } from "./controller/create_activity.js";
 import { fetch_activities } from "./controller/fetch_activities.js";
 import { activity_edit } from "./controller/activity_edit.js";
 import { plan_edit } from "./controller/plan_edit.js";
+import { quick_join } from "./controller/quick_join.js";
+import { delete_activity } from "./controller/delete_activty.js";
 
 function travel_plan(req, res) {
   try {
@@ -67,4 +69,6 @@ export {
   previous_plans,
   public_plans,
   fetch_activities,
+  quick_join,
+  delete_activity,
 };

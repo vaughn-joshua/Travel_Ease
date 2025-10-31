@@ -4,17 +4,12 @@ import Upcoming_Plans from "../component/main_page/Upcoming_Plans.jsx";
 import Ongoing_Plans from "../component/main_page/Ongoing_Plans.jsx";
 import Previous_Plans from "../component/main_page/Previous_Plans.jsx";
 import Public_Plans from "../component/main_page/Public_Plans.jsx";
+import Quick_Join from "../component/main_page/Quick_Join";
+import Plan_Modal from "../component/main_page/Plan_Modal.jsx";
 
 function Main_Page() {
-  const [clicked, setClicked] = useState(false);
-
-  const handle_click = () => {
-    setClicked(true);
-  };
-
-  const handle_close = () => {
-    setClicked(false);
-  };
+  const [activeModal, setActiveModal] = useState("");
+  const [results, setResults] = useState([]);
 
   return (
     <>
@@ -23,7 +18,9 @@ function Main_Page() {
           <div className="ongoing_plans">
             <div className="ongoing_title">
               <h3>ongoing plan</h3>
-              <button onClick={handle_click}>create plan</button>
+              <button onClick={() => setActiveModal("create")}>
+                create plan
+              </button>
             </div>
             <Ongoing_Plans />
           </div>
@@ -35,7 +32,7 @@ function Main_Page() {
           <div className="public_plans">
             <div className="public_plan_title">
               <h3>Suggested Plans</h3>
-              <button>Quick Join</button>
+              <button onClick={() => setActiveModal("join")}>Quick Join</button>
             </div>
             <Public_Plans />
           </div>
@@ -45,7 +42,21 @@ function Main_Page() {
         </div>
       </div>
 
-      {clicked && <Create_Plan on_close={handle_close} />}
+      {activeModal === "join" && (
+        <Quick_Join
+          on_close={(result) => {
+            setActiveModal("quick");
+            if (result) {
+              console.log(result);
+              setResults(result);
+            }
+          }}
+        />
+      )}
+      {activeModal === "create" && (
+        <Create_Plan on_close={() => setActiveModal("")} />
+      )}
+      {activeModal === "quick" && <Plan_Modal results={results} />}
     </>
   );
 }

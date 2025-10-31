@@ -6,8 +6,6 @@ export async function fetch_plans() {
 
     const data = await result.json();
 
-    console.log(data);
-
     return data;
   } catch (e) {
     console.error({ e });

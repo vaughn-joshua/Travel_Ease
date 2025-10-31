@@ -32,6 +32,8 @@ import {
   previous_plans,
   create_activity,
   fetch_activities,
+  quick_join,
+  delete_activity,
 } from "../travel_plan/index.js";
 
 const router = Router();
@@ -53,5 +55,8 @@ router.get("/public_plans", public_plans);
 router.get("/specific_plans", specific_plans); //is this redudant?
 
 router.put("/join_plan", join_plan);
+router.post("/quick_join", quick_join);
+
+router.delete("/delete_activity/:id", delete_activity);
 
 export default router;
