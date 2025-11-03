@@ -21,8 +21,8 @@ function Upcoming_Plans() {
 
   return (
     <>
-      <h3>your on upcoming_plans</h3>
-      <div className="plans_container">
+      <h3 className="text-xl">your on upcoming_plans</h3>
+      <div className="plans_container flex flex-wrap gap-4 ">
         {!plans && <p>loading...</p>}
 
         {plans &&
@@ -30,7 +30,7 @@ function Upcoming_Plans() {
             return (
               <div
                 key={plan.travel_plan_id}
-                className="plans"
+                className="plans bg-white rounded drop-shadow min-w-sm "
                 onClick={() => handle_click(plan.travel_plan_id)}
               >
                 <h1>{plan.travel_plan_id}</h1>

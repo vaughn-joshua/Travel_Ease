@@ -30,7 +30,7 @@ function Ongoing_Plans() {
             return (
               <div
                 key={index}
-                className="plans"
+                className="plans bg-white rounded drop-shadow"
                 onClick={() => handle_click(plan.travel_plan_id)}
               >
                 <h1>{plan.name}</h1>

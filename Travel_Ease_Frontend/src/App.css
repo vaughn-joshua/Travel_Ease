@@ -90,11 +90,11 @@
   padding: 1em;
 }
 
-.plans_container {
+/* .plans_container {
   display: flex;
   flex-wrap: wrap;
   gap: 1em;
-}
+} */
 
 .public_plans_container {
   max-height: 40vh;

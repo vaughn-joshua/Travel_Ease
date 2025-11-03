@@ -12,7 +12,7 @@ function Main_Page() {
   const [results, setResults] = useState([]);
 
   return (
-    <>
+    <div className="bg-gray-100 w-screen h-screen">
       <div className="container">
         <div className="main_left_side">
           <div className="ongoing_plans">
@@ -24,7 +24,7 @@ function Main_Page() {
             </div>
             <Ongoing_Plans />
           </div>
-          <div className="upcoming_plans">
+          <div className="">
             <Upcoming_Plans />
           </div>
         </div>
@@ -57,7 +57,7 @@ function Main_Page() {
         <Create_Plan on_close={() => setActiveModal("")} />
       )}
       {activeModal === "quick" && <Plan_Modal results={results} />}
-    </>
+    </div>
   );
 }
 
