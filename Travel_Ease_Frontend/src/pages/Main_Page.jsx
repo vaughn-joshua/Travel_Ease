@@ -12,43 +12,61 @@ function Main_Page() {
   const [results, setResults] = useState([]);
 
   return (
-    <div className="bg-gray-100 w-screen h-screen">
-      <div className="container">
-        <div className="main_left_side">
-          <div className="ongoing_plans">
-            <div className="ongoing_title">
-              <h3>ongoing plan</h3>
-              <button onClick={() => setActiveModal("create")}>
-                create plan
+    <div className="bg-gray-50 w-full h-full p-6">
+      <div className="flex gap-6">
+        {/* LEFT SIDE */}
+        <div className="flex-3">
+          <div id="ongoing_plans">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-semibold text-gray-900">
+                Ongoing Plans
+              </h3>
+              <button
+                onClick={() => setActiveModal("create")}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                + Create Plan
               </button>
             </div>
             <Ongoing_Plans />
           </div>
-          <div className="">
+
+          <div className="mt-10">
             <Upcoming_Plans />
           </div>
         </div>
-        <div className="main_right_side">
-          <div className="public_plans">
-            <div className="public_plan_title">
-              <h3>Suggested Plans</h3>
-              <button onClick={() => setActiveModal("join")}>Quick Join</button>
+
+        {/* RIGHT SIDE */}
+        <div className="flex-1">
+          <div className="m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-semibold text-gray-900">
+                Suggested Plans
+              </h3>
+              <button
+                onClick={() => setActiveModal("join")}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                Quick Join
+              </button>
             </div>
             <Public_Plans />
           </div>
-          <div className="previous_plans">
+
+          <div className="mt-8">
             <Previous_Plans />
           </div>
         </div>
       </div>
-
       {activeModal === "join" && (
         <Quick_Join
           on_close={(result) => {
             setActiveModal("quick");
-            if (result) {
+            if (result.length > 0) {
               console.log(result);
               setResults(result);
+            } else {
+              setActiveModal("");
             }
           }}
         />

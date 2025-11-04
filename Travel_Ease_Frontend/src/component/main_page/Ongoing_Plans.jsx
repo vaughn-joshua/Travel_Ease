@@ -21,28 +21,25 @@ function Ongoing_Plans() {
   };
 
   return (
-    <>
-      <div className="plans_container">
-        {!plans && <p>loading...</p>}
+    <div className="space-y-3">
+      {!plans && <p className="text-gray-500 italic">Loading...</p>}
 
-        {plans &&
-          plans.map((plan, index) => {
-            return (
-              <div
-                key={index}
-                className="plans bg-white rounded drop-shadow"
-                onClick={() => handle_click(plan.travel_plan_id)}
-              >
-                <h1>{plan.name}</h1>
-                <p>{plan.description}</p>
-                <p>{plan.start_date}</p>
-                <p>{plan.end_date}</p>
-                <p>{plan.location}</p>
-              </div>
-            );
-          })}
-      </div>
-    </>
+      {plans &&
+        plans.map((plan) => (
+          <div
+            key={plan.travel_plan_id}
+            onClick={() => handle_click(plan.travel_plan_id)}
+            className="p-4 bg-white shadow-sm rounded-xl hover:shadow-md transition cursor-pointer"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">{plan.name}</h2>
+            <p className="text-gray-600 text-sm mt-1">{plan.description}</p>
+            <p className="text-sm text-gray-500 mt-2">
+              {plan.start_date} – {plan.end_date}
+            </p>
+            <p className="text-sm text-gray-500">{plan.location}</p>
+          </div>
+        ))}
+    </div>
   );
 }
 

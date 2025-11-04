@@ -20,29 +20,39 @@ function Public_Plans() {
     navigate(`/planner/join/${key}`);
   };
 
-  return (
-    <>
-      <div className="public_plans_container">
-        {!plans && <p>loading...</p>}
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }
 
-        {plans &&
-          plans.map((plan, index) => {
-            return (
-              <div
-                key={index}
-                className="public_plans"
-                onClick={() => handle_click(plan.travel_plan_id)}
-              >
-                <h3>{plan.name}</h3>
-                <p>{plan.max_slots}</p>
-                <p>{plan.start_date}</p>
-                <p>{plan.end_date}</p>
-                <p>{plan.location}</p>
-              </div>
-            );
-          })}
-      </div>
-    </>
+  return (
+    <div className="h-[50vh] overflow-y-auto space-y-3">
+      {!plans && <p className="text-gray-500 italic">Loading...</p>}
+
+      {plans &&
+        plans.map((plan) => (
+          <div
+            key={plan.travel_plan_id}
+            onClick={() => handle_click(plan.travel_plan_id)}
+            className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition cursor-pointer"
+          >
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {plan.name}
+              </h2>
+              <p className="text-sm text-gray-500">Slots: {plan.max_slots}</p>
+            </div>
+            <p className="text-sm text-gray-500">
+              {formatDate(plan.start_date)} – {formatDate(plan.end_date)}
+            </p>
+            <p className="text-gray-600 mt-1">{plan.location}</p>
+          </div>
+        ))}
+    </div>
   );
 }
 

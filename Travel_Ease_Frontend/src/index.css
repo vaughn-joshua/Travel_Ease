@@ -68,3 +68,25 @@ button:focus-visible {
 } */
 
 @import "tailwindcss";
+
+/* Hide scrollbar but allow scrolling */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+
+
+/* Keeps scrollbar but removes up/down arrow buttons
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
+}
+
+Optional: style scrollbar track & thumb
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d0d0d0; /* Tailwind gray-400 
+  border-radius: 9999px;
+} */
