@@ -4,6 +4,9 @@ function Route_Form({ onRouteSubmit }) {
   const [startLocation, setStartLocation] = useState("");
   const [endLocation, setEndLocation] = useState("");
 
+  const [startSuggestions, setStartSuggestions] = useState([]);
+  const [endSuggestions, setEndSuggestions] = useState([]);
+
   const fetchCoords = async (address) => {
     const response = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
@@ -33,6 +36,48 @@ function Route_Form({ onRouteSubmit }) {
       alert("Could not find coordinates for one or both locations.");
     }
   };
+  const handleStartChange = async (e) => {
+    const value = e.target.value;
+    setStartLocation(value);
+    if (value.length < 3) {
+      setStartSuggestions([]);
+      return;
+    }
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+      const data = await response.json();
+      setStartSuggestions(data);
+    } catch (error) {
+      console.error("Error fetching start suggestions:", error);
+    }
+  };
+
+  const handleEndChange = async (e) => {
+    const value = e.target.value;
+    setEndLocation(value);
+    if (value.length < 3) {
+      setEndSuggestions([]);
+      return;
+    }
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+      const data = await response.json();
+      setEndSuggestions(data);
+    } catch (error) {
+      console.error("Error fetching end suggestions:", error);
+    }
+  };
+
+  // --- 3. ADDED SELECT HANDLERS ---
+  const handleStartSelect = (place) => {
+    setStartLocation(place.display_name);
+    setStartSuggestions([]);
+  };
+
+  const handleEndSelect = (place) => {
+    setEndLocation(place.display_name);
+    setEndSuggestions([]);
+  };
 
   return (
     <form
@@ -40,23 +85,51 @@ function Route_Form({ onRouteSubmit }) {
       className="bg-white p-3 rounded-md shadow-md mt-3 w-80"
     >
       <h2 className="font-semibold mb-2 text-gray-700">Find Route</h2>
-
+<div className = "relative"> 
       <input
         type="text"
         placeholder="Start location"
         value={startLocation}
-        onChange={(e) => setStartLocation(e.target.value)}
+        onChange={handleStartChange}
         className="border w-full px-2 py-1 rounded mb-2"
+        autoComplete="off"
       />
-
+      {startSuggestions.length > 0 && (
+          <ul className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md max-h-60 overflow-y-auto shadow-md z-[100000]">
+            {startSuggestions.map((place, index) => (
+              <li
+                key={index}
+                onClick={() => handleStartSelect(place)} // <-- Use new handler
+                className="p-2 cursor-pointer hover:bg-gray-100 border-b"
+              >
+                {place.display_name}
+              </li>
+            ))}
+          </ul>
+        )}
+</div>
+<div className = "relative">
       <input
         type="text"
         placeholder="End location"
         value={endLocation}
-        onChange={(e) => setEndLocation(e.target.value)}
+        onChange={handleEndChange}
         className="border w-full px-2 py-1 rounded mb-2"
       />
-
+      {endSuggestions.length > 0 && (
+          <ul className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md max-h-60 overflow-y-auto shadow-md z-[100000]">
+            {endSuggestions.map((place, index) => (
+              <li
+                key={index}
+                onClick={() => handleEndSelect(place)} // <-- Use new handler
+                className="p-2 cursor-pointer hover:bg-gray-100 border-b"
+              >
+                {place.display_name}
+              </li>
+            ))}
+          </ul>
+        )}
+</div>
       <button
         type="submit"
         className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded w-full"

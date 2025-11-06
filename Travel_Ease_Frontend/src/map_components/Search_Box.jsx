@@ -4,6 +4,7 @@ function Search_Box({ onSearch }){
 const [query, set_query] = useState("");
 const [suggestions, set_suggestions] = useState([]);
 
+
 const handleInputChange = async (e)=> {
     const value = e.target.value;
     set_query(value);
@@ -13,7 +14,7 @@ const handleInputChange = async (e)=> {
         return;
     }
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${value},Tagaytay%20City&countrycodes=ph&limit=5`);
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
         const data = await response.json();
         set_suggestions(data);
     } catch (error) {
@@ -32,7 +33,7 @@ const handleSelect = (place)=>{
 const  Handle_Search = async (e)=>{
     e.preventDefault();
 
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=120.92,14.15,120.97,14.07`);
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=120.92,14.15,120.97,14.07`);
     const data = await response.json();
     if (data[0]){
         const lat = parseFloat(data[0].lat);
@@ -44,8 +45,8 @@ const  Handle_Search = async (e)=>{
     };
 
     return(
-    <div style={{ width: "300px" }}>
-      <form onSubmit={Handle_Search} className = "flex bg-white rounded-md shadow-md relative z-[9999]">
+    <div className="relative w-[300px] z-[99999]" >
+      <form onSubmit={Handle_Search}  className="flex bg-white rounded-md shadow-md z-[9999] relative">
         <input
           type="text"
           placeholder="Search for a place..."
@@ -67,23 +68,24 @@ const  Handle_Search = async (e)=>{
       {/* Suggestion dropdown */}
       {suggestions.length > 0 && (
         <ul
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            background: "#fff",
-            border: "1px solid #ccc",
-            borderTop: "none",
-            borderRadius: "0 0 8px 8px",
-            maxHeight: "200px",
-            overflowY: "auto",
-            zIndex: 1000,
-            listStyle: "none",
-            margin: 0,
-            padding: 0,
+          // style={{
+          //   position: "absolute",
+          //   top: "100%",
+          //   left: 0,
+          //   right: 0,
+          //   background: "#fff",
+          //   border: "1px solid #ccc",
+          //   borderTop: "none",
+          //   borderRadius: "0 0 8px 8px",
+          //   maxHeight: "200px",
+          //   overflowY: "auto",
+          //   zIndex: 1000,
+          //   listStyle: "none",
+          //   margin: 0,
+          //   padding: 0,
       
-          }}
+          // }}
+           className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md max-h-60 overflow-y-auto shadow-md z-[100000]"
         >
           {suggestions.map((place, index) => (
             <li

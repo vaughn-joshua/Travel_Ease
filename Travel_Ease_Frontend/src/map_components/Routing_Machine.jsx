@@ -31,7 +31,7 @@ const Routing_Machine = ({ start, end }) => {
         routeWhileDragging: false,
         addWaypoints: false,
         draggableWaypoints: false,
-        show: false, // Hides the turn-by-turn instructions panel
+        show: true, // Hides the turn-by-turn instructions panel
         lineOptions: {
           styles: [{ color: "blue", weight: 5, opacity: 0.7 }],
         },
