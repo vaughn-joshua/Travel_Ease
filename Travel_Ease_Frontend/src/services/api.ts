@@ -29,6 +29,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     console.log(`Response received: ${response.status} ${response.config.url}`);
+    // Handle 204 No Content responses (empty body)
+    if (response.status === 204) {
+      return { ...response, data: null };
+    }
     return response;
   },
   (error) => {
@@ -88,7 +92,17 @@ export const blogApi = {
 
   // Delete blog
   deleteBlog: async (id: string): Promise<void> => {
-    await api.delete(`/blogs/${id}`);
+    try {
+      const response = await api.delete(`/blogs/${id}`);
+      // 204 No Content is a successful response with no body
+      return;
+    } catch (error: any) {
+      // If it's a 204, it's actually successful
+      if (error.response?.status === 204) {
+        return;
+      }
+      throw error;
+    }
   },
 };
 

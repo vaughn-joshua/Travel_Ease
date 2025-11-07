@@ -237,14 +237,19 @@ class DatabaseClient {
       // Build SET clause
       Object.keys(data).forEach((key) => {
         if (key !== 'id') {
-          const dbKey = key === 'publishedAt' ? '"publishedAt"' : 
-                       key === 'coverImageUrl' ? '"coverImageUrl"' :
-                       key === 'isFeatured' ? '"isFeatured"' :
-                       key === 'readingMinutes' ? '"readingMinutes"' :
-                       key === 'createdAt' ? '"createdAt"' :
-                       key === 'updatedAt' ? '"updatedAt"' :
+          const dbKey = key === 'publishedAt' ? 'publishedAt' : 
+                       key === 'coverImageUrl' ? 'coverImageUrl' :
+                       key === 'isFeatured' ? 'isFeatured' :
+                       key === 'readingMinutes' ? 'readingMinutes' :
+                       key === 'createdAt' ? 'createdAt' :
+                       key === 'updatedAt' ? 'updatedAt' :
                        key;
-          updates.push(`"${dbKey}" = $${paramIndex}`);
+          // Quote column names that need it (camelCase columns)
+          const quotedKey = dbKey === 'publishedAt' || dbKey === 'coverImageUrl' || 
+                           dbKey === 'isFeatured' || dbKey === 'readingMinutes' ||
+                           dbKey === 'createdAt' || dbKey === 'updatedAt' 
+                           ? `"${dbKey}"` : dbKey;
+          updates.push(`${quotedKey} = $${paramIndex}`);
           setParams.push(data[key]);
           paramIndex++;
         }
