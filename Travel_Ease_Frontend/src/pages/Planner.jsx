@@ -63,23 +63,33 @@ function Planner() {
   }
 
   return (
-    <>
-      <div className="planner_top">
-        <div className="map_containers"></div>
-        <div className="activities">
-          <div className="travel_plan_days">
-            {Array.from({ length: days }, (_, i) => (
-              <h4 key={i} onClick={() => click_day(i + 1)}>
-                Day {i + 1}
-              </h4>
-            ))}
+    <div className="p-5 ">
+      <div className="flex gap-6">
+        <div id="map-container" className="card w-9/12 h-[60vh]"></div>
+        <div className="activities w-3/12">
+          <div className="flex justify-between">
+            <div className="flex gap-5">
+              {Array.from({ length: days }, (_, i) => (
+                <h3
+                  className="font-bold"
+                  key={i}
+                  onClick={() => click_day(i + 1)}
+                >
+                  Day {i + 1}
+                </h3>
+              ))}
+            </div>
+            <div>
+              {status !== "join" && (
+                <button
+                  onClick={() => setActiveModal("activity")}
+                  className="hard_btn"
+                >
+                  Add Activity
+                </button>
+              )}
+            </div>
           </div>
-
-          {status !== "join" && (
-            <button onClick={() => setActiveModal("activity")}>
-              Add Activity
-            </button>
-          )}
 
           <div className="activities">
             {dates.start && (
@@ -94,6 +104,7 @@ function Planner() {
           </div>
         </div>
       </div>
+
       <div className="plan_detail_container">
         <h1>{plan[0].name}</h1>
 
@@ -128,7 +139,7 @@ function Planner() {
           on_close={() => setActiveModal("")}
         />
       )}
-    </>
+    </div>
   );
 }
 

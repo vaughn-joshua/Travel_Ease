@@ -26,10 +26,6 @@ function Create_Plan({ on_close }) {
   };
 
   useEffect(() => {
-    console.log(counter);
-  }, [counter]);
-
-  useEffect(() => {
     const formatDate = (index) =>
       dateRange[index]?.toLocaleDateString("en-US", {
         month: "long",
@@ -37,22 +33,21 @@ function Create_Plan({ on_close }) {
         year: "numeric",
       });
 
-    reset({
-      start_date: formatDate(0),
-      end_date: formatDate(1),
-    });
+    if (counter == 1) {
+      reset({
+        start_date: formatDate(0),
+        end_date: formatDate(1),
+      });
+    }
   }, [dateRange, reset]);
 
   const handle_back = () => {
-    console.log("subtracting count");
     setCounter((prev) => prev - 1);
   };
 
   const on_submit = async (d) => {
-    console.log("triggered");
     console.log(d);
-    if (counter < 3) {
-      console.log("adding count");
+    if (counter < 2) {
       setCounter((prev) => prev + 1);
       return;
     } else {
@@ -70,15 +65,15 @@ function Create_Plan({ on_close }) {
     <div className="modal">
       <div className="modal_body">
         <div className="text-center mb-4 text-sm text-gray-500">
-          {[1, 2, 3].map((step) => (
+          {[0, 1, 2].map((step) => (
             <span
               key={step}
               className={`${
                 step === counter ? "text-red-600 font-semibold" : ""
               }`}
             >
-              {step}
-              {step < 3 && <span className="mx-1">•</span>}
+              {step + 1}
+              {step < 2 && <span className="mx-1">•</span>}
             </span>
           ))}
         </div>

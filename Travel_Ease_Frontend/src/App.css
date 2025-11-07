@@ -94,12 +94,12 @@
   gap: 1em;
 }
 
-.map_containers {
+/* .map_containers {
   background-color: rgb(206, 206, 206);
   width: 70vw;
   height: 60vh;
   border-radius: 20px;
-}
+} */
 
 .activity_container {
   display: flex;

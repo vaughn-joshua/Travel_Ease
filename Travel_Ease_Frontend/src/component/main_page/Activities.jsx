@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
 import Edit_Activity from "./Edit_Activity";
 import { delete_activity } from "../../utils/travel_plan/delete_activity";
@@ -62,13 +61,13 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
 
   return (
     <>
-      <div className="activity_container">
+      <div className="mt-3">
         {!plans && <p>loading...</p>}
 
         {plans &&
           plans.map((plan, index) => {
             return (
-              <div key={index} className="activity">
+              <div key={index} className="card mb-3">
                 <h1>{plan.name}</h1>
                 <p>{plan.address}</p>
                 {/* <p>{plan.category}</p> */}
@@ -82,11 +81,17 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
                       onClick={() => {
                         handle_click(plan);
                       }}
+                      className="soft_btn"
                     >
                       edit
                     </button>
 
-                    <button onClick={() => handle_delete(plan)}>delete</button>
+                    <button
+                      onClick={() => handle_delete(plan)}
+                      className="soft_btn"
+                    >
+                      delete
+                    </button>
                   </>
                 )}
               </div>
