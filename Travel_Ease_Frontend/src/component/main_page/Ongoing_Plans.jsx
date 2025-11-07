@@ -21,7 +21,7 @@ function Ongoing_Plans() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 ">
       {!plans && <p className="text-gray-500 italic">Loading...</p>}
 
       {plans &&
@@ -29,7 +29,7 @@ function Ongoing_Plans() {
           <div
             key={plan.travel_plan_id}
             onClick={() => handle_click(plan.travel_plan_id)}
-            className="p-4 bg-white shadow-sm rounded-xl hover:shadow-md transition cursor-pointer"
+            className="p-4 bg-white shadow-sm rounded-xl hover:shadow-md transition cursor-pointer h-[40vh]"
           >
             <h2 className="text-lg font-semibold text-gray-900">{plan.name}</h2>
             <p className="text-gray-600 text-sm mt-1">{plan.description}</p>

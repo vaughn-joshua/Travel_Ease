@@ -4,6 +4,30 @@
   @apply bg-white rounded drop-shadow p-4;
 }
 
+.text_box {
+  @apply w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none;
+}
+
+.modal {
+  @apply fixed inset-0 flex items-center justify-center bg-black/40;
+}
+
+.modal_body {
+  @apply bg-white rounded-lg shadow-md w-full max-w-md p-6;
+}
+
+.label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.soft_btn {
+  @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition;
+}
+
+.hard_btn {
+  @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition;
+}
+
 /* #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -47,7 +71,7 @@
   color: #888;
 } */
 
-.modal {
+.modala {
   position: fixed;
   top: 20%;
   right: 25%;

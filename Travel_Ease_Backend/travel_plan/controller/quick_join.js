@@ -2,10 +2,8 @@ import { con } from "../../config/travelease_db.js";
 
 export async function quick_join(req, res) {
   try {
-    const { date, location } = req.body;
-    console.log(req.body);
-    console.log(date[0]);
-    console.log(date[1]);
+    console.log("quick join, finding matching plan");
+    const { start_date, end_date, location } = req.body;
 
     const query = {
       name: "quick_join",
@@ -13,10 +11,12 @@ export async function quick_join(req, res) {
         SELECT * FROM public.travel_plan
         WHERE start_date <= $2::date AND end_date >= $1::date AND location = $3
         `,
-      values: [date[0], date[1], location],
+      values: [start_date, end_date, location],
     };
 
     const result = await con.query(query);
+
+    console.log(result.rows);
 
     res.send(result.rows);
   } catch (e) {

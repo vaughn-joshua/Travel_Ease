@@ -12,7 +12,7 @@ function Main_Page() {
   const [results, setResults] = useState([]);
 
   return (
-    <div className="bg-gray-50 w-full h-full p-6">
+    <div className="bg-gray-50 w-full h-full p-5">
       <div className="flex gap-6">
         {/* LEFT SIDE */}
         <div className="flex-3">
@@ -23,7 +23,7 @@ function Main_Page() {
               </h3>
               <button
                 onClick={() => setActiveModal("create")}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                className="hard_btn"
               >
                 + Create Plan
               </button>
@@ -31,21 +31,21 @@ function Main_Page() {
             <Ongoing_Plans />
           </div>
 
-          <div className="mt-10">
+          <div className="mt-6">
             <Upcoming_Plans />
           </div>
         </div>
 
         {/* RIGHT SIDE */}
         <div className="flex-1">
-          <div className="m-4">
+          <div className="">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-semibold text-gray-900">
                 Suggested Plans
               </h3>
               <button
                 onClick={() => setActiveModal("join")}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                className="hard_btn"
               >
                 Quick Join
               </button>
@@ -53,17 +53,17 @@ function Main_Page() {
             <Public_Plans />
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6">
             <Previous_Plans />
           </div>
         </div>
       </div>
+
       {activeModal === "join" && (
         <Quick_Join
           on_close={(result) => {
             setActiveModal("quick");
             if (result.length > 0) {
-              console.log(result);
               setResults(result);
             } else {
               setActiveModal("");
@@ -74,7 +74,9 @@ function Main_Page() {
       {activeModal === "create" && (
         <Create_Plan on_close={() => setActiveModal("")} />
       )}
-      {activeModal === "quick" && <Plan_Modal results={results} />}
+      {activeModal === "quick" && (
+        <Plan_Modal results={results} on_close={() => setActiveModal("")} />
+      )}
     </div>
   );
 }

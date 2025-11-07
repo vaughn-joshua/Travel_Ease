@@ -31,10 +31,10 @@ function Previous_Plans() {
 
   return (
     <>
-      <h3 className="text-2xl font-semibold text-gray-900 mb-4">
+      <h3 className="text-2xl font-semibold text-gray-900 mb-3">
         Your Previous Plans
       </h3>
-      <div className="h-[50vh] overflow-y-auto space-y-3 m-4">
+      <div className="h-[40vh] overflow-y-auto space-y-3 m-1">
         {!plans && <p className="text-gray-500 italic">Loading...</p>}
 
         {plans &&

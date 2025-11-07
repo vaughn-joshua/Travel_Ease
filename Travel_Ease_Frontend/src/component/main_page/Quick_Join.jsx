@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { join_plan } from "../../utils/travel_plan/join_plan";
@@ -12,74 +12,115 @@ function Quick_Join({ on_close }) {
     formState: { errors },
   } = useForm();
 
-  const [value, setValue] = useState(Date);
+  const [value, setValue] = useState([]);
   const [option, setOption] = useState("");
   const [enabled, setEnabled] = useState(false);
 
-  const on_change = (selectedDates, dateStr, instance) => {
-    const formatted =
-      instance.config.mode === "multiple" ? dateStr.split(", ") : [dateStr];
+  const [dateRange, setDateRange] = useState([]);
 
-    setValue(formatted);
-    reset({ date: formatted });
+  const handle_change = (selectedDates, dateStr, instance) => {
+    if (selectedDates.length > 2) {
+      alert("You can only select up to 2 dates (start and end).");
+      const trimmed = selectedDates.slice(0, 2);
+      instance.setDate(trimmed, true);
+      setDateRange(trimmed);
+      return;
+    }
+    setDateRange(selectedDates);
   };
 
-  const handle_change = (value) => {
-    setOption(value);
-    setEnabled((prev) => !prev);
-  };
+  useEffect(() => {
+    const formatDate = (index) =>
+      dateRange[index]?.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+
+    reset({
+      start_date: formatDate(0),
+      end_date: formatDate(1),
+    });
+  }, [dateRange, reset]);
 
   const on_submit = async (data) => {
+    const short_date = (dateString) => {
+      if (!dateString) return "";
+      const date = new Date(dateString); // convert string to Date object
+      return date.toISOString().split("T")[0]; // "YYYY-MM-DD"
+    };
+
+    data.start_date = short_date(data.start_date);
+    data.end_date = short_date(data.end_date);
+
     const result = await join_plan(data);
     on_close(result);
   };
 
   return (
     <div className="modal">
-      <h1>join</h1>
-      <form onSubmit={handleSubmit(on_submit)}>
-        <label>
-          Location:
-          <input
-            {...register("location", {
-              required: "Location is required",
-            })}
-          />
-        </label>
-        {errors.location && <p>{errors.location.message}</p>}
-        <br />
-        <label>
-          Choose
-          <select
-            {...register("option")}
-            onChange={(e) => handle_change(e.target.value)}
-          >
-            <option>--select--</option>
-            <option value="specific">specifc</option>
-            <option value="range">range</option>
-          </select>
-        </label>{" "}
-        <br />
-        <label>
-          Date:
-          <input {...register("date")} placeholder="choose first" readOnly />
-        </label>
-        {enabled && (
-          <>
-            <Flatpickr
-              options={{
-                dateFormat: "Y-m-d",
-                mode: option === "range" ? "multiple" : "single",
-              }}
-              value={value}
-              onChange={on_change}
+      <div className="modal_body">
+        <h1 className="text-xl font-semibold text-red-600 text-center mb-4">
+          Quick Join
+        </h1>
+
+        <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
+          <div>
+            <label className="label">Location</label>
+            <input
+              {...register("location", {
+                required: "Location is required",
+              })}
+              className="text_box"
             />
-          </>
-        )}
-        <br />
-        <button>submit</button>
-      </form>
-      <button onClick={on_close}>exit</button>
+            {errors.location && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.location.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="label">Dates</label>
+            <div className="flex gap-2">
+              <input
+                {...register("start_date")}
+                readOnly
+                className="text_box w-1/2 bg-gray-100"
+                placeholder="Start date"
+              />
+              <input
+                {...register("end_date")}
+                disabled
+                className="text_box w-1/2 bg-gray-100"
+                placeholder="End date"
+              />
+            </div>
+
+            <div>
+              <Flatpickr
+                options={{
+                  dateFormat: "Y-m-d",
+                  mode: "multiple",
+                }}
+                value={dateRange}
+                onChange={handle_change}
+                className="text_box mt-2"
+              />
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2 pt-4">
+            <button type="button" onClick={on_close} className="soft_btn">
+              Exit
+            </button>
+            <button type="submit" className="hard_btn">
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

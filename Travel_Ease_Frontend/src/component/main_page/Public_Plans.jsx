@@ -30,7 +30,7 @@ function Public_Plans() {
   }
 
   return (
-    <div className="h-[50vh] overflow-y-auto space-y-3">
+    <div className="h-[40vh] overflow-y-auto space-y-2">
       {!plans && <p className="text-gray-500 italic">Loading...</p>}
 
       {plans &&

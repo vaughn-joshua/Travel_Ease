@@ -30,7 +30,7 @@ function Upcoming_Plans() {
 
   return (
     <>
-      <h3 className="text-2xl font-semibold text-gray-900 mb-4">
+      <h3 className="text-2xl font-semibold text-gray-900 mb-2">
         Your Upcoming Plans
       </h3>
       <div className="flex flex-wrap gap-4">
@@ -41,7 +41,7 @@ function Upcoming_Plans() {
             <div
               key={plan.travel_plan_id}
               onClick={() => handle_click(plan.travel_plan_id)}
-              className="min-w-[250px] p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition cursor-pointer"
+              className="min-w-sm min-h-40 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition cursor-pointer"
             >
               <div className="flex justify-between items-center mb-1">
                 <h2 className="font-semibold text-gray-900">{plan.name}</h2>
