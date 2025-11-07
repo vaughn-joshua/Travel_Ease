@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import Carousel from "../components/Carousel";
 import Section from "../components/Section";
 import { blogApi } from "../services/api";
@@ -202,12 +203,12 @@ export default function Blogs() {
               >
                 Start Exploring Blogs
               </a>
-              <a
-                href="/contact"
+              <Link
+                to="/blogs/new"
                 className="w-full max-w-xs rounded-full border border-white/60 px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:border-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-red sm:w-auto"
               >
                 Share Your Story
-              </a>
+              </Link>
             </div>
           </div>
 

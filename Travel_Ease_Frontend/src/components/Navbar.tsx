@@ -12,6 +12,10 @@ const navItems: NavItem[] = [
   { label: "Blogs", path: "/blogs" },
 ];
 
+const isEditorEnabled = () => {
+  return import.meta.env.VITE_ENABLE_EDITOR === "true";
+};
+
 const Navbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -64,6 +68,11 @@ const Navbar: React.FC = () => {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
+          {isEditorEnabled() && (
+            <Link to="/blogs/new" className="btn-secondary text-sm">
+              Publish
+            </Link>
+          )}
           <Link to="/contact" className="btn-secondary">
             Plan With Us
           </Link>
@@ -146,6 +155,11 @@ const Navbar: React.FC = () => {
           ))}
 
           <div className="flex flex-col gap-2 pt-2">
+            {isEditorEnabled() && (
+              <Link to="/blogs/new" className="btn-secondary text-center">
+                Publish
+              </Link>
+            )}
             <Link to="/contact" className="btn-secondary text-center">
               Plan With Us
             </Link>

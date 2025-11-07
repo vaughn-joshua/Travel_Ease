@@ -71,34 +71,24 @@ export const blogApi = {
     return response.data;
   },
 
-  // Create new blog (protected)
-  createBlog: async (
-    blogData: Partial<Blog>,
-    apiKey: string
-  ): Promise<Blog> => {
-    const response = await api.post("/blogs", blogData, {
-      headers: { "x-api-key": apiKey },
-    });
+  // Create new blog
+  createBlog: async (blogData: Partial<Blog>): Promise<Blog> => {
+    const response = await api.post("/blogs", blogData);
     return response.data;
   },
 
-  // Update blog (protected)
+  // Update blog
   updateBlog: async (
     id: string,
-    blogData: Partial<Blog>,
-    apiKey: string
+    blogData: Partial<Blog>
   ): Promise<Blog> => {
-    const response = await api.put(`/blogs/${id}`, blogData, {
-      headers: { "x-api-key": apiKey },
-    });
+    const response = await api.put(`/blogs/${id}`, blogData);
     return response.data;
   },
 
-  // Delete blog (protected)
-  deleteBlog: async (id: string, apiKey: string): Promise<void> => {
-    await api.delete(`/blogs/${id}`, {
-      headers: { "x-api-key": apiKey },
-    });
+  // Delete blog
+  deleteBlog: async (id: string): Promise<void> => {
+    await api.delete(`/blogs/${id}`);
   },
 };
 

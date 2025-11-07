@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { authenticateApiKey } from "../middleware/auth.js";
 import { createBlogSchema, updateBlogSchema, blogQuerySchema } from "../schemas/blogSchemas.js";
 export const blogRoutes = Router();
 
@@ -94,8 +93,8 @@ blogRoutes.get("/:slug", async (req, res, next) => {
   }
 });
 
-// POST /api/blogs - Create new blog (protected)
-blogRoutes.post("/", authenticateApiKey, async (req, res, next) => {
+// POST /api/blogs - Create new blog
+blogRoutes.post("/", async (req, res, next) => {
   try {
     const data = createBlogSchema.parse(req.body);
     const publishedAt = data.publishedAt ? new Date(data.publishedAt) : new Date();
@@ -117,8 +116,8 @@ blogRoutes.post("/", authenticateApiKey, async (req, res, next) => {
   }
 });
 
-// PUT /api/blogs/:id - Update blog (protected)
-blogRoutes.put("/:id", authenticateApiKey, async (req, res, next) => {
+// PUT /api/blogs/:id - Update blog
+blogRoutes.put("/:id", async (req, res, next) => {
   try {
     const {
       id
@@ -148,8 +147,8 @@ blogRoutes.put("/:id", authenticateApiKey, async (req, res, next) => {
   }
 });
 
-// DELETE /api/blogs/:id - Delete blog (protected)
-blogRoutes.delete("/:id", authenticateApiKey, async (req, res, next) => {
+// DELETE /api/blogs/:id - Delete blog
+blogRoutes.delete("/:id", async (req, res, next) => {
   try {
     const {
       id

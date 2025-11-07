@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
+import NewBlog from "./pages/NewBlog";
 import "./App.css";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Blogs />} />
           <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/new" element={<NewBlog />} />
           <Route path="/blogs/:slug" element={<BlogDetail />} />
         </Routes>
       </main>
