@@ -1,5 +1,8 @@
 export async function create_plan(input) {
   try {
+    console.log("you are at create activity frontend")
+    console.log(input);
+
     const result = await fetch(
       "http://localhost:3000/api/travel_plan/create_plan",
       {

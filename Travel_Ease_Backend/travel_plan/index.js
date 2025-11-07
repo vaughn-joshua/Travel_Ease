@@ -10,6 +10,7 @@ import { activity_edit } from "./controller/activity_edit.js";
 import { plan_edit } from "./controller/plan_edit.js";
 import { quick_join } from "./controller/quick_join.js";
 import { delete_activity } from "./controller/delete_activty.js";
+import { update_activity } from "./controller/update_activity.js";
 
 function travel_plan(req, res) {
   try {
@@ -71,4 +72,5 @@ export {
   fetch_activities,
   quick_join,
   delete_activity,
+  update_activity,
 };

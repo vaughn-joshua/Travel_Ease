@@ -11,6 +11,12 @@ function Main_Page() {
   const [activeModal, setActiveModal] = useState("");
   const [results, setResults] = useState([]);
 
+  const handle_close = () => {
+    window.location.reload();
+    console.log("closing na");
+    setActiveModal("");
+  };
+
   return (
     <div className="bg-gray-50 w-full h-full p-5">
       <div className="flex gap-6">
@@ -71,9 +77,7 @@ function Main_Page() {
           }}
         />
       )}
-      {activeModal === "create" && (
-        <Create_Plan on_close={() => setActiveModal("")} />
-      )}
+      {activeModal === "create" && <Create_Plan on_close={handle_close} />}
       {activeModal === "quick" && (
         <Plan_Modal results={results} on_close={() => setActiveModal("")} />
       )}

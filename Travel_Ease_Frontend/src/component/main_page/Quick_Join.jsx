@@ -85,7 +85,7 @@ function Quick_Join({ on_close }) {
             <div className="flex gap-2">
               <input
                 {...register("start_date")}
-                readOnly
+                disabled
                 className="text_box w-1/2 bg-gray-100"
                 placeholder="Start date"
               />

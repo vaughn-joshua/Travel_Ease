@@ -7,12 +7,14 @@ import { create_plan } from "../../utils/travel_plan/create_plan";
 function Create_Plan({ on_close }) {
   const {
     register,
-    handleSubmit,
+    handleSubmit,   
     reset,
+    setValue,
     formState: { errors },
   } = useForm();
   const [counter, setCounter] = useState(0);
   const [dateRange, setDateRange] = useState([]);
+  const [submitted, setSubmitted] = useState({});
 
   const handle_change = (selectedDates, dateStr, instance) => {
     if (selectedDates.length > 2) {
@@ -34,10 +36,8 @@ function Create_Plan({ on_close }) {
       });
 
     if (counter == 1) {
-      reset({
-        start_date: formatDate(0),
-        end_date: formatDate(1),
-      });
+      setValue("start_date", formatDate(0));
+      setValue("end_date", formatDate(1));
     }
   }, [dateRange, reset]);
 
@@ -46,14 +46,15 @@ function Create_Plan({ on_close }) {
   };
 
   const on_submit = async (d) => {
-    console.log(d);
+    setSubmitted(d);
     if (counter < 2) {
       setCounter((prev) => prev + 1);
       return;
     } else {
       try {
+        console.log(d);
         await create_plan(d);
-        setCounter(1);
+        setCounter(0);
         on_close();
       } catch (e) {
         console.error({ e });

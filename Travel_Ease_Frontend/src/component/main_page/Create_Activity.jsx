@@ -57,96 +57,101 @@ function Create_Activity({ on_close, business, dates, id }) {
 
   return (
     <div className="modal">
-      <h1>Create Activity</h1>
+      <div className="modal_body">
+        <h1>Create Activity</h1>
 
-      <form onSubmit={handleSubmit(on_submit)}>
-        <label>
-          Notes:
-          <input
-            {...register("notes", {
-              required: "Please enter some notes or description",
-            })}
+        <form onSubmit={handleSubmit(on_submit)}>
+          <label className="label">
+            Notes:
+            <input
+              {...register("notes", {
+                required: "Please enter some notes or description",
+              })}
+              className="text_box"
+            />
+          </label>
+          {errors.notes && <p>{errors.notes.message}</p>}
+
+          <label className="label">
+            Business:
+            <select
+              {...register("business_id", {
+                required: "Please select a business",
+              })}
+              className="text_box"
+            >
+              <option value="">--Select a business--</option>
+              {business.map((b) => (
+                <option key={b.business_id} value={b.business_id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {errors.business_id && <p>{errors.business_id.message}</p>}
+
+          <label className="label">
+            Target Date:
+            <input
+              {...register("target_date", {
+                validate: (value) => {
+                  const range = `${formatDate(dates.start)} - ${formatDate(
+                    dates.end
+                  )}`;
+                  return (
+                    value !== range || "Please choose a date within the range"
+                  );
+                },
+              })}
+              className="text_box"
+              disabled
+            />
+          </label>
+
+          <Flatpickr
+            options={{
+              dateFormat: "Y-m-d",
+              enable: [
+                {
+                  from: new Date(dates.start).toLocaleDateString("en-CA"), // "YYYY-MM-DD"
+                  to: new Date(dates.end).toLocaleDateString("en-CA"),
+                },
+              ],
+            }}
+            value={value}
+            onChange={handle_change}
+            className="text_box"
           />
-        </label>
-        {errors.notes && <p>{errors.notes.message}</p>}
-        <br />
+          {errors.target_date && <p>{errors.target_date.message}</p>}
 
-        <label>
-          Business:
-          <select
-            {...register("business_id", {
-              required: "Please select a business",
-            })}
-          >
-            <option value="">--Select a business--</option>
-            {business.map((b) => (
-              <option key={b.business_id} value={b.business_id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {errors.business_id && <p>{errors.business_id.message}</p>}
-        <br />
+          <label className="label">
+            Budget Range:
+            <select
+              {...register("budget_range", {
+                required: "Please select a budget range",
+              })}
+              className="text_box"
+            >
+              <option value="">--Select--</option>
+              {budget_range.map((range) => (
+                <option key={range} value={range}>
+                  {range.includes("+")
+                    ? `₱${range.replace("+", "+")}`
+                    : `₱${range.split("-")[0]} - ₱${range.split("-")[1]}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          {errors.budget_range && <p>{errors.budget_range.message}</p>}
+          <br />
 
-        <label>
-          Target Date:
-          <input
-            {...register("target_date", {
-              validate: (value) => {
-                const range = `${formatDate(dates.start)} - ${formatDate(
-                  dates.end
-                )}`;
-                return (
-                  value !== range || "Please choose a date within the range"
-                );
-              },
-            })}
-            readOnly
-          />
-        </label>
+          <input type="submit" value="Submit" className="hard_btn" />
+        </form>
 
-        <Flatpickr
-          options={{
-            dateFormat: "Y-m-d",
-            enable: [
-              {
-                from: new Date(dates.start).toLocaleDateString("en-CA"), // "YYYY-MM-DD"
-                to: new Date(dates.end).toLocaleDateString("en-CA"),
-              },
-            ],
-          }}
-          value={value}
-          onChange={handle_change}
-        />
-        {errors.target_date && <p>{errors.target_date.message}</p>}
-
-        <br />
-
-        <label>
-          Budget Range:
-          <select
-            {...register("budget_range", {
-              required: "Please select a budget range",
-            })}
-          >
-            <option value="">--Select--</option>
-            {budget_range.map((range) => (
-              <option key={range} value={range}>
-                {range.includes("+")
-                  ? `₱${range.replace("+", "+")}`
-                  : `₱${range.split("-")[0]} - ₱${range.split("-")[1]}`}
-              </option>
-            ))}
-          </select>
-        </label>
-        {errors.budget_range && <p>{errors.budget_range.message}</p>}
-        <br />
-
-        <input type="submit" value="Submit" />
-      </form>
-
-      <button onClick={on_close}>Exit</button>
+        <button onClick={on_close} className="soft_btn">
+          Exit
+        </button>
+      </div>
     </div>
   );
 }

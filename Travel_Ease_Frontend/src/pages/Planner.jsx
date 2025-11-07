@@ -65,7 +65,9 @@ function Planner() {
   return (
     <div className="p-5 ">
       <div className="flex gap-6">
-        <div id="map-container" className="card w-9/12 h-[60vh]"></div>
+        <div id="map-container" className="card w-9/12 h-[60vh]">
+          {/* here is the map po */}
+        </div>
         <div className="activities w-3/12">
           <div className="flex justify-between">
             <div className="flex gap-5">
@@ -90,7 +92,6 @@ function Planner() {
               )}
             </div>
           </div>
-
           <div className="activities">
             {dates.start && (
               <Activities
@@ -105,13 +106,15 @@ function Planner() {
         </div>
       </div>
 
-      <div className="plan_detail_container">
+      <div className="card mt-6">
         <h1>{plan[0].name}</h1>
 
-        {status === "join" && <button>join now</button>}
-        {status === "start" && <button>start now</button>}
+        {status === "join" && <button className="hard_btn">join now</button>}
+        {status === "start" && <button className="hard_btn">start now</button>}
         {status === "view" && (
-          <button onClick={() => setActiveModal("plan")}>edit</button>
+          <button onClick={() => setActiveModal("plan")} className="soft_btn">
+            edit
+          </button>
         )}
 
         <p>{plan[0].description}</p>

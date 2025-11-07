@@ -34,6 +34,7 @@ import {
   fetch_activities,
   quick_join,
   delete_activity,
+  update_activity,
 } from "../travel_plan/index.js";
 
 const router = Router();
@@ -50,6 +51,7 @@ router.post("/create_activity", create_activity);
 router.put("/edit_plan/:id", plan_edit);
 router.put("/activity_edit/:id", activity_edit);
 router.put("/collaborators_edit/:id", collaborators_edit);
+router.put("/update_activity/:id", update_activity);
 
 router.get("/public_plans", public_plans);
 router.get("/specific_plans", specific_plans); //is this redudant?
