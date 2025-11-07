@@ -5,18 +5,17 @@ A full-stack blog application built with PostgreSQL, Express, React, and Node.js
 ## Features
 
 - **Frontend**: React with TypeScript, Tailwind CSS, React Router
-- **Backend**: Express with TypeScript
-- **Database**: Temporary DB layer (Docker & Prisma removed - Phase 1)
+- **Backend**: Express with JavaScript
+- **Database**: PostgreSQL with lightweight `pg` client
 - **Blog Management**: CRUD operations with API key protection
 - **Responsive Design**: Mobile-first approach with modern UI
-
-> **Note**: Docker and Prisma have been removed. A temporary database compatibility layer is in place. Database operations will return errors or empty results until Phase 3 implementation.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js 18+
+- PostgreSQL 12+ (running locally or remote)
 - Git
 
 ### Setup
@@ -61,7 +60,7 @@ Travel_Ease/
 │   │   ├── middleware/     # Express middleware
 │   │   ├── schemas/        # Zod validation schemas
 │   │   └── lib/           # Utilities
-│   │       └── db/        # Temporary DB compatibility layer
+│   │       └── db/        # PostgreSQL database client
 │   └── package.json
 ├── Travel_Ease_Frontend/   # React application
 │   ├── src/
@@ -110,7 +109,7 @@ curl -X POST http://localhost:3000/api/blogs \
 
 ### Via Database Seed
 
-Add your blog data to `Travel_Ease_Backend/src/seed.ts` and run:
+Add your blog data to `Travel_Ease_Backend/src/seed.js` and run:
 
 ```bash
 npm run db:seed
@@ -123,7 +122,7 @@ npm run db:seed
 ```bash
 cd Travel_Ease_Backend
 npm run dev          # Start with nodemon
-npm run build        # Build TypeScript
+npm run build        # Transpile TypeScript backup to JavaScript (if needed)
 ```
 
 ### Frontend Development
@@ -137,7 +136,12 @@ npm run preview      # Preview production build
 
 ### Database Management
 
-> **Note**: Database management commands have been removed along with Prisma. The temporary DB layer in `src/lib/db/index.ts` provides stub implementations that keep the app bootable but do not persist data.
+The database schema is automatically created on first run. To seed the database with sample data:
+
+```bash
+cd Travel_Ease_Backend
+npm run db:seed
+```
 
 ## Testing
 
@@ -154,11 +158,12 @@ Create `.env` files in both backend and frontend directories:
 ### Backend (.env)
 
 ```
+DATABASE_URL="postgresql://username:password@localhost:5432/travelease_db"
 PORT=3000
 API_KEY="your-secret-api-key-here"
 ```
 
-> **Note**: `DATABASE_URL` is no longer required as Docker and Prisma have been removed. The temporary DB layer does not require database configuration.
+> **Note**: Replace `username`, `password`, `localhost`, `5432`, and `travelease_db` with your PostgreSQL credentials and database name.
 
 ### Frontend (.env)
 
