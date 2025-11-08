@@ -8,12 +8,12 @@ export async function update_activity(req, res) {
 
   try {
     // 1. Fetch all activities for the travel plan
-    const fetchQuery = {
+    const query1 = {
       text: "SELECT activity_id, target_date FROM public.activity WHERE travel_plan_id = $1",
       values: [id],
     };
 
-    const activities = await con.query(fetchQuery);
+    const activities = await con.query(query1);
 
     if (activities.rows.length === 0) {
       return res
@@ -22,23 +22,30 @@ export async function update_activity(req, res) {
     }
 
     // 2. Add milliseconds to each activity's target_date
-    const startDate = new Date(start); // base date in ms
+    const start_ms = Number(start);
 
-    const updatedActivities = activities.rows.map((activity, index) => {
-      // Each activity gets an incremental offset, e.g., 1 day apart
-      const newDate = new Date(startDate.getTime() + index * 86400000); // +1 day per activity
-      const formattedDate = newDate.toISOString().split("T")[0];
-      return { id: activity.activity_id, newDate: formattedDate };
+    const updated_activities = activities.rows.map((activity, index) => {
+      const new_date = new Date(activity.target_date);
+
+      const mili_sec = new_date.getTime() + start_ms;
+      const updated = new Date(mili_sec);
+      const date_string = updated.toISOString().slice(0, 10);
+
+      return date_string;
     });
 
+    // console.log(updated_activities);
+
+    console.log(activities.rows);
+
     // 3. Update each activity in the DB
-    for (const act of updatedActivities) {
-      const updateQuery = {
+    updated_activities.map(async (data, key) => {
+      const query2 = {
         text: "UPDATE public.activity SET target_date = $1 WHERE activity_id = $2",
-        values: [act.newDate, act.id],
+        values: [data, activities.rows[key].activity_id],
       };
-      await con.query(updateQuery);
-    }
+      const result = await con.query(query2);
+    });
 
     console.log("Edited all activity dates successfully");
 

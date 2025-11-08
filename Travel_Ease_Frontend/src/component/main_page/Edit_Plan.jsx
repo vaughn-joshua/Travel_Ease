@@ -87,7 +87,7 @@ function Edit_Plan({ data, on_close, travel_plan }) {
     };
 
     submit_data.travel_plan = travel_plan;
-    // edit_plan(submit_data);
+    edit_plan(submit_data);
     edit_activity_date(edit_activity_data);
     on_close();
   };

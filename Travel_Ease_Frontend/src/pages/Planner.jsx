@@ -22,6 +22,12 @@ function Planner() {
     end: 0,
   });
 
+  const handle_close = () => {
+    window.location.reload();
+    console.log("closing na");
+    setActiveModal("");
+  };
+
   useEffect(() => {
     const load_data = async () => {
       try {
@@ -136,11 +142,7 @@ function Planner() {
         />
       )}
       {activeModal === "plan" && (
-        <Edit_Plan
-          data={plan}
-          travel_plan={id}
-          on_close={() => setActiveModal("")}
-        />
+        <Edit_Plan data={plan} travel_plan={id} on_close={handle_close} />
       )}
     </div>
   );
