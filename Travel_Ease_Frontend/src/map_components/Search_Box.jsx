@@ -1,8 +1,24 @@
-import React, {useState} from "react";
-import Button_Route from "./Route_Form.jsx";
+import React, { useState, useRef, useEffect } from "react";
+
 function Search_Box({ onSearch }){
 const [query, set_query] = useState("");
 const [suggestions, set_suggestions] = useState([]);
+const boxRef = useRef(null);
+
+useEffect(()=> {
+  const handleClickOutside = (event) =>{
+    if (boxRef.current && !boxRef.current.contains(event.target)){
+      set_suggestions([]); // hide suggestions when clicked/tapped outside
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener("touchstart", handleClickOutside);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+    document.removeEventListener("touchstart", handleClickOutside);
+  };
+}, []);
+
 
 
 const handleInputChange = async (e)=> {
@@ -14,7 +30,7 @@ const handleInputChange = async (e)=> {
         return;
     }
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+        const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
         const data = await response.json();
         set_suggestions(data);
     } catch (error) {
@@ -33,7 +49,7 @@ const handleSelect = (place)=>{
 const  Handle_Search = async (e)=>{
     e.preventDefault();
 
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=120.92,14.15,120.97,14.07`);
+    const response = await fetch(`http://localhost:3001/api/search?query=${encodeURIComponent(query)}`);
     const data = await response.json();
     if (data[0]){
         const lat = parseFloat(data[0].lat);
@@ -44,8 +60,8 @@ const  Handle_Search = async (e)=>{
         }
     };
 
-    return(
-    <div className="relative w-[300px] z-[99999]" >
+  return(
+  <div ref={boxRef} className="relative w-[300px] z-[99999]" >
       <form onSubmit={Handle_Search}  className="flex bg-white rounded-md shadow-md z-[9999] relative">
         <input
           type="text"

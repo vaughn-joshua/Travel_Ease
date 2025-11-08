@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 function Route_Form({ onRouteSubmit }) {
   const [startLocation, setStartLocation] = useState("");
@@ -7,11 +7,25 @@ function Route_Form({ onRouteSubmit }) {
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [endSuggestions, setEndSuggestions] = useState([]);
 
+  const formRef = useRef(null);
+
+  //Hide dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (formRef.current && !formRef.current.contains(event.target)) {
+        setStartSuggestions([]);
+        setEndSuggestions([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+
+  
   const fetchCoords = async (address) => {
     const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      address
-    )},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=120.92,14.15,120.97,14.07`
+          `http://localhost:3001/api/search?query=${encodeURIComponent(query)}`
     );
     const data = await response.json();
     return data.length > 0
@@ -44,7 +58,7 @@ function Route_Form({ onRouteSubmit }) {
       return;
     }
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+      const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
       const data = await response.json();
       setStartSuggestions(data);
     } catch (error) {
@@ -60,7 +74,7 @@ function Route_Form({ onRouteSubmit }) {
       return;
     }
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+      const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
       const data = await response.json();
       setEndSuggestions(data);
     } catch (error) {

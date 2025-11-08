@@ -1,26 +1,56 @@
 import express from 'express';
-import {con} from './config/travelease_db.js';
-import { initDB } from './config/travelease_db.js';
-const app = express();
+import cors from 'cors';
+import axios from 'axios';
 
+const app = express();
+const PORT = 3001;
+
+app.use(cors());
 app.use(express.json()); // parse application/json
 
-app.get('/', async (req, res) => {
+app.get('/api/suggestions', async (req, res) => {
+    const { query }= req.query;
+    if(!query || query.length < 3){
+        return res.json([]);
+    }
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+    query
+  )},Tagaytay%20City&countrycodes=ph&limit=5`;
+
     try {
-        const result = await con.query('SELECT * FROM "User"');
-        res.json({
-            message: 'Hello World!',
-            users: result.rows
-        });
+        const response = await axios.get(nominatimUrl);
+        res.json(response.data);
     } catch (error) {
-        console.error('Error executing query', error.stack);
-        res.status(500).send('Internal Server Error');
+        console.error("Error fetching suggestions:", error.message);
+        res.status(500).json({ error: "Error fetching suggestions" });
     }
 });
 
+app.get("/api/search", async (req, res) => {
+  const { query } = req.query; // Get the query from React
 
-initDB().then(()=> {
-    app.listen(3000, () =>{
-        console.log('Server is running on port 3000');
-    })
+  if (!query) {
+    return res.json([]);
+  }
+
+  // This is your complex URL with the 'viewbox'
+  const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+    query
+  )},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=120.92,14.15,120.97,14.07`;
+
+  try {
+    // Call Nominatim from the server
+    const response = await axios.get(nominatimUrl);
+    res.json(response.data); // Send the response back to React
+  } catch (error) {
+    console.error("Error fetching search:", error.message);
+    res.status(500).json({ error: "Failed to fetch search results" });
+  }
 });
+
+
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+
