@@ -7,7 +7,7 @@ import { create_plan } from "../../utils/travel_plan/create_plan";
 function Create_Plan({ on_close }) {
   const {
     register,
-    handleSubmit,   
+    handleSubmit,
     reset,
     setValue,
     formState: { errors },

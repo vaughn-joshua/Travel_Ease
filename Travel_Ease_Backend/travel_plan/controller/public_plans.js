@@ -4,7 +4,9 @@ export async function public_plans(req, res) {
   try {
     const query = {
       name: "fetch-public-plans",
-      text: "SELECT travel_plan_id, name, start_date, end_date, max_slots, location FROM public.travel_plan WHERE visibility = $1;",
+      text: `SELECT travel_plan_id, name, start_date, end_date, max_slots, location, visibility_timestamp FROM public.travel_plan 
+              WHERE visibility = $1
+              ORDER BY visibility_timestamp DESC`,
       values: [true],
     };
 

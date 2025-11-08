@@ -6,11 +6,32 @@ import { useNavigate } from "react-router-dom";
 function Public_Plans() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState();
+  const [postedAt, setPostedAt] = useState([]);
 
   useEffect(() => {
     const load_plans = async () => {
       const data = await fetch_public_plans();
       setPlans(data);
+
+      data.map((plan, index) => {
+        // get current time
+        const current_date = new Date();
+
+        const timestamp = new Date(plan.visibility_timestamp);
+
+        console.log({ timestamp, index });
+
+        // compute for time difference relative to the current time
+        const time_difference = Math.round(
+          (current_date - timestamp) / 1000 / 60
+        );
+
+        // console.log({ time_difference });
+        console.log(`${time_difference} minutes ago`);
+
+        //set the postedAt
+        setPostedAt((prev) => [...prev, time_difference]);
+      });
     };
 
     load_plans();
@@ -34,7 +55,7 @@ function Public_Plans() {
       {!plans && <p className="text-gray-500 italic">Loading...</p>}
 
       {plans &&
-        plans.map((plan) => (
+        plans.map((plan, index) => (
           <div
             key={plan.travel_plan_id}
             onClick={() => handle_click(plan.travel_plan_id)}
@@ -44,7 +65,10 @@ function Public_Plans() {
               <h2 className="text-lg font-semibold text-gray-900">
                 {plan.name}
               </h2>
-              <p className="text-sm text-gray-500">Slots: {plan.max_slots}</p>
+              <div>
+                <p className="text-sm text-gray-500">Slots: {plan.max_slots}</p>
+                <p className="text-sm text-gray-500">{`${postedAt[index]} minutes ago`}</p>
+              </div>
             </div>
             <p className="text-sm text-gray-500">
               {formatDate(plan.start_date)} – {formatDate(plan.end_date)}

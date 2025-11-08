@@ -47,6 +47,8 @@ function Create_Activity({ on_close, business, dates, id }) {
     try {
       data.travel_plan_id = id;
       data.user_id = 1; //change it dont hard code the user
+      console.log({ data });
+
       create_activity(data);
       reset();
       on_close();
@@ -62,6 +64,17 @@ function Create_Activity({ on_close, business, dates, id }) {
 
         <form onSubmit={handleSubmit(on_submit)}>
           <label className="label">
+            Title:
+            <input
+              {...register("title", {
+                required: "Please enter a title",
+              })}
+              className="text_box"
+            />
+          </label>
+          {errors.title && <p>{errors.title.message}</p>}
+
+          <label className="label">
             Notes:
             <input
               {...register("notes", {
@@ -74,12 +87,8 @@ function Create_Activity({ on_close, business, dates, id }) {
 
           <label className="label">
             Business:
-            <select
-              {...register("business_id", {
-                required: "Please select a business",
-              })}
-              className="text_box"
-            >
+            {/* not required, cuz activity can also just be a sponti one not connected to business */}
+            <select {...register("business_id")} className="text_box">
               <option value="">--Select a business--</option>
               {business.map((b) => (
                 <option key={b.business_id} value={b.business_id}>
@@ -88,7 +97,6 @@ function Create_Activity({ on_close, business, dates, id }) {
               ))}
             </select>
           </label>
-          {errors.business_id && <p>{errors.business_id.message}</p>}
 
           <label className="label">
             Target Date:

@@ -18,7 +18,11 @@ export async function plan_edit(req, res) {
     const query = {
       name: "edit plan",
       text: `UPDATE public.travel_plan 
-                SET description = $1, name = $2, location = $3, max_slots = $4, start_date = $5, end_date = $6, visibility = $7
+                SET description = $1, name = $2, location = $3, max_slots = $4, start_date = $5, end_date = $6, visibility = $7, 
+                  visibility_timestamp = CASE 
+                    WHEN $7 = TRUE AND visibility = FALSE THEN NOW()
+                    ELSE visibility_timestamp
+                  END
                 WHERE travel_plan_id = $8`,
       values: [
         description,

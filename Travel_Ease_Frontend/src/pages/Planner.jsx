@@ -112,16 +112,28 @@ function Planner() {
         </div>
       </div>
 
-      <div className="card mt-6">
-        <h1>{plan[0].name}</h1>
+      <div id="travel_plan_details_header" className="card mt-6">
+        <div className="flex justify-between">
+          <h1>{plan[0].name}</h1>
 
-        {status === "join" && <button className="hard_btn">join now</button>}
-        {status === "start" && <button className="hard_btn">start now</button>}
-        {status === "view" && (
-          <button onClick={() => setActiveModal("plan")} className="soft_btn">
-            edit
-          </button>
-        )}
+          <div id="buttons_container" className=" space-x-2">
+            {status === "join" && (
+              <button className="hard_btn">join now</button>
+            )}
+            {status === "start" && (
+              <button className="hard_btn">start now</button>
+            )}
+            {status === "view" && (
+              <button
+                onClick={() => setActiveModal("plan")}
+                className="soft_btn"
+              >
+                edit
+              </button>
+            )}
+            <button className="hard_btn">Collborators</button>
+          </div>
+        </div>
 
         <p>{plan[0].description}</p>
         <p>{plan[0].location}</p>

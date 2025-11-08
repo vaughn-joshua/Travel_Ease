@@ -9,20 +9,21 @@ export async function fetch_activities(req, res) {
       text: `
         SELECT 
           a.activity_id,
+          a.title,
           a.business_id,
           a.notes,
           a.target_date,
           a.budget_range,
           a.user_id,
           a.is_priority,
-          b.name,
+          b.name AS business_name,
           b.address,
           b.rating,
           b.business_hours,
           b.category_id,
           u.first_name
         FROM public.activity AS a
-        INNER JOIN public.business AS b ON a.business_id = b.business_id
+        LEFT JOIN public.business AS b ON a.business_id = b.business_id
         INNER JOIN public."user" AS u ON a.user_id = u.user_id
         WHERE a.travel_plan_id = $1;
       `,

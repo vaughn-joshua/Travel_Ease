@@ -14,6 +14,7 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
   useEffect(() => {
     const load_plans = async () => {
       const data = await fetch_activities(reference_id);
+      // console.log({ data });
       const starting_date = new Date(dates.start);
       let current_day;
 
@@ -68,7 +69,8 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
           plans.map((plan, index) => {
             return (
               <div key={index} className="card mb-3">
-                <h1>{plan.name}</h1>
+                <h1>{plan.title}</h1>
+                <p>{plan.name}</p>
                 <p>{plan.address}</p>
                 {/* <p>{plan.category}</p> */}
                 <p>{plan.notes}</p>
