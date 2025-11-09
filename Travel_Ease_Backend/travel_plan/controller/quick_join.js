@@ -9,7 +9,7 @@ export async function quick_join(req, res) {
       name: "quick_join",
       text: `
         SELECT * FROM public.travel_plan
-        WHERE start_date <= $2::date AND end_date >= $1::date AND location = $3
+        WHERE start_date <= $2::date AND end_date >= $1::date AND location = $3 AND visibility = TRUE
         `,
       values: [start_date, end_date, location],
     };

@@ -47,7 +47,6 @@ function Create_Activity({ on_close, business, dates, id }) {
     try {
       data.travel_plan_id = id;
       data.user_id = 1; //change it dont hard code the user
-      console.log({ data });
 
       create_activity(data);
       reset();

@@ -5,10 +5,13 @@ import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
 import Activities from "../component/main_page/Activities";
 import Edit_Plan from "../component/main_page/Edit_Plan";
 import Create_Activity from "../component/main_page/Create_Activity";
+import { useNavigate } from "react-router-dom";
+import { edit_plan } from "../utils/travel_plan/edit_plan";
 
 function Planner() {
   const { id, status } = useParams();
 
+  const navigate = useNavigate();
   const [plan, setPlan] = useState();
   const [days, setDays] = useState(0);
   const [businesses, setBusinesses] = useState();
@@ -62,6 +65,12 @@ function Planner() {
   const click_day = (i) => {
     setLoadActivity((prev) => !prev);
     setDaySelected(i);
+  };
+
+  const handle_start = () => {
+    const to_submit = { travel_plan: id, status: "Active" };
+    navigate(`/planner/view/${id}`);
+    edit_plan(to_submit);
   };
 
   if (!plan) {
@@ -121,7 +130,17 @@ function Planner() {
               <button className="hard_btn">join now</button>
             )}
             {status === "start" && (
-              <button className="hard_btn">start now</button>
+              <>
+                <button
+                  onClick={() => setActiveModal("plan")}
+                  className="soft_btn"
+                >
+                  edit
+                </button>
+                <button className="hard_btn" onClick={handle_start}>
+                  start now
+                </button>
+              </>
             )}
             {status === "view" && (
               <button

@@ -19,15 +19,10 @@ function Public_Plans() {
 
         const timestamp = new Date(plan.visibility_timestamp);
 
-        console.log({ timestamp, index });
-
         // compute for time difference relative to the current time
         const time_difference = Math.round(
           (current_date - timestamp) / 1000 / 60
         );
-
-        // console.log({ time_difference });
-        console.log(`${time_difference} minutes ago`);
 
         //set the postedAt
         setPostedAt((prev) => [...prev, time_difference]);

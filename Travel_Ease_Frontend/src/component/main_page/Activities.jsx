@@ -14,7 +14,6 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
   useEffect(() => {
     const load_plans = async () => {
       const data = await fetch_activities(reference_id);
-      // console.log({ data });
       const starting_date = new Date(dates.start);
       let current_day;
 
