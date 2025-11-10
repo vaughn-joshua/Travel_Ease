@@ -64,6 +64,7 @@ const  Handle_Search = async (e)=>{
   <div ref={boxRef} className="relative w-[300px] z-[99999]" >
       <form onSubmit={Handle_Search}  className="flex bg-white rounded-md shadow-md z-[9999] relative">
         <input
+          ref={boxRef}
           type="text"
           placeholder="Search for a place..."
           value={query}

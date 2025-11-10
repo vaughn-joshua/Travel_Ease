@@ -7,6 +7,9 @@ function Route_Form({ onRouteSubmit }) {
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [endSuggestions, setEndSuggestions] = useState([]);
 
+  const startTimerRef = useRef(null);
+  const endTimerRef = useRef(null);
+
   const formRef = useRef(null);
 
   //Hide dropdowns when clicking outside
@@ -25,7 +28,9 @@ function Route_Form({ onRouteSubmit }) {
   
   const fetchCoords = async (address) => {
     const response = await fetch(
-          `http://localhost:3001/api/search?query=${encodeURIComponent(query)}`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        address
+      )}&countrycodes=ph&viewbox=120.92,14.15,120.97,14.07`
     );
     const data = await response.json();
     return data.length > 0
@@ -53,33 +58,40 @@ function Route_Form({ onRouteSubmit }) {
   const handleStartChange = async (e) => {
     const value = e.target.value;
     setStartLocation(value);
+
+    clearTimeout(startTimerRef.current);
     if (value.length < 3) {
       setStartSuggestions([]);
       return;
     }
-    try {
-      const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
-      const data = await response.json();
-      setStartSuggestions(data);
-    } catch (error) {
-      console.error("Error fetching start suggestions:", error);
-    }
+startTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+        const data = await response.json();
+        setStartSuggestions(data);
+      } catch (error) {
+        console.error("Error fetching start suggestions:", error);
+      }
+    }, 500); // 500ms delay
   };
 
   const handleEndChange = async (e) => {
     const value = e.target.value;
     setEndLocation(value);
+    clearTimeout(endTimerRef.current);
     if (value.length < 3) {
       setEndSuggestions([]);
       return;
     }
-    try {
-      const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
-      const data = await response.json();
-      setEndSuggestions(data);
-    } catch (error) {
-      console.error("Error fetching end suggestions:", error);
-    }
+  endTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+        const data = await response.json();
+        setEndSuggestions(data);
+      } catch (error) {
+        console.error("Error fetching end suggestions:", error);
+      }
+    }, 500); // 500ms delay
   };
 
   // --- 3. ADDED SELECT HANDLERS ---
@@ -95,6 +107,7 @@ function Route_Form({ onRouteSubmit }) {
 
   return (
     <form
+      ref={formRef}
       onSubmit={handleSubmit}
       className="bg-white p-3 rounded-md shadow-md mt-3 w-80"
     >
