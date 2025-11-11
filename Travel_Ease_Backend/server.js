@@ -4,6 +4,7 @@ import {
   travel_plan_routes,
   user_routes,
   config_routes,
+  utils_routes,
 } from "./routes/index.js";
 const app = express();
 
@@ -16,6 +17,8 @@ app.use(cors()); //for testing
 app.use("/api/travel_plan", travel_plan_routes);
 
 app.use("/api/user", user_routes);
+
+app.use("/api/utils", utils_routes);
 
 app.use("/api/config", config_routes);
 

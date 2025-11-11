@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { upload_image } from "../../utils/business/upload_image";
 
 function Register({ on_close }) {
   const {
@@ -10,6 +11,8 @@ function Register({ on_close }) {
 
   const on_submit = (data) => {
     console.log(data);
+
+    upload_image(data.picture[0]);
   };
 
   const handle_close = () => {
