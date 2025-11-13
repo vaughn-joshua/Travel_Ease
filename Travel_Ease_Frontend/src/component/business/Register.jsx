@@ -9,17 +9,18 @@ function Register({ on_close }) {
     formState: { errors },
   } = useForm();
 
-  const on_submit = (data) => {
-    // console.log(data);
-
-    upload_image(data.picture[0]);
-  };
-
-  const handle_change = async (data) => {
-    console.log(data.target.files[0]);
+  const on_submit = async (data) => {
+    // file name, file, folder
     const formData = new FormData();
-    formData.append("image", data.target.files[0]);
+    formData.append("image", data.picture[0]);
+    formData.append("name", data.name);
+    formData.append("folder", "Travel_Ease/Business");
+
     const upload = await upload_image(formData);
+    console.log({ upload });
+
+    data.secure_url = upload;
+    console.log({ data });
   };
 
   const handle_close = () => {
@@ -88,7 +89,6 @@ function Register({ on_close }) {
                 required: "picture is required",
               })}
               className="text_box"
-              onChange={handle_change}
               type="file"
             />
           </label>
