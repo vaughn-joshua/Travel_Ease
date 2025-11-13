@@ -10,9 +10,16 @@ function Register({ on_close }) {
   } = useForm();
 
   const on_submit = (data) => {
-    console.log(data);
+    // console.log(data);
 
     upload_image(data.picture[0]);
+  };
+
+  const handle_change = async (data) => {
+    console.log(data.target.files[0]);
+    const formData = new FormData();
+    formData.append("image", data.target.files[0]);
+    const upload = await upload_image(formData);
   };
 
   const handle_close = () => {
@@ -81,6 +88,7 @@ function Register({ on_close }) {
                 required: "picture is required",
               })}
               className="text_box"
+              onChange={handle_change}
               type="file"
             />
           </label>
