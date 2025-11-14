@@ -13,7 +13,7 @@
 }
 
 .modal_body {
-  @apply bg-white rounded-lg shadow-md w-full max-w-md p-6;
+  @apply bg-white rounded-lg shadow-md p-6;
 }
 
 .label {
