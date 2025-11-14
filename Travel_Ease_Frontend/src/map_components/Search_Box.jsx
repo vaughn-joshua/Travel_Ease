@@ -4,6 +4,7 @@ function Search_Box({ onSearch }){
 const [query, set_query] = useState("");
 const [suggestions, set_suggestions] = useState([]);
 const boxRef = useRef(null);
+const timeRef = useRef(null);
 
 useEffect(()=> {
   const handleClickOutside = (event) =>{
@@ -25,10 +26,15 @@ const handleInputChange = async (e)=> {
     const value = e.target.value;
     set_query(value);
 
+    clearTimeout(timeRef.current);
+
     if(value.length < 3){
         set_suggestions([]);
         return;
     }
+
+
+    timeRef.current = setTimeout(async ()=> {
     try {
         const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
         const data = await response.json();
@@ -36,6 +42,8 @@ const handleInputChange = async (e)=> {
     } catch (error) {
         console.error("Error fetching suggestions:", error);
     }
+    }, 500);
+
 };
 
 const handleSelect = (place)=>{

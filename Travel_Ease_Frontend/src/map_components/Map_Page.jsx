@@ -8,9 +8,9 @@ import "leaflet-routing-machine";
 import Routing_Machine from "./Routing_Machine.jsx";
 import { Map_Mover } from "./Map_Mover.jsx";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import MapClickHandler from "./MapClickHandler.jsx";
 
-
-function Map_Page({ search_result, start, end }){
+function Map_Page({ search_result, start, end , onMapClear}){
 
     
 const Tagaytay_Center = [14.1154, 120.9620];
@@ -58,6 +58,7 @@ const custom_icon = new Icon({
 
             <Map_Mover position = {search_result} />
             <Routing_Machine start={start} end={end} />
+            <MapClickHandler onClear={onMapClear} />
             </MapContainer>
         </>
 

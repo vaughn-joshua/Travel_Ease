@@ -13,6 +13,12 @@ function Main_Map_Page(){
         setStart(start);
         setEnd(end);
     }
+    const handleClearMap = () => {
+    set_search_result(null);
+    setStart(null);
+    setEnd(null);
+    console.log("Map Cleared!");
+  };
 
     return(
         <>
@@ -39,7 +45,9 @@ function Main_Map_Page(){
         
         </div> 
  
-        <Map_Page search_result = {search_result} start = {start} end = {end}></Map_Page>
+        <Map_Page search_result = {search_result} start = {start} end = {end} onMapClear={handleClearMap}>
+            
+        </Map_Page>
 
       
         </>
