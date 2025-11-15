@@ -32,29 +32,65 @@ app.get("/api/suggestions", (req, res) => {
 });
 
 app.post("/api/search", async (req, res) => {
-  const { street, brgy } = req.body;
+  let { street, brgy } = req.body;
   console.log(req.body);
 
   try {
-    const nominatim_url =
-      `https://nominatim.openstreetmap.org/search?` +
-      `street=${encodeURIComponent(street)}` +
-      `&neighbourhood=${encodeURIComponent(brgy)}` +
-      `&city=Pasay` +
-      `&country=Philippines` +
-      `&format=json` +
-      `&limit=5` +
-      `&addressdetails=1`;
+    // Normalize street name
+    const cleanStreet = street
+      .replace(/cor\.?/i, "&")
+      .replace(/corner/i, "&")
+      .replace(/St\.?/gi, "Street")
+      .trim();
 
-    const response = await axios.get(nominatim_url, {
-      headers: {
-        "User-Agent": "TravelEaseApp/1.0 (joshuabarit77@gmail.com)",
-      },
+    // 1st attempt: intersection style
+    let query = `${cleanStreet}, Barangay ${brgy}, Pasay, Philippines`;
+
+    let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      query
+    )}&format=json&limit=1&addressdetails=1`;
+
+    let response = await axios.get(url, {
+      headers: { "User-Agent": "TravelEaseApp/1.0 (your_email)" },
     });
 
-    res.json(response.data);
+    if (response.data.length > 0) {
+      console.log("Intersection MATCH:", response.data);
+      return res.json(response.data);
+    }
+
+    // 2nd attempt: remove intersection symbol, use simple search
+    const secondQuery = `${street}, Pasay, Philippines`;
+
+    url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      secondQuery
+    )}&format=json&limit=1&addressdetails=1`;
+
+    response = await axios.get(url, {
+      headers: { "User-Agent": "TravelEaseApp/1.0 (your_email)" },
+    });
+
+    if (response.data.length > 0) {
+      console.log("Fallback MATCH:", response.data);
+      return res.json(response.data);
+    }
+
+    // 3rd attempt: barangay only
+    const thirdQuery = `Barangay ${brgy}, Pasay, Philippines`;
+
+    url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      thirdQuery
+    )}&format=json&limit=1&addressdetails=1`;
+
+    response = await axios.get(url, {
+      headers: { "User-Agent": "TravelEaseApp/1.0 (your_email)" },
+    });
+
+    console.log("Barangay MATCH:", response.data);
+    return res.json(response.data);
   } catch (error) {
     console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
   }
 });
 

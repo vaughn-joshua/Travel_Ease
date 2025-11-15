@@ -10,6 +10,13 @@ function Business_Page() {
   5. google auth
   */
 
+  /*
+  to do
+    1. post business registration
+    2. business page layout
+    3. create a business product or service
+  */
+
   return (
     <>
       <h1>busines page</h1>
