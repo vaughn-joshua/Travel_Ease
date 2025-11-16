@@ -48,6 +48,26 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
+app.get("/api/geocode", async (req, res) => {
+  const { query } = req.query;
+  if (!query) {
+    return res.json([]);
+  }
+
+  // This is the FLEXIBLE query. It does NOT have 'bounded=1'.
+  const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+    query
+  )}&countrycodes=ph&viewbox=120.92,14.15,120.97,14.07`;
+
+  try {
+    const response = await axios.get(nominatimUrl);
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error fetching geocode:", error.message);
+    res.status(500).json({ error: "Failed to fetch geocode results" });
+  }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

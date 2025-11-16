@@ -4,6 +4,8 @@ import Map_Page from "./Map_Page.jsx";
 import Search_Box from "./Search_Box.jsx";
 import Route_Form from "./Route_Form.jsx";
 
+
+
 function Main_Map_Page(){
     const [search_result, set_search_result] = useState(null);
     const [start, setStart] = useState(null);
@@ -13,10 +15,21 @@ function Main_Map_Page(){
         setStart(start);
         setEnd(end);
     }
+
+//     const handleShowSampleRoutes = () => {
+//       setRoutes(sampleRoutesData);
+//     };
+//     const handlePinClick = (route) => {
+//     // Set the active routes to be ONLY the one that was clicked
+//     setActiveRoutes([route]);
+//   };
+
+
     const handleClearMap = () => {
     set_search_result(null);
     setStart(null);
     setEnd(null);
+    // setActiveRoutes([]); // Clear the active routes
     console.log("Map Cleared!");
   };
 
@@ -45,7 +58,13 @@ function Main_Map_Page(){
         
         </div> 
  
-        <Map_Page search_result = {search_result} start = {start} end = {end} onMapClear={handleClearMap}>
+        <Map_Page search_result = {search_result} 
+        start = {start} 
+        end = {end} 
+        // sampleRoutes={sampleRoutes}  // Pass all sample routes
+        // activeRoutes={activeRoutes}  // Pass only the routes to draw
+        // onPinClick={handlePinClick}   // Pass the click handler
+        onMapClear={handleClearMap}>
             
         </Map_Page>
 

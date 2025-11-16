@@ -1,5 +1,6 @@
 import React from "react";
 import Pin_Icon from "../assets/pin.png";
+import Man from "../assets/man.png";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, TileLayer, Popup, useMap, GeoJSON, ZoomControl} from "react-leaflet";
 import L, { Icon } from "leaflet";
@@ -23,6 +24,10 @@ const Max_Bounds = [[14.052170, 120.876775],
 // const [boundary_data, set_boundary_data] = useState(null);
 const custom_icon = new Icon({
     iconUrl: Pin_Icon,
+    iconSize:[30,30] 
+})
+const custom_icon_person = new Icon({
+    iconUrl: Man,
     iconSize:[30,30] 
 })
 // const routePositions = start && end ? [start, end] : null;
@@ -50,11 +55,12 @@ const custom_icon = new Icon({
                     </Marker>
                 )}
             {start && (
-                <Marker position= {start} icon = {custom_icon} />
+                <Marker position= {start} icon = {custom_icon_person} />
             )}
-            {end && (
+            {end && (   
                 <Marker position= {end} icon = {custom_icon} />
             )}
+            
 
             <Map_Mover position = {search_result} />
             <Routing_Machine start={start} end={end} />

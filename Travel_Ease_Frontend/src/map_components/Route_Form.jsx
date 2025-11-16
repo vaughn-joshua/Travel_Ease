@@ -28,9 +28,7 @@ function Route_Form({ onRouteSubmit }) {
   
   const fetchCoords = async (address) => {
     const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        address
-      )}&countrycodes=ph&viewbox=120.92,14.15,120.97,14.07`
+         `http://localhost:3001/api/geocode?query=${encodeURIComponent(address)}`
     );
     const data = await response.json();
     return data.length > 0
@@ -66,7 +64,7 @@ function Route_Form({ onRouteSubmit }) {
     }
 startTimerRef.current = setTimeout(async () => {
       try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+        const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
         const data = await response.json();
         setStartSuggestions(data);
       } catch (error) {
@@ -85,7 +83,7 @@ startTimerRef.current = setTimeout(async () => {
     }
   endTimerRef.current = setTimeout(async () => {
       try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)},Tagaytay%20City&countrycodes=ph&limit=5`);
+        const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
         const data = await response.json();
         setEndSuggestions(data);
       } catch (error) {
