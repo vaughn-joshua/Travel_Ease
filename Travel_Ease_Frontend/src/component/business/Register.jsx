@@ -17,6 +17,16 @@ const category = [
   "local offers",
 ];
 
+const days = [
+  { start: null, end: null, day: "sun" },
+  { start: null, end: null, day: "mon" },
+  { start: null, end: null, day: "tues" },
+  { start: null, end: null, day: "wed" },
+  { start: null, end: null, day: "thurs" },
+  { start: null, end: null, day: "fri" },
+  { start: null, end: null, day: "sat" },
+];
+
 function Register({ on_close }) {
   const {
     register,
@@ -26,9 +36,10 @@ function Register({ on_close }) {
   } = useForm();
   const [counter, setCounter] = useState(0);
   const [pin, setPins] = useState([]);
+  const [selectedDays, setSelectedDays] = useState([]);
+  const [hours, setHours] = useState([]);
 
   const handlePinMove = (lat, lng) => {
-    console.log(lat, lng);
     setPins([{ lat, lon: lng }]); // update pin position
   };
 
@@ -40,11 +51,15 @@ function Register({ on_close }) {
       formData.append("name", data.name);
       formData.append("folder", "Travel_Ease/Business");
 
-      const upload = await upload_image(formData);
+      // const upload = await upload_image(formData);
 
-      data.secure_url = upload;
+      data.secure_url = "upload";
+
       data.lat = pin[0].lat;
       data.lng = pin[0].lon;
+
+      data.business_hrs = hours;
+
       console.log({ data });
 
       await create_business(data);
@@ -53,7 +68,6 @@ function Register({ on_close }) {
       try {
         const street = data.street;
         const brgy = data.brgy;
-        console.log({ street, brgy });
 
         const response = await fetch("http://localhost:3000/api/search", {
           method: "POST",
@@ -72,8 +86,6 @@ function Register({ on_close }) {
           lat: Number(loc.lat),
           lon: Number(loc.lon),
         }));
-
-        console.log({ cleanPins });
 
         setPins(cleanPins);
       } catch (error) {
@@ -109,6 +121,39 @@ function Register({ on_close }) {
     setCounter((prev) => prev - 1);
   };
 
+  const clicked_day = (day) => {
+    setSelectedDays((prev) => {
+      if (prev.includes(day)) {
+        return prev;
+      }
+      return [...prev, day];
+    });
+  };
+
+  const change_time = (time, value) => {
+    //go through the selected days
+    selectedDays.map((day) => {
+      days.map((data) => {
+        if (data.day == day) {
+          //add the start or ending time
+          if (time === "start") data.start = value;
+          if (time === "end") {
+            data.end = value;
+            //set selected days to none
+            setSelectedDays([]);
+          }
+        }
+      });
+    });
+
+    //save days to state
+    setHours(days);
+  };
+
+  useEffect(() => {
+    console.log(selectedDays);
+  }, [selectedDays]);
+
   return (
     <div className="modal ">
       <div className="modal_body w-[70vw] h-[60vh]">
@@ -128,7 +173,7 @@ function Register({ on_close }) {
               onSubmit={handleSubmit(on_submit)}
               className="flex flex-col h-100"
             >
-              {counter == 2 && (
+              {counter == 0 && (
                 <>
                   <label className="label">
                     Name:
@@ -221,21 +266,53 @@ function Register({ on_close }) {
                 </>
               )}
 
-              {counter === 0 && (
+              {counter === 2 && (
                 <>
                   <label className="label">
                     Business Hours:
-                    <input
-                      {...register("business_hours", {
-                        required: "business hours is required",
-                      })}
-                      className="text_box"
-                    />
+                    <div className="flex flex-col gap-2">
+                      <div className="days w-100 mt-2 ">
+                        {days.map((day, index) => (
+                          <button
+                            className="day_btn"
+                            key={index}
+                            onClick={() => clicked_day(day.day)}
+                          >
+                            {day.day}
+                          </button>
+                        ))}
+                      </div>
+
+                      {selectedDays.length > 0 && (
+                        <div className="flex gap-2">
+                          <input
+                            {...register("starting_time", {
+                              required: "starting_time is required",
+                            })}
+                            type="time"
+                            className="text_box"
+                            onChange={(e) =>
+                              change_time("start", e.target.value)
+                            }
+                          />
+
+                          <input
+                            {...register("ending_time", {
+                              required: "ending_time is required",
+                            })}
+                            type="time"
+                            className="text_box"
+                            onChange={(e) => change_time("end", e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </label>
-                  {errors.business_hours && (
-                    <p>{errors.business_hours.message}</p>
+                  {errors.starting_time && (
+                    <p>{errors.starting_time.message}</p>
                   )}
-                  <Business_Hours />
+                  {errors.ending_time && <p>{errors.ending_time.message}</p>}
+
                   <label className="label">
                     Picture:
                     <input

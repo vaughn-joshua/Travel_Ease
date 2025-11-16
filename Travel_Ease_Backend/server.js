@@ -6,6 +6,7 @@ import {
   user_routes,
   config_routes,
   utils_routes,
+  business_routes,
 } from "./routes/index.js";
 const app = express();
 
@@ -22,6 +23,8 @@ app.use("/api/user", user_routes);
 app.use("/api/utils", utils_routes);
 
 app.use("/api/config", config_routes);
+
+app.use("/api/business", business_routes);
 
 app.get("/api/suggestions", (req, res) => {
   res.json({ message: "accessed backend" });

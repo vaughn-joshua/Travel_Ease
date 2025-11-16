@@ -46,6 +46,14 @@ export async function model_db(req, res) {
             picture TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS business_hours (
+            id SERIAL PRIMARY KEY,
+            business_id INTEGER REFERENCES business(business_id) ON DELETE CASCADE,
+            day_of_week VARCHAR(10),
+            open_time TIME,
+            close_time TIME
+            );
+
             CREATE TYPE status_enum AS ENUM ('Draft', 'Active', 'Completed', 'Cancelled');
 
             CREATE TABLE IF NOT EXISTS travel_plan(
