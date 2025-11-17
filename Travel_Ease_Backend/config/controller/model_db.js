@@ -131,6 +131,7 @@ export async function model_db(req, res) {
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status BOOLEAN DEFAULT FALSE
             );
+            
 
             `);
     console.log("Tables are created or already exist.");
