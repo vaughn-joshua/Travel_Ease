@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { fetch_categories } from "../../utils/business/fetch_categories";
 import { create_range } from "../../utils/business/create_range";
+import { upload_images } from "../../utils/business/upload_images";
 
 function Add_Product({ on_close, id }) {
   const {
@@ -31,8 +32,23 @@ function Add_Product({ on_close, id }) {
 
   const on_submit = async (data) => {
     console.log(data);
-    await create_range(data);
-    on_close();
+
+    const form_data = new FormData();
+
+    for (let i = 0; i < data.menu.length; i++) {
+      const to_append = {
+        image: data.menu[0],
+        name: `${id}_${i}`,
+        folder: "Travel_Ease/Business/Menu",
+      };
+
+      form_data.append(`picture_${i}`, JSON.stringify(to_append));
+    }
+
+    const upload = await upload_images(formData);
+
+    // await create_range(data);
+    // on_close();
   };
 
   return (
@@ -58,7 +74,7 @@ function Add_Product({ on_close, id }) {
             />
           </label>
           {errors.menu && <p>{errors.menu.message}</p>}
-
+          {/* 
           {categroies.map((category, index) => (
             <div key={index}>
               <label className="label">
@@ -96,7 +112,7 @@ function Add_Product({ on_close, id }) {
               </label>
               {errors.category && <p>{errors.category.message}</p>}
             </div>
-          ))}
+          ))} */}
 
           <input type="submit" value="Submit" className="hard_btn mt-3" />
         </form>
