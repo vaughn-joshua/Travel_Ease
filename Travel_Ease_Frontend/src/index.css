@@ -80,6 +80,6 @@ button:focus-visible {
 }
 
 .leaflet-container {
-  height: 100vh !important;
-  width: 100% !important;
+  /* height: 100vh !important;
+  width: 100% !important; */
 }

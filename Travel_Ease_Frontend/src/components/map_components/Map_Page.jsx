@@ -1,6 +1,6 @@
 import React from "react";
-import Pin_Icon from "../assets/pin.png";
-import Man from "../assets/man.png";
+import Pin_Icon from "../../assets/pin.png";
+import Man from "../../assets/man.png";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, TileLayer, Popup, useMap, GeoJSON, ZoomControl} from "react-leaflet";
 import L, { Icon } from "leaflet";
@@ -36,7 +36,7 @@ const custom_icon_person = new Icon({
         <>
             <MapContainer center = {Tagaytay_Center} 
                           zoom = {zoom} 
-                          style = {{height: "90vh", width: "100%"}}
+                          style = {{height: "100vh", width: "100%"}}
                           maxBounds = {Max_Bounds}
                           maxBoundsViscosity = {1.0}
                           minZoom = {Max_Zoom}
