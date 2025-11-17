@@ -1,6 +1,8 @@
-import { con } from "../travelease_db.js";
+import { con } from "../../config/travelease_db.js";
 
 export async function createBusinessSchema() {
+  console.log("making business schema...");
+
   try {
     con.query(`
       -- BUSINESS MAIN TABLE
@@ -16,11 +18,23 @@ export async function createBusinessSchema() {
         longtitude DOUBLE PRECISION,
         description TEXT,
         rating DECIMAL(3,1),
-        business_hours VARCHAR(100),
-        category_id INT REFERENCES category(category_id) ON DELETE SET NULL,
         google_authenticator VARCHAR(100),
         status BOOLEAN DEFAULT FALSE,
         picture TEXT
+      );
+
+      -- CORE DEPENDENCY TABLES
+      CREATE TABLE IF NOT EXISTS business_category(
+        category_id SERIAL PRIMARY KEY,
+        business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
+        category_name category NOT NULL
+      );
+
+      -- FAVORITES
+      CREATE TABLE IF NOT EXISTS business_favorite(
+        favorite_id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
+        business_id INT REFERENCES business(business_id) ON DELETE CASCADE
       );
 
       -- BUSINESS RELATED TABLES
@@ -32,13 +46,14 @@ export async function createBusinessSchema() {
         close_time TIME
       );
 
-      CREATE TABLE IF NOT EXISTS product_service(
-        product_service_id SERIAL PRIMARY KEY,
-        business_id INT REFERENCES business(business_id) ON DELETE CASCADE,
-        name VARCHAR(200) NOT NULL,
-        description TEXT,
-        price_range range NOT NULL
+      CREATE TABLE IF NOT EXISTS price_range(
+        id SERIAL PRIMARY KEY,
+        category_id INT REFERENCES business_category(category_id) ON DELETE SET NULL,
+        min_price INT NOT NULL,
+        max_price INT NOT NULL
       );
+
+
     `);
     console.log("Business tables created.");
   } catch (error) {

@@ -62,6 +62,17 @@ export async function create_business(req, res) {
       const result = await con.query(hours_query);
     }
 
+    for (let i = 0; i < category.length; i++) {
+      const category_query = {
+        text: `INSERT INTO public.category_table
+                (business_id, category_name)
+                VALUES ($1, $2)`,
+        values: [business_id, category[i]],
+      };
+
+      const result = await con.query(category_query);
+    }
+
     res.json({ message: "successfully created a business" });
 
     //post on category table

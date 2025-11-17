@@ -6,14 +6,14 @@ import { create_business } from "../../utils/business/create_business";
 import Business_Hours from "./Business_Hours";
 
 const category = [
-  "popular",
-  "food & drinks",
+  "food",
+  "drinks",
   "accomodation",
   "souvenir shop",
   "nature",
   "night life",
   "leisure",
-  "actvities",
+  "activities",
   "local offers",
 ];
 
@@ -33,6 +33,7 @@ function Register({ on_close }) {
     handleSubmit,
     reset,
     formState: { errors },
+    getValues,
   } = useForm();
   const [counter, setCounter] = useState(0);
   const [pin, setPins] = useState([]);
@@ -41,6 +42,38 @@ function Register({ on_close }) {
 
   const handlePinMove = (lat, lng) => {
     setPins([{ lat, lon: lng }]); // update pin position
+    console.log({ lat, lng });
+  };
+
+  const set_pin = async () => {
+    try {
+      const street = getValues("street");
+      const brgy = getValues("brgy");
+
+      const response = await fetch("http://localhost:3000/api/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          street,
+          brgy,
+        }),
+      });
+
+      const result = await response.json();
+
+      const cleanPins = result.map((loc) => ({
+        lat: Number(loc.lat),
+        lon: Number(loc.lon),
+      }));
+
+      console.log({ cleanPins });
+
+      setPins(cleanPins);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const on_submit = async (data) => {
@@ -63,34 +96,8 @@ function Register({ on_close }) {
       console.log({ data });
 
       await create_business(data);
-    } else if (counter == 1) {
-      setCounter((prev) => prev + 1);
-      try {
-        const street = data.street;
-        const brgy = data.brgy;
 
-        const response = await fetch("http://localhost:3000/api/search", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            street,
-            brgy,
-          }),
-        });
-
-        const result = await response.json();
-
-        const cleanPins = result.map((loc) => ({
-          lat: Number(loc.lat),
-          lon: Number(loc.lon),
-        }));
-
-        setPins(cleanPins);
-      } catch (error) {
-        console.log(error);
-      }
+      on_close();
     } else {
       setCounter((prev) => prev + 1);
     }
@@ -260,6 +267,7 @@ function Register({ on_close }) {
                         required: "City is required",
                       })}
                       className="text_box"
+                      onChange={set_pin}
                     />
                   </label>
                   {errors.city && <p>{errors.city.message}</p>}

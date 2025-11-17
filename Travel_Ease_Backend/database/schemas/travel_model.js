@@ -1,4 +1,4 @@
-import { con } from "../travelease_db.js";
+import { con } from "../../config/travelease_db.js";
 
 export async function createTravelSchema() {
   try {
@@ -38,6 +38,12 @@ export async function createTravelSchema() {
         role participant_role NOT NULL DEFAULT 'Viewer',
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         status BOOLEAN DEFAULT FALSE
+      );
+
+      CREATE TABLE IF NOT EXISTS travel_plan_favorite(
+        favorite_id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
+        travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE
       );
     `);
     console.log("Travel and planning tables created.");

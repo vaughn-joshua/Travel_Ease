@@ -3,7 +3,7 @@ import { Client } from "pg";
 export const con = new Client({
   user: "postgres",
   host: "localhost",
-  database: "travelease_business_db",
+  database: "travelease_business_db1",
   password: "123",
   port: 5432,
 });
