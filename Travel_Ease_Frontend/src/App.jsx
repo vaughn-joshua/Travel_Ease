@@ -1,14 +1,14 @@
 import { Routes, Route } from "react-router-dom";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
+import Main_Page from "./pages/Main_Page.jsx";
+import Planner from "./pages/Planner.jsx";
 
 function App() {
   return (
     <main>
       <Routes>
-        <Route />
-        <Route />
+        <Route path="/" element={<Main_Page />} />
+        <Route path="/planner/:status/:id" element={<Planner />} />
       </Routes>
     </main>
   );
