@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 function Public_Plans() {
   const navigate = useNavigate();
-  const [plans, setPlans] = useState();
+  const [plans, setPlans] = useState([]);
   const [postedAt, setPostedAt] = useState([]);
 
   useEffect(() => {

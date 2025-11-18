@@ -2,7 +2,7 @@ export async function join_plan(submitted) {
   try {
     console.log(submitted);
     const result = await fetch(
-      "http://localhost:3000/api/travel_plan/quick_join",
+      "http://localhost:3001/api/travel_plan/quick_join",
       {
         method: "POST",
         headers: {

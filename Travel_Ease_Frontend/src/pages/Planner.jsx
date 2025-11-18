@@ -7,6 +7,7 @@ import Edit_Plan from "../component/main_page/Edit_Plan";
 import Create_Activity from "../component/main_page/Create_Activity";
 import { useNavigate } from "react-router-dom";
 import { edit_plan } from "../utils/travel_plan/edit_plan";
+import Landing_Page from "./Landing_Page";
 
 function Planner() {
   const { id, status } = useParams();
@@ -35,6 +36,8 @@ function Planner() {
     const load_data = async () => {
       try {
         const business_data = await fetch_businesses();
+
+        // fetch plan details
         const plan_data = await fetch_plan_id(id);
 
         setPlan(plan_data);
@@ -81,7 +84,7 @@ function Planner() {
     <div className="p-5 ">
       <div className="flex gap-6">
         <div id="map-container" className="card w-9/12 h-[60vh]">
-          {/* here is the map po */}
+          <Landing_Page className="w-full h-full grid col-span-8" />
         </div>
         <div className="activities w-3/12">
           <div className="flex justify-between">

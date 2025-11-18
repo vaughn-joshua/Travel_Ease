@@ -23,6 +23,7 @@ function Main_Page() {
         {/* LEFT SIDE */}
         <div className="flex-3">
           <div id="ongoing_plans">
+            {/* header */}
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-semibold text-gray-900">
                 Ongoing Plans

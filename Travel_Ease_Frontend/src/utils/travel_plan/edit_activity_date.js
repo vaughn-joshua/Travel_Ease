@@ -2,7 +2,7 @@ export async function edit_activity_date(submitted) {
   console.log(submitted);
   try {
     const result = await fetch(
-      `http://localhost:3000/api/travel_plan/update_activity/${submitted.id}`,
+      `http://localhost:3001/api/travel_plan/update_activity/${submitted.id}`,
       {
         method: "PUT",
         headers: {

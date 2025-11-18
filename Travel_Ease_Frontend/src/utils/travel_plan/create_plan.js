@@ -4,7 +4,7 @@ export async function create_plan(input) {
     console.log(input);
 
     const result = await fetch(
-      "http://localhost:3000/api/travel_plan/create_plan",
+      "http://localhost:3001/api/travel_plan/create_plan",
       {
         method: "POST",
         headers: {

@@ -1,6 +1,6 @@
 export async function fetch_plans() {
   try {
-    const result = await fetch("http://localhost:3000/api/travel_plan/plans", {
+    const result = await fetch("http://localhost:3001/api/travel_plan/plans", {
       method: "GET",
     });
 

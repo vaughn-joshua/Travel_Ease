@@ -1,7 +1,7 @@
 export async function edit_activity(edited_data) {
   try {
     const result = await fetch(
-      `http://localhost:3000/api/travel_plan/activity_edit/${edited_data.activity_id}`,
+      `http://localhost:3001/api/travel_plan/activity_edit/${edited_data.activity_id}`,
       {
         method: "PUT",
         headers: {

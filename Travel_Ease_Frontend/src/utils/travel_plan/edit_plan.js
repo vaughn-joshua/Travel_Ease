@@ -1,7 +1,7 @@
 export async function edit_plan(edited_data) {
   try {
     const result = await fetch(
-      `http://localhost:3000/api/travel_plan/edit_plan/${edited_data.travel_plan}`,
+      `http://localhost:3001/api/travel_plan/edit_plan/${edited_data.travel_plan}`,
       {
         method: "PUT",
         headers: {

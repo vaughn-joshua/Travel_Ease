@@ -2,7 +2,7 @@ export async function create_activity(input) {
   try {
     console.log({ input });
     const result = await fetch(
-      "http://localhost:3000/api/travel_plan/create_activity",
+      "http://localhost:3001/api/travel_plan/create_activity",
       {
         method: "POST",
         headers: {

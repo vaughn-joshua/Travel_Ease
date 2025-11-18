@@ -15,7 +15,8 @@ export async function createTravelSchema() {
         visibility_end_date DATE,
         status status_enum NOT NULL DEFAULT 'Draft',
         max_slots INT,
-        location TEXT
+        location TEXT,
+        visibility_timestamp TIMESTAMP
       );
 
       -- ACTIVITY AND BUDGET
@@ -23,6 +24,7 @@ export async function createTravelSchema() {
         activity_id SERIAL PRIMARY KEY, 
         travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE,
         business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
+        title VARCHAR(200) NOT NULL,
         notes TEXT,
         target_date DATE,
         budget_range range,

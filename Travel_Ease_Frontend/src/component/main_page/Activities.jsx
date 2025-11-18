@@ -59,6 +59,13 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
     setToDelete(plan.activity_id);
   };
 
+  const click_plan = (plan) => {
+    if (status == "planner") {
+      console.log("clicked");
+      console.log(plan);
+    }
+  };
+
   return (
     <>
       <div className="mt-3">
@@ -67,7 +74,11 @@ function Activities({ reference_id, load_state, day_selected, dates, status }) {
         {plans &&
           plans.map((plan, index) => {
             return (
-              <div key={index} className="card mb-3">
+              <div
+                key={index}
+                className="card"
+                onClick={() => click_plan(plan)}
+              >
                 <h1>{plan.title}</h1>
                 <p>{plan.name}</p>
                 <p>{plan.address}</p>

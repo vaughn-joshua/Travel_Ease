@@ -1,7 +1,7 @@
 export async function fetch_public_plans() {
   try {
     const result = await fetch(
-      "http://localhost:3000/api/travel_plan/public_plans",
+      "http://localhost:3001/api/travel_plan/public_plans",
       {
         method: "GET",
       }
