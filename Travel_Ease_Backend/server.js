@@ -2,6 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 
+import express from "express";
+import cors from "cors";
+import {
+  travel_plan_routes,
+  user_routes,
+  config_routes,
+  business_routes,
+} from "./routes/index.js";
 const app = express();
 const PORT = 3001;
 
@@ -66,6 +74,22 @@ app.get("/api/geocode", async (req, res) => {
     console.error("Error fetching geocode:", error.message);
     res.status(500).json({ error: "Failed to fetch geocode results" });
   }
+app.use(cors()); //for testing
+
+//routes
+
+app.use("/api/travel_plan", travel_plan_routes);
+
+app.use("/api/user", user_routes);
+
+app.use("/api/config", config_routes);
+
+app.use("/api/business", business_routes);
+
+//server
+
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
 });
 
 
