@@ -17,8 +17,8 @@ function Ongoing_Plans() {
   const [selected, setSelected] = useState();
 
   const [clickedActivity, setClickActivity] = useState({
-    start: 0,
-    end: 0,
+    start: null, // array [lat, lng]
+    end: null,
   });
 
   // store day number
@@ -29,6 +29,11 @@ function Ongoing_Plans() {
   });
   const [daySelected, setDaySelected] = useState(1);
   const [loadActivity, setLoadActivity] = useState(false);
+
+  const handleChildData = (lat, long) => {
+    console.log({ lat, long });
+    setClickActivity({ end: [lat, long] });
+  };
 
   useEffect(() => {
     const load_plans = async () => {
@@ -101,7 +106,7 @@ function Ongoing_Plans() {
             <div className="bg-amber-100 w-[50vw]">
               <Landing_Page
                 start={itineraryRoute.start}
-                end={itineraryRoute.end}
+                end={clickedActivity.end}
                 className="w-full h-full grid col-span-8"
               />
             </div>
@@ -146,6 +151,7 @@ function Ongoing_Plans() {
                     load_state={loadActivity}
                     day_selected={daySelected}
                     dates={dates}
+                    onSendData={handleChildData}
                   />
                 )}
               </div>
