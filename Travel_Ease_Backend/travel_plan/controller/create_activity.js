@@ -3,32 +3,52 @@ import { con } from "../../config/travelease_db.js";
 export async function create_activity(req, res) {
   const {
     travel_plan_id,
-    title,
-    business_id,
     notes,
     target_date,
     budget_range,
     user_id,
+    lat,
+    lng,
+    location,
+    brgy,
+    province,
+    city,
   } = req.body;
 
-  const new_business_id = business_id ? business : null;
+  console.log("backend");
 
-  console.log(req.body);
+  console.log({
+    travel_plan_id,
+    notes,
+    target_date,
+    budget_range,
+    user_id,
+    lat,
+    lng,
+    location,
+    brgy,
+    province,
+    city,
+  });
 
   try {
-    // console.log({ title, description, location, date, slots, collaborators });
-
     const query = {
       name: "create activity",
-      text: "INSERT INTO activity (travel_plan_id, title, business_id, notes, target_date, budget_range, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      text: `INSERT INTO activity 
+              (travel_plan_id, notes, target_date, budget_range, user_id, lat, lng, location, brgy, province, city) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       values: [
         travel_plan_id,
-        title,
-        new_business_id,
         notes,
         target_date,
         budget_range,
         user_id,
+        lat,
+        lng,
+        location,
+        brgy,
+        province,
+        city,
       ],
     };
 

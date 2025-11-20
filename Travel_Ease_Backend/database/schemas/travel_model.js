@@ -23,13 +23,14 @@ export async function createTravelSchema() {
       CREATE TABLE IF NOT EXISTS activity(
         activity_id SERIAL PRIMARY KEY, 
         travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE,
-        business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
         title VARCHAR(200) NOT NULL,
         notes TEXT,
         target_date DATE,
         budget_range range,
         user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
-        is_priority BOOLEAN DEFAULT FALSE
+        is_priority BOOLEAN DEFAULT FALSE,
+        lat DOUBLE PRECISION,
+        lng DOUBLE PRECISION
       );
 
       -- PARTICIPANTS AND ROLES

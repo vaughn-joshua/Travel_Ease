@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
+import Search_Box from "../map_components/Search_Box";
 
 function Create_Activity({ on_close, business, dates, id }) {
   const formatDate = (dateStr) => {
@@ -15,6 +16,7 @@ function Create_Activity({ on_close, business, dates, id }) {
   };
 
   const [value, setValue] = useState(dates.start);
+  const [search_result, set_search_result] = useState(null);
 
   const budget_range = [
     "0-100",
@@ -47,6 +49,14 @@ function Create_Activity({ on_close, business, dates, id }) {
     try {
       data.travel_plan_id = id;
       data.user_id = 1; //change it dont hard code the user
+      data.lat = search_result[0];
+      data.lng = search_result[1];
+      data.location = search_result[2];
+      data.brgy = search_result[3];
+      data.province = search_result[4];
+      data.city = search_result[5];
+
+      console.log(data);
 
       create_activity(data);
       reset();
@@ -63,38 +73,9 @@ function Create_Activity({ on_close, business, dates, id }) {
 
         <form onSubmit={handleSubmit(on_submit)}>
           <label className="label">
-            Title:
-            <input
-              {...register("title", {
-                required: "Please enter a title",
-              })}
-              className="text_box"
-            />
-          </label>
-          {errors.title && <p>{errors.title.message}</p>}
-
-          <label className="label">
-            Notes:
-            <input
-              {...register("notes", {
-                required: "Please enter some notes or description",
-              })}
-              className="text_box"
-            />
-          </label>
-          {errors.notes && <p>{errors.notes.message}</p>}
-
-          <label className="label">
-            Business:
-            {/* not required, cuz activity can also just be a sponti one not connected to business */}
-            <select {...register("business_id")} className="text_box">
-              <option value="">--Select a business--</option>
-              {business.map((b) => (
-                <option key={b.business_id} value={b.business_id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            Location:
+            {/* return the lat lng */}
+            <Search_Box onSearch={set_search_result} />
           </label>
 
           <label className="label">
@@ -150,6 +131,11 @@ function Create_Activity({ on_close, business, dates, id }) {
             </select>
           </label>
           {errors.budget_range && <p>{errors.budget_range.message}</p>}
+
+          <label className="label">
+            Notes:
+            <input {...register("notes")} className="text_box" />
+          </label>
           <br />
 
           <input type="submit" value="Submit" className="hard_btn" />

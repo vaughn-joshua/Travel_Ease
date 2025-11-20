@@ -9,6 +9,11 @@ import { useNavigate } from "react-router-dom";
 import { edit_plan } from "../utils/travel_plan/edit_plan";
 import Landing_Page from "./Landing_Page";
 
+const itineraryRoute = {
+  // Tagaytay Rotonda
+  start: [14.1154, 120.9618], // SHOULD BE USER LOCATION
+};
+
 function Planner() {
   const { id, status } = useParams();
 
@@ -26,10 +31,22 @@ function Planner() {
     end: 0,
   });
 
+  const [clickedActivity, setClickActivity] = useState({
+    start: null,
+    end: null, // will be [lat, lng]
+  });
+
   const handle_close = () => {
     window.location.reload();
     console.log("closing na");
     setActiveModal("");
+  };
+
+  const handleChildData = (lat, long) => {
+    console.log({ lat, long });
+
+    // Update end point for map path
+    setClickActivity({ end: [lat, long] });
   };
 
   useEffect(() => {
@@ -84,7 +101,11 @@ function Planner() {
     <div className="p-5 ">
       <div className="flex gap-6">
         <div id="map-container" className="card w-9/12 h-[60vh]">
-          <Landing_Page className="w-full h-full grid col-span-8" />
+          <Landing_Page
+            start={itineraryRoute.start}
+            end={clickedActivity.end} // updates when activity is clicked
+            className="w-full h-full grid col-span-8"
+          />
         </div>
         <div className="activities w-3/12">
           <div className="flex justify-between">
@@ -118,6 +139,7 @@ function Planner() {
                 load_state={loadActivity}
                 day_selected={daySelected}
                 dates={dates}
+                onSendData={handleChildData}
               />
             )}
           </div>

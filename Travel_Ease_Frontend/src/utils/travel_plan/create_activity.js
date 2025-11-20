@@ -1,6 +1,6 @@
 export async function create_activity(input) {
   try {
-    console.log({ input });
+    console.log({ input, message: "we are at front end" });
     const result = await fetch(
       "http://localhost:3001/api/travel_plan/create_activity",
       {
