@@ -34,6 +34,20 @@ app.get("/api/travel_spots", async (req ,res) => {
 
 })
 
+app.get("/api/travel_spots/reviews/:id", async (req, res)=> {
+   const businessId = req.params.id;
+   try {
+    const result = await con.query("SELECT * from business_review WHERE business_id = $1 ORDER BY review_date DESC", [businessId]);
+    res.json({
+      message: "Success", 
+      data: result.rows
+    })
+   } catch (error) {
+    console.error("Error fetching reviews: ", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+   }
+})
+
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
