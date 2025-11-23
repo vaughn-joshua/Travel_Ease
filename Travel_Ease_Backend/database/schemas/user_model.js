@@ -2,14 +2,14 @@ import { con } from "../../config/travelease_db.js";
 
 export async function user_model() {
   try {
-    con.query(`
+    await con.query(`
       -- USER
       CREATE TABLE IF NOT EXISTS "user" (
         user_id SERIAL PRIMARY KEY,
         first_name VARCHAR(100) NOT NULL,
         last_name VARCHAR(100) NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
-        contact_no VARCHAR(20),
+        contact_no VARCHAR(50),
         password VARCHAR NOT NULL
       );
 

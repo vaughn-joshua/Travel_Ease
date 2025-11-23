@@ -2,7 +2,7 @@ import { con } from "../../config/travelease_db.js";
 
 export async function createTravelSchema() {
   try {
-    con.query(`
+    await con.query(`
       -- TRAVEL PLAN MAIN TABLE
       CREATE TABLE IF NOT EXISTS travel_plan(
         travel_plan_id SERIAL PRIMARY KEY,

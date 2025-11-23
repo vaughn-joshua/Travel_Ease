@@ -2,7 +2,7 @@ import { con } from "../../config/travelease_db.js";
 
 export async function review_model() {
   try {
-    con.query(`
+    await con.query(`
       -- REVIEWS
       CREATE TABLE IF NOT EXISTS business_review(
         review_id SERIAL PRIMARY KEY,

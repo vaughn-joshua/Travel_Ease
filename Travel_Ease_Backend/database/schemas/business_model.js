@@ -4,7 +4,7 @@ export async function createBusinessSchema() {
   console.log("making business schema...");
 
   try {
-    con.query(`
+    await con.query(`
       -- BUSINESS MAIN TABLE
       CREATE TABLE IF NOT EXISTS business (
         business_id SERIAL PRIMARY KEY,

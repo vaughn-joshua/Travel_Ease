@@ -3,7 +3,7 @@ import { con } from "../../config/travelease_db.js";
 export async function createCoreSchema() {
   console.log("making core schema...");
   try {
-    con.query(`
+    await con.query(`
       -- DEFINE CUSTOM TYPES FIRST
       DO $$ BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_enum') THEN
