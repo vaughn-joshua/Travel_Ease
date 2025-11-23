@@ -4,6 +4,7 @@ import Register_Map from "./Register_Map";
 import { useEffect, useState } from "react";
 import { create_business } from "../../utils/business/create_business";
 import Business_Hours from "./Business_Hours";
+import { business_edit } from "../../utils/business/business_edit";
 
 // Predefined category list selection
 const category = [
@@ -37,7 +38,10 @@ function Edit_Business({ on_close, business }) {
     reset,
     formState: { errors },
     getValues,
+    watch,
   } = useForm();
+
+  const selectedCategories = watch("category") || [];
 
   // Multi-step form counter (0, 1, 2)
   const [counter, setCounter] = useState(0);
@@ -74,8 +78,6 @@ function Edit_Business({ on_close, business }) {
         });
 
         const result = await response.json();
-
-        console.log(result);
 
         // Convert API results to map-friendly format
         const cleanPins = result?.map((loc) => ({
@@ -148,7 +150,7 @@ function Edit_Business({ on_close, business }) {
 
       // Submit business to backend
       // await create_business(data);
-      await business_edit(data);
+      await business_edit(data, business.id);
 
       on_close();
     } else {
@@ -391,48 +393,57 @@ function Edit_Business({ on_close, business }) {
 
               {counter === 3 && (
                 <>
-                  {business.categories.map((category, index) => (
-                    <div key={index}>
-                      <label className="label">
-                        {category.category_name} Price Range:
-                        <div className="flex gap-3">
-                          <input
-                            {...register(`categories.${index}.min_price`, {
-                              min: 1,
-                              step: 1,
-                            })}
-                            className="text_box"
-                            type="number"
-                            defaultValue={
-                              business.categories[index].price_range.min_price
-                            }
-                          />
-                          <input
-                            {...register(`categories.${index}.max_price`, {
-                              min: 1,
-                              step: 1,
-                            })}
-                            className="text_box"
-                            type="number"
-                            defaultValue={
-                              business.categories[index].price_range.max_price
-                            }
-                          />
-                          <input
-                            type="hidden"
-                            {...register(`categories.${index}.category_name`)}
-                            value={category.category_name}
-                          />
-                          <input
-                            type="hidden"
-                            {...register(`categories.${index}.category_id`)}
-                            value={category.category_id}
-                          />
-                        </div>
-                      </label>
-                      {errors.category && <p>{errors.category.message}</p>}
-                    </div>
-                  ))}
+                  {selectedCategories.map((category, index) => {
+                    // Find matching existing category
+                    const existing = business.categories.find(
+                      (c) => c.category_name === category
+                    );
+
+                    return (
+                      <div key={index}>
+                        <label className="label">
+                          {category} Price Range:
+                          <div className="flex gap-3">
+                            <input
+                              {...register(`categories.${index}.min_price`, {
+                                min: 1,
+                                step: 1,
+                              })}
+                              className="text_box"
+                              type="number"
+                              defaultValue={
+                                business.categories[index].price_range.min_price
+                              }
+                            />
+                            <input
+                              {...register(`categories.${index}.max_price`, {
+                                min: 1,
+                                step: 1,
+                              })}
+                              className="text_box"
+                              type="number"
+                              defaultValue={
+                                business.categories[index].price_range.max_price
+                              }
+                            />
+                            <input
+                              type="hidden"
+                              {...register(`categories.${index}.category_name`)}
+                              value={category}
+                            />
+
+                            {/* existing category? give its id, else null */}
+                            <input
+                              type="hidden"
+                              {...register(`categories.${index}.category_id`)}
+                              value={existing?.category_id || ""}
+                            />
+                          </div>
+                        </label>
+                        {errors.category && <p>{errors.category.message}</p>}
+                      </div>
+                    );
+                  })}
                 </>
               )}
 

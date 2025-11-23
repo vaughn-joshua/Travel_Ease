@@ -6,7 +6,7 @@ import Edit_Business from "../component/business/Edit_Business";
 
 function Business_Page() {
   const { id } = useParams();
-  const [businessData, serBusinessData] = useState(null);
+  const [businessData, setBusinessData] = useState(null);
   const [product, setProduct] = useState(false);
   const [pictures, setPictures] = useState([]);
   const [clicked, setClicked] = useState(null);
@@ -17,9 +17,10 @@ function Business_Page() {
       try {
         const data = await fetch_business(id);
         const image_urls = JSON.parse(data.picture);
-        // setPictures(image_urls);
+        setPictures(image_urls);
         console.log(data);
-        serBusinessData(data);
+        data.id = id;
+        setBusinessData(data);
       } catch (error) {
         console.log(error);
       }
