@@ -31,7 +31,12 @@ export async function model_db(req, res) {
             business_id SERIAL PRIMARY KEY,
             user_id INTEGER REFERENCES "user"(user_id) ON DELETE CASCADE,
             name VARCHAR(200) NOT NULL,
-            address VARCHAR(300),
+            house_number VARCHAR(300),
+            street VARCHAR(300),
+            brgy VARCHAR(300),
+            city VARCHAR(300),
+            latitude DOUBLE PRECISION,
+            longtitude DOUBLE PRECISION,
             description TEXT,
             rating DECIMAL(3,1),
             business_hours VARCHAR(100),
@@ -39,6 +44,14 @@ export async function model_db(req, res) {
             google_authenticator VARCHAR(100),
             status BOOLEAN DEFAULT FALSE,
             picture TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS business_hours (
+            id SERIAL PRIMARY KEY,
+            business_id INTEGER REFERENCES business(business_id) ON DELETE CASCADE,
+            day_of_week VARCHAR(10),
+            open_time TIME,
+            close_time TIME
             );
 
             CREATE TYPE status_enum AS ENUM ('Draft', 'Active', 'Completed', 'Cancelled');
@@ -120,6 +133,7 @@ export async function model_db(req, res) {
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status BOOLEAN DEFAULT FALSE
             );
+            
 
             `);
     console.log("Tables are created or already exist.");

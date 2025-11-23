@@ -5,11 +5,16 @@ import Main_Landing_Page from "./pages/Main_Landing_Page.jsx";
 import Main_Page from "./pages/Main_Page.jsx";
 import Planner from "./pages/Planner.jsx";
 import "./App.css";
+import Landing_Page from "./pages/Landing_Page.";
+import Business_Page from "./pages/Business_Page";
 
 function App() {
   return (
     <main>
       <Routes>
+        <Route path="/business_landing_page" element={<Landing_Page />} />
+        <Route path="/business/:id" element={<Business_Page />} />
+        <Route />
         <Route path="/" element={<Main_Page />} />
         <Route path="/planner/:status/:id" element={<Planner />} />
         <Route path="/map" element={<Main_Map_Page />} />

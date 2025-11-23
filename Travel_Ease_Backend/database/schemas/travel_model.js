@@ -23,7 +23,7 @@ export async function createTravelSchema() {
       CREATE TABLE IF NOT EXISTS activity(
         activity_id SERIAL PRIMARY KEY, 
         travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE,
-        title VARCHAR(200) NOT NULL,
+        business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
         notes TEXT,
         target_date DATE,
         budget_range range,
