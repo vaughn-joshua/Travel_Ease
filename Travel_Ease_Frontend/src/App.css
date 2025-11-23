@@ -32,6 +32,10 @@
   @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition;
 }
 
+.category {
+  @apply border px-4 py-1 rounded-2xl border-gray-100 bg-gray-300 text-xs;
+}
+
 /* #root {
   max-width: 1280px;
   margin: 0 auto;

@@ -19,3 +19,4 @@ export async function categories_fetch(req, res) {
     console.log(error);
   }
 }
+  

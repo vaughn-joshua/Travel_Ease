@@ -7,6 +7,6 @@ const router = Router();
 const upload = multer();
 
 router.post("/upload", upload.single("image"), upload_image);
-router.post("/upload_images", upload.single("image"), upload_images);
+router.post("/upload_images", upload.array("images"), upload_images);
 
 export default router;

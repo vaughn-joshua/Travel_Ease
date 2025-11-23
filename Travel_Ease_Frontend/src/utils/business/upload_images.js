@@ -12,7 +12,7 @@ export async function upload_images(image) {
 
     const data = await result.json();
 
-    return data;
+    return JSON.stringify(data); //get like this const image_urls = JSON.parse(row.image_urls);
   } catch (error) {
     console.log(error);
   }

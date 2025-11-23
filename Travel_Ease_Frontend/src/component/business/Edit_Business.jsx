@@ -29,7 +29,7 @@ const days = [
   { start: null, end: null, day: "sat" },
 ];
 
-function Register({ on_close }) {
+function Edit_Business({ on_close, business }) {
   // react-hook-form configuration
   const {
     register,
@@ -58,6 +58,39 @@ function Register({ on_close }) {
     setPins([{ lat, lon: lng }]);
     console.log({ lat, lng });
   };
+
+  useEffect(() => {
+    const load_pin = async () => {
+      try {
+        const street = business.street;
+        const brgy = business.brgy;
+
+        const response = await fetch("http://localhost:3000/api/search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ street, brgy }),
+        });
+
+        const result = await response.json();
+
+        console.log(result);
+
+        // Convert API results to map-friendly format
+        const cleanPins = result?.map((loc) => ({
+          lat: Number(loc.lat),
+          lon: Number(loc.lon),
+        }));
+
+        console.log({ cleanPins });
+        setPins(cleanPins);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    load_pin();
+  }, []);
 
   /**
    * Auto-pin based on street + barangay search
@@ -94,7 +127,7 @@ function Register({ on_close }) {
    * Handles final form submission
    */
   const on_submit = async (data) => {
-    if (counter == 2) {
+    if (counter == 3) {
       // Build image upload payload
       const formData = new FormData();
       formData.append("image", data.picture[0]);
@@ -109,12 +142,13 @@ function Register({ on_close }) {
       data.lng = pin[0].lon;
 
       // Attach business hours
-      data.business_hrs = hours;
+      //   data.business_hrs = hours;
 
       console.log({ data });
 
       // Submit business to backend
       // await create_business(data);
+      await business_edit(data);
 
       on_close();
     } else {
@@ -220,6 +254,7 @@ function Register({ on_close }) {
                     <input
                       {...register("name", { required: "name is required" })}
                       className="text_box"
+                      defaultValue={business.name}
                     />
                   </label>
                   {errors.name && <p>{errors.name.message}</p>}
@@ -232,6 +267,9 @@ function Register({ on_close }) {
                           <input
                             type="checkbox"
                             value={cat}
+                            defaultChecked={business.categories?.some(
+                              (c) => c.category_name === cat
+                            )}
                             {...register("category", {
                               required: "category is required",
                             })}
@@ -250,6 +288,7 @@ function Register({ on_close }) {
                         required: "description is required",
                       })}
                       className="text_box"
+                      defaultValue={business.description}
                     />
                   </label>
                   {errors.description && <p>{errors.description.message}</p>}
@@ -266,6 +305,7 @@ function Register({ on_close }) {
                         required: "House Number is required",
                       })}
                       className="text_box"
+                      defaultValue={business.house_number}
                     />
                   </label>
                   {errors.house_no && <p>{errors.house_no.message}</p>}
@@ -278,6 +318,7 @@ function Register({ on_close }) {
                       })}
                       className="text_box"
                       onChange={handle_change}
+                      defaultValue={business.street}
                     />
                   </label>
                   {errors.street && <p>{errors.street.message}</p>}
@@ -290,6 +331,7 @@ function Register({ on_close }) {
                       })}
                       className="text_box"
                       onChange={handle_change}
+                      defaultValue={business.brgy}
                     />
                   </label>
                   {errors.brgy && <p>{errors.brgy.message}</p>}
@@ -300,6 +342,7 @@ function Register({ on_close }) {
                       {...register("city", { required: "City is required" })}
                       className="text_box"
                       onChange={set_pin}
+                      defaultValue={business.city}
                     />
                   </label>
                   {errors.city && <p>{errors.city.message}</p>}
@@ -311,65 +354,85 @@ function Register({ on_close }) {
                 <>
                   <label className="label">
                     Business Hours:
-                    <div className="flex flex-col gap-2">
-                      {/* Day Buttons */}
-                      <div className="days w-100 mt-2">
-                        {days.map((day, index) => (
-                          <button
-                            className="day_btn"
-                            key={index}
-                            onClick={() => clicked_day(day.day)}
-                          >
-                            {day.day}
-                          </button>
-                        ))}
+                    {business.business_hours.map((hour, index) => (
+                      <div key={index} className="flex gap-1">
+                        <p>{hour.day_of_week} :</p>
+                        <input
+                          {...register(`business_hrs[${index}.open_time]`)}
+                          className="text_box"
+                          defaultValue={hour.open_time}
+                        />
+                        <input
+                          {...register(`business_hrs[${index}.close_time]`)}
+                          className="text_box"
+                          defaultValue={hour.close_time}
+                        />
+                        <input
+                          {...register(`business_hrs[${index}.day_of_week]`)}
+                          value={hour.day_of_week}
+                          hidden
+                        />
                       </div>
-
-                      {/* Time Inputs */}
-                      {selectedDays.length > 0 && (
-                        <div className="flex gap-2">
-                          <input
-                            {...register("starting_time", {
-                              required: "starting_time is required",
-                            })}
-                            type="time"
-                            className="text_box"
-                            onChange={(e) =>
-                              change_time("start", e.target.value)
-                            }
-                          />
-
-                          <input
-                            {...register("ending_time", {
-                              required: "ending_time is required",
-                            })}
-                            type="time"
-                            className="text_box"
-                            onChange={(e) => change_time("end", e.target.value)}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </label>
-
-                  {/* Error messages */}
-                  {errors.starting_time && (
-                    <p>{errors.starting_time.message}</p>
-                  )}
-                  {errors.ending_time && <p>{errors.ending_time.message}</p>}
 
                   {/* Business Picture */}
                   <label className="label">
                     Picture:
                     <input
-                      {...register("picture", {
-                        required: "picture is required",
-                      })}
+                      {...register("picture")}
                       className="text_box"
                       type="file"
                     />
                   </label>
                   {errors.picture && <p>{errors.picture.message}</p>}
+                </>
+              )}
+
+              {counter === 3 && (
+                <>
+                  {business.categories.map((category, index) => (
+                    <div key={index}>
+                      <label className="label">
+                        {category.category_name} Price Range:
+                        <div className="flex gap-3">
+                          <input
+                            {...register(`categories.${index}.min_price`, {
+                              min: 1,
+                              step: 1,
+                            })}
+                            className="text_box"
+                            type="number"
+                            defaultValue={
+                              business.categories[index].price_range.min_price
+                            }
+                          />
+                          <input
+                            {...register(`categories.${index}.max_price`, {
+                              min: 1,
+                              step: 1,
+                            })}
+                            className="text_box"
+                            type="number"
+                            defaultValue={
+                              business.categories[index].price_range.max_price
+                            }
+                          />
+                          <input
+                            type="hidden"
+                            {...register(`categories.${index}.category_name`)}
+                            value={category.category_name}
+                          />
+                          <input
+                            type="hidden"
+                            {...register(`categories.${index}.category_id`)}
+                            value={category.category_id}
+                          />
+                        </div>
+                      </label>
+                      {errors.category && <p>{errors.category.message}</p>}
+                    </div>
+                  ))}
                 </>
               )}
 
@@ -383,7 +446,7 @@ function Register({ on_close }) {
 
                 <input
                   type="submit"
-                  value={counter == 2 ? "submit" : "next"}
+                  value={counter == 3 ? "submit" : "next"}
                   className="hard_btn"
                 />
               </div>
@@ -395,4 +458,4 @@ function Register({ on_close }) {
   );
 }
 
-export default Register;
+export default Edit_Business;

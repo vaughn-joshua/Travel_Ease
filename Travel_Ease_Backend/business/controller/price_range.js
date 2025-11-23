@@ -1,9 +1,7 @@
 import { con } from "../../config/travelease_db.js";
 
 export async function price_range(req, res) {
-  const { categories, menu } = req.body;
-
-  const id = 1;
+  const { categories, menu, pictures, id } = req.body;
 
   console.log("creating range...");
 
@@ -23,6 +21,14 @@ export async function price_range(req, res) {
 
       const result = await con.query(range_query);
     }
+
+    const picture_query = {
+      name: "upload url links to business table",
+      text: "UPDATE public.business SET picture = $1 WHERE business_id = $2",
+      values: [pictures, id],
+    };
+
+    const result = await con.query(picture_query);
 
     res.json({ message: "successfully input price_range/s" });
 

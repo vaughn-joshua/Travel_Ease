@@ -31,24 +31,23 @@ function Add_Product({ on_close, id }) {
   };
 
   const on_submit = async (data) => {
-    console.log(data);
-
     const form_data = new FormData();
 
     for (let i = 0; i < data.menu.length; i++) {
-      const to_append = {
-        image: data.menu[0],
-        name: `${id}_${i}`,
-        folder: "Travel_Ease/Business/Menu",
-      };
-
-      form_data.append(`picture_${i}`, JSON.stringify(to_append));
+      form_data.append("images", data.menu[i]);
+      form_data.append("names", `${id}_${i}`);
+      form_data.append("folders", `Travel_Ease/Business/Menu`);
     }
 
-    const upload = await upload_images(formData);
+    const upload = await upload_images(form_data);
 
-    // await create_range(data);
-    // on_close();
+    data.pictures = upload;
+    data.id = id;
+
+    console.log({ data });
+
+    await create_range(data);
+    on_close();
   };
 
   return (
@@ -74,7 +73,7 @@ function Add_Product({ on_close, id }) {
             />
           </label>
           {errors.menu && <p>{errors.menu.message}</p>}
-          {/* 
+
           {categroies.map((category, index) => (
             <div key={index}>
               <label className="label">
@@ -112,7 +111,7 @@ function Add_Product({ on_close, id }) {
               </label>
               {errors.category && <p>{errors.category.message}</p>}
             </div>
-          ))} */}
+          ))}
 
           <input type="submit" value="Submit" className="hard_btn mt-3" />
         </form>
