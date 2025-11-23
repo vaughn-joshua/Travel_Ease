@@ -8,7 +8,7 @@ import {
   utils_routes,
   business_routes,
 } from "./routes/index.js";
-
+import { con } from "./config/travelease_db.js";
 const app = express();
 const PORT = 3001;
 
@@ -90,6 +90,32 @@ app.post("/api/search", async (req, res) => {
 });
 
 //server
+app.get("/api/travel_spots", async (req ,res) => {
+  try {
+      const result = await con.query("SELECT business_id, user_id, name, house_number, street, brgy, city, latitude, longtitude, description, rating, status, picture FROM business");
+      res.json({
+        message: 'Success',
+        data: result.rows,
+      })
+  } catch (error) {
+      res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+
+})
+
+app.get("/api/travel_spots/reviews/:id", async (req, res)=> {
+   const businessId = req.params.id;
+   try {
+    const result = await con.query("SELECT * from business_review WHERE business_id = $1 ORDER BY review_date DESC", [businessId]);
+    res.json({
+      message: "Success", 
+      data: result.rows
+    })
+   } catch (error) {
+    console.error("Error fetching reviews: ", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+   }
+})
 //map routes
 app.get("/api/suggestions", async (req, res) => {
   const { query } = req.query;
