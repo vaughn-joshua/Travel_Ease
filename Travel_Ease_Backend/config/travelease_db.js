@@ -6,8 +6,8 @@ types.setTypeParser(1082, (val) => val);
 export const con = new Client({
   user: "postgres",
   host: "localhost",
-  database: "travelease_business_db1",
-  password: "123",
+  database: "travelease_db",
+  password: "1234",
   port: 5432,
 });
 

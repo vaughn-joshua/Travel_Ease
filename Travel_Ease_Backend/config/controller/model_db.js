@@ -17,15 +17,26 @@ export async function model_db(req, res) {
             password VARCHAR NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS blog (
-            blog_id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES "user"(user_id) ON DELETE CASCADE,
+            CREATE TABLE IF NOT EXISTS "Blog" (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             title VARCHAR(200) NOT NULL,
-            description TEXT,
-            content TEXT,
-            category_id INT REFERENCES category(category_id) ON DELETE SET NULL,
-            blog_date DATE DEFAULT CURRENT_DATE
+            slug VARCHAR(200) UNIQUE NOT NULL,
+            excerpt VARCHAR(500) NOT NULL,
+            content TEXT NOT NULL,
+            "coverImageUrl" TEXT NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            "isFeatured" BOOLEAN DEFAULT false,
+            "readingMinutes" INTEGER NOT NULL,
+            "publishedAt" TIMESTAMP DEFAULT NOW(),
+            author VARCHAR(100) NOT NULL,
+            "createdAt" TIMESTAMP DEFAULT NOW(),
+            "updatedAt" TIMESTAMP DEFAULT NOW()
             );
+
+            CREATE INDEX IF NOT EXISTS idx_blog_slug ON "Blog"(slug);
+            CREATE INDEX IF NOT EXISTS idx_blog_category ON "Blog"(category);
+            CREATE INDEX IF NOT EXISTS idx_blog_is_featured ON "Blog"("isFeatured");
+            CREATE INDEX IF NOT EXISTS idx_blog_published_at ON "Blog"("publishedAt");
 
             CREATE TABLE IF NOT EXISTS business (
             business_id SERIAL PRIMARY KEY,
