@@ -1,0 +1,19 @@
+import { con } from "../../config/travelease_db.js";
+
+export async function fetch_plans(req, res) {
+  try {
+    const query = {
+      name: "fetch-plans",
+      text: "SELECT travel_plan_id, name, start_date, end_date, description, location FROM public.travel_plan WHERE status = $1;",
+      values: ["Draft"],
+    };
+
+    const result = await con.query(query);
+
+    console.log("successful fetch plans");
+    console.log(result.rows);
+    res.send(result.rows);
+  } catch (e) {
+    res.send({ error: e });
+  }
+}

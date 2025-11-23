@@ -19,6 +19,9 @@ export async function single_group(req, res) {
         await user_model();
         break;
       case "plan":
+        await createCoreSchema();
+        await user_model();
+        await createBusinessSchema();
         await createTravelSchema();
         break;
       case "review":

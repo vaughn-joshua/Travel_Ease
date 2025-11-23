@@ -1,4 +1,7 @@
-import { Client } from "pg";
+import { Client, types } from "pg";
+
+// OID 1082 is the Postgres OID for 'DATE'
+types.setTypeParser(1082, (val) => val);
 
 export const con = new Client({
   user: "postgres",

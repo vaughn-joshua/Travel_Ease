@@ -15,7 +15,8 @@ export async function createTravelSchema() {
         visibility_end_date DATE,
         status status_enum NOT NULL DEFAULT 'Draft',
         max_slots INT,
-        location TEXT
+        location TEXT,
+        visibility_timestamp TIMESTAMP
       );
 
       -- ACTIVITY AND BUDGET
@@ -27,7 +28,9 @@ export async function createTravelSchema() {
         target_date DATE,
         budget_range range,
         user_id INT REFERENCES "user"(user_id) ON DELETE CASCADE,
-        is_priority BOOLEAN DEFAULT FALSE
+        is_priority BOOLEAN DEFAULT FALSE,
+        lat DOUBLE PRECISION,
+        lng DOUBLE PRECISION
       );
 
       -- PARTICIPANTS AND ROLES

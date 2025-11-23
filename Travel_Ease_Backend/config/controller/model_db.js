@@ -67,7 +67,8 @@ export async function model_db(req, res) {
             visibility_end_date DATE,
             status status_enum NOT NULL DEFAULT 'Draft',
             max_slots INT,
-            location TEXT
+            location TEXT,
+            visibility_timestamp TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS business_favorite(
@@ -114,6 +115,7 @@ export async function model_db(req, res) {
             activity_id SERIAL PRIMARY KEY, 
             travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE,
             business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
+            title VARCHAR(200) NOT NULL, 
             notes TEXT,
             target_date DATE,
             budget_range range,
