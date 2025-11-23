@@ -1,6 +1,6 @@
 import React from "react";
 import type { Blog } from "../../../types/blog";
-import BlogCard from "../component/blog/BlogCard";
+import BlogCard from "./BlogCard";
 
 interface SectionProps {
   title: string;

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import type { Blog } from "../types/blog";
+import type { Blog } from "../../../types/blog";
 
 interface BlogCardProps {
   blog: Blog;
@@ -37,7 +37,9 @@ const BlogCard: React.FC<BlogCardProps> = ({
     <Link
       to={`/blogs/${blog.slug}`}
       className={`group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-4 ${
-        isDark ? "focus-visible:ring-offset-primary-red" : "focus-visible:ring-offset-white"
+        isDark
+          ? "focus-visible:ring-offset-primary-red"
+          : "focus-visible:ring-offset-white"
       } ${className}`}
       aria-label={`Read blog post: ${blog.title}`}
     >
@@ -67,9 +69,7 @@ const BlogCard: React.FC<BlogCardProps> = ({
 
         <div className="flex h-full flex-col gap-4 p-6">
           <div className="space-y-3">
-            <h3
-              className={`text-xl font-semibold leading-tight ${titleColor}`}
-            >
+            <h3 className={`text-xl font-semibold leading-tight ${titleColor}`}>
               {blog.title}
             </h3>
             <p className={`text-sm leading-relaxed line-clamp-3 ${bodyColor}`}>

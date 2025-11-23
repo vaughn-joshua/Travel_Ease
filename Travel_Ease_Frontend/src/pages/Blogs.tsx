@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import Carousel from "../components/Carousel";
-import Section from "../components/Section";
+import Carousel from "../component/blog/components/Carousel";
+import Section from "../component/blog/components/Section";
 import { blogApi } from "../services/api";
 import type { Blog } from "../types/blog";
 
@@ -123,12 +123,7 @@ export default function Blogs() {
         name: "TravelEase",
       },
     };
-  }, [
-    clientEducationBlogs,
-    destinationsBlogs,
-    featuredBlogs,
-    tipsBlogs,
-  ]);
+  }, [clientEducationBlogs, destinationsBlogs, featuredBlogs, tipsBlogs]);
 
   if (loading) {
     return (
@@ -225,9 +220,7 @@ export default function Blogs() {
               <dt className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
                 Destinations Covered
               </dt>
-              <dd className="text-2xl font-semibold text-white">
-                60+ Cities
-              </dd>
+              <dd className="text-2xl font-semibold text-white">60+ Cities</dd>
             </div>
             <div className="flex flex-col gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
