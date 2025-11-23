@@ -17,21 +17,37 @@ export async function model_db(req, res) {
             password VARCHAR NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS blog (
-            blog_id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES "user"(user_id) ON DELETE CASCADE,
+            CREATE TABLE IF NOT EXISTS "Blog" (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             title VARCHAR(200) NOT NULL,
-            description TEXT,
-            content TEXT,
-            category_id INT REFERENCES category(category_id) ON DELETE SET NULL,
-            blog_date DATE DEFAULT CURRENT_DATE
+            slug VARCHAR(200) UNIQUE NOT NULL,
+            excerpt VARCHAR(500) NOT NULL,
+            content TEXT NOT NULL,
+            "coverImageUrl" TEXT NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            "isFeatured" BOOLEAN DEFAULT false,
+            "readingMinutes" INTEGER NOT NULL,
+            "publishedAt" TIMESTAMP DEFAULT NOW(),
+            author VARCHAR(100) NOT NULL,
+            "createdAt" TIMESTAMP DEFAULT NOW(),
+            "updatedAt" TIMESTAMP DEFAULT NOW()
             );
+
+            CREATE INDEX IF NOT EXISTS idx_blog_slug ON "Blog"(slug);
+            CREATE INDEX IF NOT EXISTS idx_blog_category ON "Blog"(category);
+            CREATE INDEX IF NOT EXISTS idx_blog_is_featured ON "Blog"("isFeatured");
+            CREATE INDEX IF NOT EXISTS idx_blog_published_at ON "Blog"("publishedAt");
 
             CREATE TABLE IF NOT EXISTS business (
             business_id SERIAL PRIMARY KEY,
             user_id INTEGER REFERENCES "user"(user_id) ON DELETE CASCADE,
             name VARCHAR(200) NOT NULL,
-            address VARCHAR(300),
+            house_number VARCHAR(300),
+            street VARCHAR(300),
+            brgy VARCHAR(300),
+            city VARCHAR(300),
+            latitude DOUBLE PRECISION,
+            longtitude DOUBLE PRECISION,
             description TEXT,
             rating DECIMAL(3,1),
             business_hours VARCHAR(100),
@@ -39,6 +55,14 @@ export async function model_db(req, res) {
             google_authenticator VARCHAR(100),
             status BOOLEAN DEFAULT FALSE,
             picture TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS business_hours (
+            id SERIAL PRIMARY KEY,
+            business_id INTEGER REFERENCES business(business_id) ON DELETE CASCADE,
+            day_of_week VARCHAR(10),
+            open_time TIME,
+            close_time TIME
             );
 
             CREATE TYPE status_enum AS ENUM ('Draft', 'Active', 'Completed', 'Cancelled');
@@ -54,7 +78,8 @@ export async function model_db(req, res) {
             visibility_end_date DATE,
             status status_enum NOT NULL DEFAULT 'Draft',
             max_slots INT,
-            location TEXT
+            location TEXT,
+            visibility_timestamp TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS business_favorite(
@@ -101,6 +126,7 @@ export async function model_db(req, res) {
             activity_id SERIAL PRIMARY KEY, 
             travel_plan_id INT REFERENCES travel_plan(travel_plan_id) ON DELETE CASCADE,
             business_id INT REFERENCES business(business_id) ON DELETE SET NULL,
+            title VARCHAR(200) NOT NULL, 
             notes TEXT,
             target_date DATE,
             budget_range range,
@@ -118,6 +144,7 @@ export async function model_db(req, res) {
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status BOOLEAN DEFAULT FALSE
             );
+            
 
             `);
     console.log("Tables are created or already exist.");

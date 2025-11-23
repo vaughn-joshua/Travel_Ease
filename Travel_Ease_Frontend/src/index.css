@@ -1,23 +1,33 @@
-/* index.css */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+@layer base {
+  html {
+    font-family: "Inter", system-ui, sans-serif;
+  }
 
-/* 1. Resetting the base elements */
-html,
-body {
-    /* Ensures the absolute maximum height of the browser window is used */
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: #f2f6f9;
-    /* Optional: Sets the base font for the entire application */
-
+  body {
+    @apply bg-white text-gray-900;
+  }
 }
 
-/* 2. Setting the React Root Container */
-#root {
-    /* Ensures the #root element fills the entire height of the body */
-    height: 100%; 
-    width: 100%; 
+@layer components {
+  .btn-primary {
+    @apply bg-primary-red text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-red-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-primary-red border-2 border-primary-red px-6 py-3 rounded-lg font-medium hover:bg-primary-red hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold text-secondary-blue text-center mb-8;
+  }
 }

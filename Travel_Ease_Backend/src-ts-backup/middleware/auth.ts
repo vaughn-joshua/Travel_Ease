@@ -1,0 +1,21 @@
+import { Request, Response, NextFunction } from "express";
+
+export const authenticateApiKey = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const apiKey = req.headers["x-api-key"];
+  const expectedApiKey = process.env.API_KEY;
+
+  if (!expectedApiKey) {
+    return res.status(500).json({ error: "API key not configured" });
+  }
+
+  if (!apiKey || apiKey !== expectedApiKey) {
+    return res.status(401).json({ error: "Invalid or missing API key" });
+  }
+
+  next();
+};
+
