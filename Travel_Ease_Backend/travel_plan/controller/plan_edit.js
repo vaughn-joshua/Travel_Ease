@@ -1,4 +1,4 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function plan_edit(req, res) {
   const { id } = req.params;
@@ -18,50 +18,51 @@ export async function plan_edit(req, res) {
 
   try {
     if (status) {
-      const query = {
-        name: "start plan",
-        text: `UPDATE public.travel_plan SET status = $1 WHERE travel_plan_id = $2`,
-        values: [status, id],
-      };
+      // Simple status update
+      const updated = await prisma.travelPlan.update({
+        where: {
+          travel_plan_id: parseInt(id)
+        },
+        data: {
+          status
+        }
+      });
 
-      const result = await con.query(query);
-
-      console.log({ result });
-
-      console.log("travel plan ongoing");
-
-      res.status(201).json({ messageg: "travel plan ongoing" });
+      console.log("travel plan status updated");
+      res.status(201).json({ message: "travel plan status updated" });
     } else {
-      const query = {
-        name: "edit plan",
-        text: `UPDATE public.travel_plan 
-                SET description = $1, name = $2, location = $3, max_slots = $4, start_date = $5, end_date = $6, visibility = $7, 
-                  visibility_timestamp = CASE 
-                    WHEN $7 = TRUE AND visibility = FALSE THEN NOW()
-                    ELSE visibility_timestamp
-                  END
-                WHERE travel_plan_id = $8`,
-        values: [
+      // Full plan edit
+      const currentPlan = await prisma.travelPlan.findUnique({
+        where: { travel_plan_id: parseInt(id) }
+      });
+
+      const updated = await prisma.travelPlan.update({
+        where: {
+          travel_plan_id: parseInt(id)
+        },
+        data: {
           description,
           name,
           location,
           max_slots,
-          start_date,
-          end_date,
+          start_date: start_date ? new Date(start_date) : undefined,
+          end_date: end_date ? new Date(end_date) : undefined,
           visibility,
-          id,
-        ],
-      };
+          // Set visibility_timestamp if visibility changes from false to true
+          ...(visibility === true && currentPlan?.visibility === false && {
+            visibility_timestamp: new Date()
+          })
+        }
+      });
 
-      const result = await con.query(query);
-
-      console.log({ result });
-
-      console.log("edited activity successfully");
-
-      res.status(201).json({ messageg: "you edited the activty successfully" });
+      console.log("edited plan successfully");
+      res.status(201).json({ message: "you edited the plan successfully" });
     }
-  } catch (e) {
-    res.send({ error: e });
+  } catch (error) {
+    console.error("Error editing plan:", error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: "Travel plan not found" });
+    }
+    res.status(500).json({ error: error.message });
   }
 }

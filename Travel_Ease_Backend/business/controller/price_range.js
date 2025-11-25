@@ -1,4 +1,4 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function price_range(req, res) {
   const { categories, menu, pictures, id } = req.body;
@@ -6,35 +6,34 @@ export async function price_range(req, res) {
   console.log("creating range...");
 
   try {
-    // post on business hours table
-    for (let i = 0; i < categories.length; i++) {
-      const range_query = {
-        text: `INSERT INTO public.price_range
-                (category_id, min_price, max_price)
-                VALUES ($1, $2, $3)`,
-        values: [
-          categories[i].category_id,
-          categories[i].min_price,
-          categories[i].max_price,
-        ],
-      };
+    await prisma.$transaction(async (tx) => {
+      // Create price ranges for categories
+      if (categories && categories.length > 0) {
+        await tx.priceRange.createMany({
+          data: categories.map((cat) => ({
+            category_id: cat.category_id,
+            min_price: cat.min_price,
+            max_price: cat.max_price,
+          })),
+        });
+      }
 
-      const result = await con.query(range_query);
-    }
-
-    const picture_query = {
-      name: "upload url links to business table",
-      text: "UPDATE public.business SET picture = $1 WHERE business_id = $2",
-      values: [pictures, id],
-    };
-
-    const result = await con.query(picture_query);
+      // Update business pictures
+      if (pictures && id) {
+        await tx.business.update({
+          where: {
+            business_id: parseInt(id)
+          },
+          data: {
+            picture: pictures
+          }
+        });
+      }
+    });
 
     res.json({ message: "successfully input price_range/s" });
-
-    //post on category table
   } catch (error) {
-    console.log(error);
-    res.send(error);
+    console.error("Error creating price range:", error);
+    res.status(500).json({ error: error.message });
   }
 }

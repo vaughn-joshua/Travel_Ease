@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { endpoints } from "../../config/api.js";
 
 function Route_Form({ onRouteSubmit }) {
   const [startLocation, setStartLocation] = useState("");
@@ -28,7 +29,7 @@ function Route_Form({ onRouteSubmit }) {
   
   const fetchCoords = async (address) => {
     const response = await fetch(
-         `http://localhost:3001/api/geocode?query=${encodeURIComponent(address)}`
+         `${endpoints.map.geocode}?query=${encodeURIComponent(address)}`
     );
     const data = await response.json();
     return data.length > 0
@@ -64,7 +65,7 @@ function Route_Form({ onRouteSubmit }) {
     }
 startTimerRef.current = setTimeout(async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
+        const response = await fetch(`${endpoints.map.suggestions}?query=${encodeURIComponent(value)}`);
         const data = await response.json();
         setStartSuggestions(data);
       } catch (error) {
@@ -83,7 +84,7 @@ startTimerRef.current = setTimeout(async () => {
     }
   endTimerRef.current = setTimeout(async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/suggestions?query=${encodeURIComponent(value)}`);
+        const response = await fetch(`${endpoints.map.suggestions}?query=${encodeURIComponent(value)}`);
         const data = await response.json();
         setEndSuggestions(data);
       } catch (error) {

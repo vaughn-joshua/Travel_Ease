@@ -2,6 +2,7 @@ import Business_box from "../../components/Travel_Spots/Business_box.jsx";
 import Search_Box from "../../components/Travel_Spots/Search_Box.jsx";
 import Modal_Review from "../../components/Travel_Spots/Modal_Review.jsx";
 import { useState, useEffect } from "react";
+import { endpoints } from "../../config/api.js";
 
 function Main_Travel_Spots_Page(){
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -15,7 +16,7 @@ function Main_Travel_Spots_Page(){
       const fetchReviews = async () => {
         setIsLoadingReviews(true);
         try {
-          const response = await fetch(`http://localhost:3000/api/travel_spots/reviews/${selectedBusiness.business_id}`);
+          const response = await fetch(endpoints.business.reviews(selectedBusiness.business_id));
           const result = await response.json();
           console.log("API Response:", result);
           setReviews(result.data || []);

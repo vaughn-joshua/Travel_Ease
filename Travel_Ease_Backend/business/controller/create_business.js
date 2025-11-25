@@ -1,4 +1,4 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function create_business(req, res) {
   const {
@@ -15,69 +15,60 @@ export async function create_business(req, res) {
     category,
   } = req.body;
 
-  const id = 1;
+  const userId = req.body.user_id || 1; // Default to 1 if not provided
 
   console.log("you are at backend create business");
 
   try {
-    // post on business table
-    const business_query = {
-      name: "ceate business",
-      text: `INSERT INTO public.business
-                  (user_id, name, house_number, street, brgy, city, latitude, longtitude, description, picture)
-                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                  RETURNING business_id;`,
-      values: [
-        id,
-        name,
-        house_no,
-        street,
-        brgy,
-        city,
-        lat,
-        lng,
-        description,
-        secure_url,
-      ],
-    };
+    // Create business with related records in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create business
+      const business = await tx.business.create({
+        data: {
+          user_id: userId,
+          name,
+          house_number: house_no,
+          street,
+          brgy,
+          city,
+          latitude: lat,
+          longtitude: lng,
+          description,
+          picture: secure_url,
+        },
+      });
 
-    const result = await con.query(business_query);
+      // Create business hours
+      if (business_hrs && business_hrs.length > 0) {
+        await tx.businessHours.createMany({
+          data: business_hrs.map((hrs) => ({
+            business_id: business.business_id,
+            day_of_week: hrs.day,
+            open_time: hrs.start ? new Date(`1970-01-01T${hrs.start}`) : null,
+            close_time: hrs.end ? new Date(`1970-01-01T${hrs.end}`) : null,
+          })),
+        });
+      }
 
-    const business_id = result.rows[0].business_id;
+      // Create business categories
+      if (category && category.length > 0) {
+        await tx.businessCategory.createMany({
+          data: category.map((cat) => ({
+            business_id: business.business_id,
+            category_name: cat,
+          })),
+        });
+      }
 
-    // post on business hours table
-    for (let i = 0; i < business_hrs.length; i++) {
-      const hours_query = {
-        text: `INSERT INTO public.business_hours
-                (business_id, day_of_week, open_time, close_time)
-                VALUES ($1, $2, $3, $4)`,
-        values: [
-          business_id,
-          business_hrs[i].day,
-          business_hrs[i].start,
-          business_hrs[i].end,
-        ],
-      };
+      return business;
+    });
 
-      const result = await con.query(hours_query);
-    }
-
-    for (let i = 0; i < category.length; i++) {
-      const category_query = {
-        text: `INSERT INTO public.category_table
-                (business_id, category_name)
-                VALUES ($1, $2)`,
-        values: [business_id, category[i]],
-      };
-
-      const result = await con.query(category_query);
-    }
-
-    res.json({ message: "successfully created a business" });
-
-    //post on category table
+    res.json({ 
+      message: "successfully created a business",
+      business_id: result.business_id
+    });
   } catch (error) {
-    console.log(error);
-    res.send(error);
+    console.error("Error creating business:", error);
+    res.status(500).json({ error: error.message });
   }
 }

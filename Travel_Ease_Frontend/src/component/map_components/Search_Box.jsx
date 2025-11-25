@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { endpoints } from "../../config/api.js";
 
 function Search_Box({ onSearch }) {
   const [query, set_query] = useState("");
@@ -34,9 +35,7 @@ function Search_Box({ onSearch }) {
     timeRef.current = setTimeout(async () => {
       try {
         const response = await fetch(
-          `http://localhost:3001/api/suggestions?query=${encodeURIComponent(
-            value
-          )}`
+          `${endpoints.map.suggestions}?query=${encodeURIComponent(value)}`
         );
         const data = await response.json();
         set_suggestions(data);
@@ -66,7 +65,7 @@ function Search_Box({ onSearch }) {
     e.preventDefault();
 
     const response = await fetch(
-      `http://localhost:3001/api/search?query=${encodeURIComponent(query)}`
+      `${endpoints.map.search}?query=${encodeURIComponent(query)}`
     );
     const data = await response.json();
     if (data[0]) {

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { endpoints } from "../../config/api.js";
+
 function Business_box({onCardSelect}) {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const fetch_data = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/travel_spots`);
+        const response = await fetch(endpoints.business.travelSpots);
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }

@@ -67,7 +67,7 @@ function Register({ on_close }) {
       const street = getValues("street");
       const brgy = getValues("brgy");
 
-      const response = await fetch("http://localhost:3000/api/search", {
+      const response = await fetch("/api/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -131,7 +131,7 @@ function Register({ on_close }) {
 
     if (value.length >= 3) {
       try {
-        const response = await fetch("http://localhost:3000/api/suggestions", {
+        const response = await fetch("/api/suggestions", {
           method: "GET",
         });
 

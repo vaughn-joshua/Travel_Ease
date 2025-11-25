@@ -1,20 +1,18 @@
-export async function create_activity(input) {
+import { endpoints } from '../../config/api.js';
+
+export async function create_activity(submitted) {
   try {
-    console.log({ input, message: "we are at front end" });
-    const result = await fetch(
-      "http://localhost:3001/api/travel_plan/create_activity",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(input),
-      }
-    );
+    console.log(submitted);
+    const result = await fetch(endpoints.travelPlan.createActivity, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submitted),
+    });
+
     const data = await result.json();
-    if (result.status === 201) {
-      console.log({ message: "created successfully", status: result.status });
-    }
+    return data;
   } catch (e) {
     console.log(e);
   }

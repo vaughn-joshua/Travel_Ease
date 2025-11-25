@@ -69,7 +69,7 @@ function Edit_Business({ on_close, business }) {
         const street = business.street;
         const brgy = business.brgy;
 
-        const response = await fetch("http://localhost:3000/api/search", {
+        const response = await fetch("/api/search", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -167,7 +167,7 @@ function Edit_Business({ on_close, business }) {
 
     if (value.length >= 3) {
       try {
-        const response = await fetch("http://localhost:3000/api/suggestions", {
+        const response = await fetch("/api/suggestions", {
           method: "GET",
         });
 

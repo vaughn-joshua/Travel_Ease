@@ -1,37 +1,48 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function fetch_activities(req, res) {
   try {
     const { id } = req.params;
 
-    const query = {
-      name: "fetch-activities",
-      text: `
-        SELECT 
-          a.activity_id,
-          a.notes,
-          a.target_date,
-          a.budget_range,
-          a.user_id,
-          a.is_priority,
-          a.lat,
-          a.lng,
-          a. location,
-          a.brgy,
-          a.province,
-          a.city,
-          u.first_name
-        FROM public.activity AS a
-        INNER JOIN public."user" AS u ON a.user_id = u.user_id
-        WHERE a.travel_plan_id = $1;
-      `,
-      values: [id],
-    };
+    const activities = await prisma.activity.findMany({
+      where: {
+        travel_plan_id: parseInt(id)
+      },
+      include: {
+        user: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true
+          }
+        },
+        business: {
+          select: {
+            business_id: true,
+            name: true,
+            latitude: true,
+            longtitude: true
+          }
+        }
+      }
+    });
 
-    const result = await con.query(query);
+    // Flatten the response to match original format
+    const formattedActivities = activities.map(activity => ({
+      activity_id: activity.activity_id,
+      notes: activity.notes,
+      target_date: activity.target_date,
+      budget_range: activity.budget_range,
+      user_id: activity.user_id,
+      is_priority: activity.is_priority,
+      lat: activity.lat,
+      lng: activity.lng,
+      first_name: activity.user.first_name
+    }));
 
-    res.send(result.rows);
-  } catch (e) {
-    res.send({ error: e });
+    res.json(formattedActivities);
+  } catch (error) {
+    console.error("Error fetching activities:", error);
+    res.status(500).json({ error: error.message });
   }
 }

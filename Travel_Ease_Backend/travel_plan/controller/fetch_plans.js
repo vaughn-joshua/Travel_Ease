@@ -1,19 +1,25 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function fetch_plans(req, res) {
   try {
-    const query = {
-      name: "fetch-plans",
-      text: "SELECT travel_plan_id, name, start_date, end_date, description, location FROM public.travel_plan WHERE status = $1;",
-      values: ["Draft"],
-    };
-
-    const result = await con.query(query);
+    const plans = await prisma.travelPlan.findMany({
+      where: {
+        status: 'Draft'
+      },
+      select: {
+        travel_plan_id: true,
+        name: true,
+        start_date: true,
+        end_date: true,
+        description: true,
+        location: true
+      }
+    });
 
     console.log("successful fetch plans");
-    console.log(result.rows);
-    res.send(result.rows);
-  } catch (e) {
-    res.send({ error: e });
+    res.json(plans);
+  } catch (error) {
+    console.error("Error fetching plans:", error);
+    res.status(500).json({ error: error.message });
   }
 }

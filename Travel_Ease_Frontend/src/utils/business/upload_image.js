@@ -1,18 +1,15 @@
-export async function upload_image(image) {
-  // const formData = new FormData();
-  // formData.append("image", image);
-  console.log(`you are in frontend upload image`);
-  console.log(image);
+import { endpoints } from '../../config/api.js';
+
+export async function upload_image(formData) {
   try {
-    const result = await fetch("http://localhost:3000/api/utils/upload", {
+    const result = await fetch(endpoints.utils.upload, {
       method: "POST",
-      body: image,
+      body: formData,
     });
 
     const data = await result.json();
-
     return data;
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
   }
 }

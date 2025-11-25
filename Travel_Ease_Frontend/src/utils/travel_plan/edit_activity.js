@@ -1,21 +1,17 @@
+import { endpoints } from '../../config/api.js';
+
 export async function edit_activity(edited_data) {
   try {
-    const result = await fetch(
-      `http://localhost:3001/api/travel_plan/activity_edit/${edited_data.activity_id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json", 
-        },
-        body: JSON.stringify(edited_data),
-      }
-    );
+    const result = await fetch(endpoints.travelPlan.editActivity(edited_data.activity_id), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(edited_data),
+    });
 
     const data = await result.json();
-
-    if (result.status === 201) {
-      console.log({ message: "successfully edited", status: result.status });
-    }
+    return data;
   } catch (e) {
     console.log(e);
   }

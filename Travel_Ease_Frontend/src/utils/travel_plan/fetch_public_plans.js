@@ -1,16 +1,17 @@
+import { endpoints } from '../../config/api.js';
+
 export async function fetch_public_plans() {
   try {
-    const result = await fetch(
-      "http://localhost:3001/api/travel_plan/public_plans",
-      {
-        method: "GET",
-      }
-    );
+    const result = await fetch(endpoints.travelPlan.public, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
     const data = await result.json();
-
     return data;
   } catch (e) {
-    console.error({ e });
+    console.log(e);
   }
 }

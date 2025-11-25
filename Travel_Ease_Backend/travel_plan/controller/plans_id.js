@@ -1,21 +1,34 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function plans_id(req, res) {
   try {
     const { id } = req.params;
 
-    const query = {
-      name: "fetch_plan_id",
-      text: "SELECT name, user_id, start_date, end_date, description, location, status, max_slots, visibility FROM public.travel_plan WHERE travel_plan_id = $1;",
-      values: [id],
-    };
+    const plan = await prisma.travelPlan.findUnique({
+      where: {
+        travel_plan_id: parseInt(id)
+      },
+      select: {
+        name: true,
+        user_id: true,
+        start_date: true,
+        end_date: true,
+        description: true,
+        location: true,
+        status: true,
+        max_slots: true,
+        visibility: true
+      }
+    });
 
-    const result = await con.query(query);
+    if (!plan) {
+      return res.status(404).json({ error: "Travel plan not found" });
+    }
 
-    // console.log(result.rows);
     console.log("successful fetch plan id");
-    res.send(result.rows);
-  } catch (e) {
-    res.send({ error: e });
+    res.json([plan]); // Return as array to match original behavior
+  } catch (error) {
+    console.error("Error fetching plan:", error);
+    res.status(500).json({ error: error.message });
   }
 }

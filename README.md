@@ -1,14 +1,24 @@
-# TravelEase - PERN Stack Blog Application
+# TravelEase - Full Stack Travel Planning Application
 
-A full-stack blog application built with PostgreSQL, Express, React, and Node.js.
+A comprehensive travel planning and discovery platform built with the PERN stack (PostgreSQL, Express, React, Node.js) and Prisma ORM.
 
 ## Features
 
-- **Frontend**: React with TypeScript, Tailwind CSS, React Router
-- **Backend**: Express with JavaScript
-- **Database**: PostgreSQL with lightweight `pg` client
-- **Blog Management**: CRUD operations with API key protection
-- **Responsive Design**: Mobile-first approach with modern UI
+### Core Functionality
+- **Travel Planning**: Create, manage, and collaborate on travel plans with activities and itineraries
+- **Business Directory**: Browse and register travel-related businesses (restaurants, hotels, attractions)
+- **Interactive Maps**: Search locations, plan routes, and visualize travel spots using Leaflet and OpenStreetMap
+- **Blog System**: Share travel stories and experiences with rich content management
+- **Reviews**: Rate and review businesses and travel plans
+- **User Management**: Registration, login, and favorites system
+
+### Technical Stack
+- **Frontend**: React 19 with TypeScript, Tailwind CSS 4, React Router
+- **Backend**: Express.js with unified API architecture
+- **Database**: PostgreSQL with Prisma ORM
+- **Maps**: Leaflet, React Leaflet, Leaflet Routing Machine
+- **Image Upload**: Cloudinary integration
+- **Geocoding**: OpenStreetMap Nominatim API
 
 ## Quick Start
 
@@ -16,6 +26,7 @@ A full-stack blog application built with PostgreSQL, Express, React, and Node.js
 
 - Node.js 18+
 - PostgreSQL 12+ (running locally or remote)
+- Cloudinary account (for image uploads)
 - Git
 
 ### Setup
@@ -31,7 +42,35 @@ A full-stack blog application built with PostgreSQL, Express, React, and Node.js
    npm install
    ```
 
-2. **Start development servers**:
+2. **Configure Backend Environment**:
+
+   Create `.env` file in `Travel_Ease_Backend/`:
+
+   ```env
+   # Database
+   DATABASE_URL="postgresql://username:password@localhost:5432/travelease_db"
+
+   # Server
+   PORT=3001
+
+   # Cloudinary
+   CLOUDINARY_CLOUD_NAME="your-cloud-name"
+   CLOUDINARY_API_KEY="your-api-key"
+   CLOUDINARY_API_SECRET="your-api-secret"
+
+   # Environment
+   NODE_ENV=development
+   ```
+
+3. **Initialize Database**:
+
+   ```bash
+   cd Travel_Ease_Backend
+   npx prisma generate
+   npx prisma db push
+   ```
+
+4. **Start Development Servers**:
 
    **Terminal 1 - Backend:**
    ```bash
@@ -48,72 +87,121 @@ A full-stack blog application built with PostgreSQL, Express, React, and Node.js
 The application will be available at:
 
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:3000
+- Backend API: http://localhost:3001
 
 ## Project Structure
 
 ```
 Travel_Ease/
-├── Travel_Ease_Backend/     # Express API server
+├── Travel_Ease_Backend/        # Express API server (Port 3001)
+│   ├── server.js              # Unified server entry point
+│   ├── prisma/                # Prisma schema and migrations
+│   │   └── schema.prisma      # Database schema definition
+│   ├── routes/                # API route handlers
+│   │   ├── business_routes.js
+│   │   ├── travel_plan_routes.js
+│   │   ├── user_routes.js
+│   │   ├── map_routes.js
+│   │   └── utils_routes.js
+│   ├── business/              # Business controller logic
+│   ├── travel_plan/           # Travel plan controller logic
+│   ├── user/                  # User controller logic
+│   ├── utils/                 # Utilities (image upload)
 │   ├── src/
-│   │   ├── routes/         # API routes
-│   │   ├── middleware/     # Express middleware
-│   │   ├── schemas/        # Zod validation schemas
-│   │   └── lib/           # Utilities
-│   │       └── db/        # PostgreSQL database client
+│   │   ├── routes/            # Blog routes
+│   │   ├── middleware/        # Auth and error handling
+│   │   ├── schemas/           # Zod validation schemas
+│   │   └── lib/
+│   │       └── prisma.js      # Prisma client singleton
 │   └── package.json
-├── Travel_Ease_Frontend/   # React application
+├── Travel_Ease_Frontend/      # React application (Port 5173)
 │   ├── src/
-│   │   ├── components/    # Reusable React components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API client
-│   │   └── types/        # TypeScript type definitions
+│   │   ├── config/
+│   │   │   └── api.js         # Centralized API configuration
+│   │   ├── component/         # Feature components
+│   │   │   ├── main_page/    # Travel plan components
+│   │   │   ├── business/     # Business registration/edit
+│   │   │   ├── blog/         # Blog components
+│   │   │   └── map_components/ # Map and routing
+│   │   ├── pages/            # Page components
+│   │   ├── utils/            # API utility functions
+│   │   │   ├── travel_plan/
+│   │   │   └── business/
+│   │   ├── services/         # API client
+│   │   └── types/            # TypeScript type definitions
 │   └── package.json
 ```
 
 ## API Endpoints
 
-### Public Endpoints
+### Travel Plan Endpoints
+- `GET /api/travel_plan/ongoing_plan` - Get active travel plans
+- `GET /api/travel_plan/plans` - Get draft plans
+- `GET /api/travel_plan/previous_plans` - Get completed plans
+- `GET /api/travel_plan/public_plans` - Get public plans
+- `GET /api/travel_plan/plans/:id` - Get specific plan
+- `GET /api/travel_plan/activities/:id` - Get activities for a plan
+- `POST /api/travel_plan/create_plan` - Create new travel plan
+- `POST /api/travel_plan/create_activity` - Add activity to plan
+- `POST /api/travel_plan/quick_join` - Find matching public plans
+- `PUT /api/travel_plan/edit_plan/:id` - Update travel plan
+- `PUT /api/travel_plan/activity_edit/:id` - Update activity
+- `PUT /api/travel_plan/update_activity/:id` - Update activity dates
+- `DELETE /api/travel_plan/delete_activity/:id` - Delete activity
 
+### Business Endpoints
+- `GET /api/business/businesses` - List all businesses
+- `GET /api/business/fetch_business/:id` - Get business details
+- `GET /api/business/fetch_categories/:id` - Get business categories
+- `GET /api/business/travel_spots` - Get travel spots (businesses)
+- `GET /api/business/travel_spots/reviews/:id` - Get business reviews
+- `POST /api/business/create_business` - Register new business
+- `POST /api/business/price_range` - Add price ranges
+- `PUT /api/business/edit_business/:id` - Update business
+
+### User Endpoints
+- `POST /api/user/register` - User registration
+- `POST /api/user/login` - User login
+- `POST /api/user/favorite` - Add to favorites
+- `GET /api/user/favorite/:id` - Get user favorites
+- `GET /api/user/user/:id` - Get user details
+
+### Map Endpoints
+- `GET /api/suggestions?query=<location>` - Location autocomplete
+- `GET /api/search?query=<location>` - Search locations (bounded)
+- `GET /api/geocode?query=<address>` - Geocode address
+- `POST /api/search` - Address search with POST
+
+### Blog Endpoints
 - `GET /api/blogs` - List blogs with pagination and filtering
 - `GET /api/blogs/featured` - Get featured blogs
 - `GET /api/blogs/:slug` - Get single blog by slug
-- `GET /api/health` - Health check
-
-### Protected Endpoints (require x-api-key header)
-
 - `POST /api/blogs` - Create new blog
 - `PUT /api/blogs/:id` - Update blog
 - `DELETE /api/blogs/:id` - Delete blog
 
-## Adding a New Blog
+### Utility Endpoints
+- `POST /api/utils/upload` - Upload single image to Cloudinary
+- `POST /api/utils/upload_images` - Upload multiple images
+- `GET /api/health` - Health check
 
-### Via API (with API key)
+## Database Schema
 
-```bash
-curl -X POST http://localhost:3000/api/blogs \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: your-secret-api-key-here" \
-  -d '{
-    "title": "My New Blog Post",
-    "slug": "my-new-blog-post",
-    "excerpt": "A brief description...",
-    "content": "<p>Full blog content...</p>",
-    "coverImageUrl": "https://example.com/image.jpg",
-    "category": "Destinations",
-    "isFeatured": false,
-    "readingMinutes": 5,
-    "author": "Your Name"
-  }'
-```
+The application uses Prisma ORM with the following models:
 
-### Via Database Seed
-
-Add your blog data to `Travel_Ease_Backend/src/seed.js` and run:
-
-```bash
-npm run db:seed
-```
+- **User**: User accounts and authentication
+- **Blog**: Travel blog posts with rich content
+- **Business**: Travel-related businesses and venues
+- **BusinessCategory**: Business categorization (many-to-many)
+- **BusinessHours**: Operating hours for businesses
+- **PriceRange**: Price ranges for business categories
+- **TravelPlan**: User-created travel plans
+- **Activity**: Activities within travel plans
+- **Participant**: Collaborators on travel plans
+- **BusinessReview**: Reviews and ratings for businesses
+- **TravelPlanReview**: Reviews for travel plans
+- **BusinessFavorite**: User's favorite businesses
+- **TravelPlanFavorite**: User's favorite travel plans
 
 ## Development
 
@@ -121,77 +209,156 @@ npm run db:seed
 
 ```bash
 cd Travel_Ease_Backend
-npm run dev          # Start with nodemon
-npm run build        # Transpile TypeScript backup to JavaScript (if needed)
+npm run dev              # Start with nodemon (watches for changes)
+npm start                # Start production server
+npm run db:push          # Push schema changes to database
+npm run db:migrate       # Create and run migrations
+npm run db:studio        # Open Prisma Studio (database GUI)
 ```
 
 ### Frontend Development
 
 ```bash
 cd Travel_Ease_Frontend
-npm run dev          # Start Vite dev server
-npm run build        # Build for production
-npm run preview      # Preview production build
+npm run dev              # Start Vite dev server
+npm run build            # Build for production
+npm run preview          # Preview production build
+npm run test             # Run tests
+npm run test:ui          # Run tests with UI
 ```
 
 ### Database Management
 
-The database schema is automatically created on first run. To seed the database with sample data:
+The database schema is managed with Prisma. Key commands:
 
 ```bash
-cd Travel_Ease_Backend
-npm run db:seed
-```
+# Generate Prisma Client after schema changes
+npx prisma generate
 
-## Testing
+# Push schema changes to database (development)
+npx prisma db push
 
-```bash
-npm run test         # Run all tests
-npm run test:backend # Backend tests only
-npm run test:frontend # Frontend tests only
+# Create a migration (production)
+npx prisma migrate dev --name migration_name
+
+# Open Prisma Studio to browse/edit data
+npx prisma studio
 ```
 
 ## Environment Variables
 
-Create `.env` files in both backend and frontend directories:
-
 ### Backend (.env)
 
-```
+```env
+# Database
 DATABASE_URL="postgresql://username:password@localhost:5432/travelease_db"
-PORT=3000
-API_KEY="your-secret-api-key-here"
+
+# Server
+PORT=3001
+
+# Cloudinary (for image uploads)
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
+
+# Environment
+NODE_ENV=development
 ```
 
-> **Note**: Replace `username`, `password`, `localhost`, `5432`, and `travelease_db` with your PostgreSQL credentials and database name.
+### Frontend (.env.local)
 
-### Frontend (.env)
+```env
+VITE_API_BASE_URL=/api
+```
 
-```
-VITE_API_URL=http://localhost:3000
-```
+## Key Features Explained
+
+### Travel Planning
+Create comprehensive travel plans with:
+- Start and end dates
+- Activities and itineraries
+- Collaborators with different roles (Admin, Editor, Viewer)
+- Budget ranges
+- Public/private visibility
+- Quick join for finding compatible plans
+
+### Business Directory
+- Register and manage travel-related businesses
+- Categorize by type (food, accommodation, activities, etc.)
+- Operating hours management
+- Image uploads via Cloudinary
+- Price range information
+- User reviews and ratings
+
+### Interactive Maps
+- Search and autocomplete using OpenStreetMap Nominatim
+- Visualize travel spots on interactive maps
+- Route planning between locations
+- Geocoding for addresses
+
+### Blog System
+- Rich text content with HTML support
+- Featured posts
+- Categories and tags
+- Reading time estimation
+- Pagination and search
+
+## Architecture Decisions
+
+### Unified Backend Server
+All API routes are consolidated into a single Express server running on port 3001, providing:
+- Consistent API base URL
+- Shared middleware (CORS, error handling)
+- Centralized Prisma client
+- Better resource management
+
+### Prisma ORM
+Migrated from raw SQL queries to Prisma for:
+- Type-safe database queries
+- Automatic migrations
+- Better relation handling
+- Improved developer experience
+
+### Centralized API Configuration
+Frontend uses a single API configuration file (`src/config/api.js`) that:
+- Eliminates hardcoded URLs
+- Works with Vite proxy in development
+- Easy to update for production
+- Type-safe endpoint builders
 
 ## Deployment
 
-1. Build both applications:
+1. **Build both applications**:
 
    ```bash
+   # Backend
+   cd Travel_Ease_Backend
+   npm install --production
+
+   # Frontend
+   cd ../Travel_Ease_Frontend
    npm run build
    ```
 
-2. Set up production database and environment variables
+2. **Set up production database**:
+   - Create PostgreSQL database
+   - Run migrations: `npx prisma migrate deploy`
+   - Set DATABASE_URL environment variable
 
-3. Deploy backend and frontend to your hosting platform
+3. **Configure environment variables** for production
+
+4. **Deploy**:
+   - Backend: Deploy to Node.js hosting (Heroku, Railway, etc.)
+   - Frontend: Deploy dist/ folder to static hosting (Vercel, Netlify, etc.)
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Run tests and linting
 5. Submit a pull request
 
 ## License
 
 ISC
-

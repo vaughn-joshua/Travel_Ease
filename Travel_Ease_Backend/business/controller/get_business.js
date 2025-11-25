@@ -1,17 +1,26 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function get_businesses(req, res) {
   try {
-    const query = {
-      name: "fetch businesses",
-      text: "SELECT * FROM public.business",
-    };
+    const businesses = await prisma.business.findMany({
+      include: {
+        categories: true,
+        business_hours: true,
+        user: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true
+          }
+        }
+      }
+    });
 
-    const result = await con.query(query);
-
-    console.log(result.rows);
-    res.status(200).send(result.rows);
-  } catch (e) {
-    res.send({ error: e });
+    console.log(businesses);
+    res.status(200).json(businesses);
+  } catch (error) {
+    console.error("Error fetching businesses:", error);
+    res.status(500).json({ error: error.message });
   }
 }

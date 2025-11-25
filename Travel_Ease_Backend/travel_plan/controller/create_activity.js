@@ -1,4 +1,4 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function create_activity(req, res) {
   const {
@@ -15,51 +15,28 @@ export async function create_activity(req, res) {
     city,
   } = req.body;
 
-  console.log("backend");
-
-  console.log({
-    travel_plan_id,
-    notes,
-    target_date,
-    budget_range,
-    user_id,
-    lat,
-    lng,
-    location,
-    brgy,
-    province,
-    city,
-  });
+  console.log("backend creating activity");
 
   try {
-    const query = {
-      name: "create activity",
-      text: `INSERT INTO activity 
-              (travel_plan_id, notes, target_date, budget_range, user_id, lat, lng, location, brgy, province, city) 
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      values: [
-        travel_plan_id,
+    const activity = await prisma.activity.create({
+      data: {
+        travel_plan_id: parseInt(travel_plan_id),
         notes,
-        target_date,
+        target_date: target_date ? new Date(target_date) : null,
         budget_range,
-        user_id,
-        lat,
-        lng,
-        location,
-        brgy,
-        province,
-        city,
-      ],
-    };
+        user_id: user_id || 1,
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null
+      }
+    });
 
-    const result = await con.query(query);
-
-    console.log({ result });
-
-    console.log("created plan successfully");
-
-    res.status(201).json({ messageg: "you are at create plan" });
-  } catch (e) {
-    res.send({ error: e });
+    console.log("created activity successfully");
+    res.status(201).json({ 
+      message: "Activity created successfully",
+      activity_id: activity.activity_id
+    });
+  } catch (error) {
+    console.error("Error creating activity:", error);
+    res.status(500).json({ error: error.message });
   }
 }

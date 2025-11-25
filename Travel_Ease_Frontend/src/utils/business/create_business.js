@@ -1,20 +1,18 @@
-export async function create_business(data) {
+import { endpoints } from '../../config/api.js';
+
+export async function create_business(submitted) {
   try {
-    const result = await fetch(
-      "http://localhost:3000/api/business/create_business",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      }
-    );
+    const result = await fetch(endpoints.business.create, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submitted),
+    });
 
-    const newData = await result.json();
-
-    console.log(newData);
-  } catch (error) {
-    console.log(error);
+    const data = await result.json();
+    return data;
+  } catch (e) {
+    console.log(e);
   }
 }

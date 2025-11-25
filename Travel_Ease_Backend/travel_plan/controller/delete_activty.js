@@ -1,24 +1,23 @@
-import { con } from "../../config/travelease_db.js";
+import { prisma } from "../../src/lib/prisma.js";
 
 export async function delete_activity(req, res) {
   const { id } = req.params;
-  console.log("you are at create plan controller");
+  console.log("deleting activity:", id);
 
   try {
-    const query = {
-      name: "delete_activity",
-      text: "DELETE FROM public.activity WHERE activity_id = $1",
-      values: [id],
-    };
-
-    const result = await con.query(query);
-
-    console.log({ result });
+    await prisma.activity.delete({
+      where: {
+        activity_id: parseInt(id)
+      }
+    });
 
     console.log("deleted activity successfully");
-
     res.status(201).json({ message: "deleted activity successfully" });
-  } catch (e) {
-    res.send({ error: e });
+  } catch (error) {
+    console.error("Error deleting activity:", error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+    res.status(500).json({ error: error.message });
   }
 }

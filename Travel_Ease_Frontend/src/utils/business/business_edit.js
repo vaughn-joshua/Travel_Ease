@@ -1,19 +1,18 @@
-export async function business_edit(details, id) {
+import { endpoints } from '../../config/api.js';
+
+export async function business_edit(id, submitted) {
   try {
-    console.log(id);
-    const result = await fetch(
-      `http://localhost:3000/api/business/edit_business/${id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(details),
-      }
-    );
+    const result = await fetch(endpoints.business.edit(id), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submitted),
+    });
 
     const data = await result.json();
-  } catch (error) {
-    console.log(error);
+    return data;
+  } catch (e) {
+    console.log(e);
   }
 }
