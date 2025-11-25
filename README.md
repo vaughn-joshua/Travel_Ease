@@ -351,6 +351,83 @@ Frontend uses a single API configuration file (`src/config/api.js`) that:
    - Backend: Deploy to Node.js hosting (Heroku, Railway, etc.)
    - Frontend: Deploy dist/ folder to static hosting (Vercel, Netlify, etc.)
 
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Backend won't start
+
+**Issue**: `Cannot find module` errors
+- **Solution**: Run `npm install` in the backend directory to ensure all dependencies are installed
+- **Solution**: Run `npx prisma generate` to generate the Prisma client
+
+**Issue**: Database connection errors
+- **Solution**: Verify your `DATABASE_URL` in `.env` is correct
+- **Solution**: Ensure PostgreSQL is running
+- **Solution**: Check database credentials and that the database exists
+
+#### Frontend won't start
+
+**Issue**: Dependency conflicts or peer dependency warnings
+- **Solution**: We use React 19 which requires compatible versions:
+  - `@testing-library/react@^16.0.1` (not 14.x)
+  - `@typescript-eslint/eslint-plugin@^8.0.0` and `@typescript-eslint/parser@^8.0.0` (not 7.x)
+- **Solution**: Delete `node_modules` and `package-lock.json`, then run `npm install`
+
+**Issue**: API calls fail from frontend
+- **Solution**: Ensure backend is running on port 3001
+- **Solution**: Check Vite proxy configuration in `vite.config.js` points to `http://localhost:3001`
+- **Solution**: Verify API calls use `/api` prefix to utilize the proxy
+
+#### Node Version Warnings
+
+**Issue**: `EBADENGINE` warnings about Node.js version
+- **Note**: The project specifies Node.js 18-24, but works fine with Node.js 25
+- **Solution**: You can safely ignore this warning, or adjust `engines` in `package.json` if needed
+
+#### Image Upload Issues
+
+**Issue**: Image uploads fail
+- **Solution**: Verify Cloudinary credentials in `.env` are correct
+- **Solution**: Check that the backend has `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` set
+
+#### Port Conflicts
+
+**Issue**: "Port already in use" errors
+- **Backend**: Kill processes using port 3001: `lsof -ti:3001 | xargs kill -9`
+- **Frontend**: Kill processes using port 5173: `lsof -ti:5173 | xargs kill -9`
+
+### Resetting the Environment
+
+If you encounter persistent issues, try a complete reset:
+
+```bash
+# Backend
+cd Travel_Ease_Backend
+pkill -f nodemon  # Stop any running servers
+rm -rf node_modules package-lock.json
+npm install
+npx prisma generate
+npm run dev
+
+# Frontend (in a new terminal)
+cd Travel_Ease_Frontend
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
+```
+
+### Verification Checklist
+
+After setup, verify everything works:
+
+- [ ] Backend starts without errors on port 3001
+- [ ] Frontend starts without errors on port 5173
+- [ ] Health check returns OK: `curl http://localhost:3001/api/health`
+- [ ] Frontend can access backend via proxy: `curl http://localhost:5173/api/health`
+- [ ] No CORS errors in browser console
+- [ ] Database connection works (no Prisma errors in backend logs)
+
 ## Contributing
 
 1. Fork the repository
