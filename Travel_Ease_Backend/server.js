@@ -14,7 +14,7 @@ import { blogRoutes } from "./src/routes/blogRoutes.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
 
 const app = express();
-const PORT = 3001; // Unified server port
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());

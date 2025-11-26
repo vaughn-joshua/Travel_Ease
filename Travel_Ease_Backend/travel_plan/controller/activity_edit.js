@@ -22,7 +22,7 @@ export async function activity_edit(req, res) {
     });
 
     console.log("edited activity successfully");
-    res.status(201).json({ message: "you edited the activity successfully" });
+    res.json({ message: "Activity updated successfully", activity });
   } catch (error) {
     console.error("Error editing activity:", error);
     if (error.code === 'P2025') {

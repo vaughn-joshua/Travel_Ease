@@ -24,7 +24,10 @@ import {
   createPlanSchema,
   editPlanSchema,
   createActivitySchema,
-  editActivitySchema
+  editActivitySchema,
+  addParticipantSchema,
+  updateParticipantSchema,
+  joinPlanSchema
 } from "../src/schemas/validation.js";
 import {
   activity_edit,
@@ -74,15 +77,15 @@ router.put("/collaborators_edit/:id", authenticateToken, requirePlanOwnership, c
 router.put("/update_activity/:id", authenticateToken, requirePlanOwnership, update_activity);
 
 // Join/participant routes
-router.put("/join_plan", authenticateToken, join_plan);
+router.put("/join_plan", authenticateToken, validate(joinPlanSchema), join_plan);
 
 // Delete routes (auth + ownership)
 router.delete("/delete_activity/:id", authenticateToken, requireActivityAccess, delete_activity);
 
 // Participant management routes
 router.get("/:id/participants", authenticateToken, get_participants);
-router.post("/:id/participants", authenticateToken, requirePlanOwnership, add_participant);
-router.put("/:id/participants/:userId", authenticateToken, requirePlanOwnership, update_participant);
+router.post("/:id/participants", authenticateToken, requirePlanOwnership, validate(addParticipantSchema), add_participant);
+router.put("/:id/participants/:userId", authenticateToken, requirePlanOwnership, validate(updateParticipantSchema), update_participant);
 router.delete("/:id/participants/:userId", authenticateToken, requirePlanOwnership, remove_participant);
 
 // Legacy/specific routes

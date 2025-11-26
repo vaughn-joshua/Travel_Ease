@@ -55,9 +55,12 @@ export async function cleanupTestData() {
   // Delete in reverse order of dependencies
   await prisma.participant.deleteMany();
   await prisma.activity.deleteMany();
+  await prisma.travelPlanFavorite.deleteMany();
+  await prisma.travelPlanReview.deleteMany();
   await prisma.travelPlan.deleteMany();
   await prisma.businessReview.deleteMany();
   await prisma.businessFavorite.deleteMany();
+  await prisma.priceRange.deleteMany();
   await prisma.businessCategory.deleteMany();
   await prisma.businessHours.deleteMany();
   await prisma.business.deleteMany();

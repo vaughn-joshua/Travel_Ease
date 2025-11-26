@@ -110,10 +110,27 @@ export const createFavoriteSchema = z.object({
   message: "Either business_id or travel_plan_id must be provided"
 });
 
-// Participant Schema
+// Participant Schemas
+export const addParticipantSchema = z.object({
+  user_id: z.number().int().positive("user_id must be a positive integer"),
+  role: z.enum(['Admin', 'Editor', 'Viewer']).optional()
+});
+
 export const updateParticipantSchema = z.object({
   role: z.enum(['Admin', 'Editor', 'Viewer']).optional(),
   status: z.boolean().optional()
+});
+
+export const joinPlanSchema = z.object({
+  travel_plan_id: z.number().int().positive("travel_plan_id is required"),
+  role: z.enum(['Admin', 'Editor', 'Viewer']).optional()
+});
+
+export const quickJoinSearchSchema = z.object({
+  code: z.string().min(1, "Code is required").optional(),
+  name: z.string().min(1, "Name is required").optional()
+}).refine(data => data.code || data.name, {
+  message: "Either code or name must be provided"
 });
 
 // Price Range Schema

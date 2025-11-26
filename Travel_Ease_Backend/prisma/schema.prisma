@@ -235,6 +235,7 @@ model Participant {
   travel_plan    TravelPlan?      @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
   user           User?            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@unique([user_id, travel_plan_id])
   @@map("participant")
 }
 

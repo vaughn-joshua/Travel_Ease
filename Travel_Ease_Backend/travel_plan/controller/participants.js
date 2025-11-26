@@ -101,6 +101,9 @@ export async function add_participant(req, res) {
     });
   } catch (error) {
     console.error("Error adding participant:", error);
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: "User is already a participant" });
+    }
     res.status(500).json({ error: error.message });
   }
 }
