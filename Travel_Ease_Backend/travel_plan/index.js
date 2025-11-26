@@ -11,28 +11,26 @@ import { plan_edit } from "./controller/plan_edit.js";
 import { quick_join } from "./controller/quick_join.js";
 import { delete_activity } from "./controller/delete_activty.js";
 import { update_activity } from "./controller/update_activity.js";
+import {
+  get_participants,
+  add_participant,
+  update_participant,
+  remove_participant,
+  collaborators_edit
+} from "./controller/participants.js";
 
 function travel_plan(req, res) {
   try {
-    console.log("hello, your in travel-plan, index.js");
-    res.send("hello");
+    res.send("Travel Plan API - Use specific endpoints");
   } catch (e) {
-    console.log({ error: e });
     res.send({ error: e });
   }
 }
 
 function finished_plan(req, res) {
   try {
-    res.send("here are at the finished_plan");
-  } catch (e) {
-    res.send({ error: e });
-  }
-}
-
-function collaborators_edit(req, res) {
-  try {
-    res.send("here are at the collaborators_edit");
+    // Redirect to previous_plans with Completed status
+    res.send("Use /api/travel_plan/previous_plans for completed plans");
   } catch (e) {
     res.send({ error: e });
   }
@@ -40,17 +38,27 @@ function collaborators_edit(req, res) {
 
 function specific_plans(req, res) {
   try {
-    res.send("here are at the specific_plans");
+    // This seems redundant with plans_id
+    res.send("Use /api/travel_plan/plans/:id for specific plan");
   } catch (e) {
     res.send({ error: e });
   }
 }
 
-function join_plan(req, res) {
+// Join plan - add current user as participant
+async function join_plan(req, res) {
   try {
-    res.send("here are at the join_plan");
+    const { travel_plan_id, role = 'Viewer' } = req.body;
+    const userId = req.user.id;
+
+    // Use the add_participant logic
+    req.params.id = travel_plan_id;
+    req.body = { user_id: userId, role };
+    
+    return await add_participant(req, res);
   } catch (e) {
-    res.send({ error: e });
+    console.error("Error in join_plan:", e);
+    res.status(500).json({ error: e.message });
   }
 }
 
@@ -73,4 +81,8 @@ export {
   quick_join,
   delete_activity,
   update_activity,
+  get_participants,
+  add_participant,
+  update_participant,
+  remove_participant,
 };

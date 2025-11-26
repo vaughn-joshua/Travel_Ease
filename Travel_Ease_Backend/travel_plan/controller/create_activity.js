@@ -6,7 +6,6 @@ export async function create_activity(req, res) {
     notes,
     target_date,
     budget_range,
-    user_id,
     lat,
     lng,
     location,
@@ -15,7 +14,8 @@ export async function create_activity(req, res) {
     city,
   } = req.body;
 
-  console.log("backend creating activity");
+  // Use authenticated user ID from middleware
+  const userId = req.user.id;
 
   try {
     const activity = await prisma.activity.create({
@@ -24,7 +24,7 @@ export async function create_activity(req, res) {
         notes,
         target_date: target_date ? new Date(target_date) : null,
         budget_range,
-        user_id: user_id || 1,
+        user_id: userId,
         lat: lat ? parseFloat(lat) : null,
         lng: lng ? parseFloat(lng) : null
       }

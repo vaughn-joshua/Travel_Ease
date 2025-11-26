@@ -185,6 +185,102 @@ Travel_Ease/
 - `POST /api/utils/upload_images` - Upload multiple images
 - `GET /api/health` - Health check
 
+### Review Endpoints
+- `POST /api/reviews/business` 🔒 - Create business review
+- `POST /api/reviews/travel_plan` 🔒 - Create travel plan review
+- `GET /api/reviews/travel_plan/:id` - Get travel plan reviews
+
+**Legend:** 🔒 = Requires authentication
+
+## Authentication
+
+Travel_Ease supports two authentication modes:
+
+### Supabase Auth (Recommended for Production)
+
+**Setup:**
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Get credentials from Dashboard > Settings > API
+3. Add to `.env`:
+```env
+AUTH_MODE="supabase"
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+```
+
+**User Registration (Supabase):**
+```bash
+curl -X POST http://localhost:3001/api/user/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john@example.com",
+    "password": "secure123",
+    "contact_no": "1234567890"
+  }'
+```
+
+**User Login (Supabase):**
+```bash
+curl -X POST http://localhost:3001/api/user/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "secure123"
+  }'
+```
+
+Response includes Supabase session token.
+
+### Local JWT Mode (Development/Testing)
+
+**Setup:**
+```env
+AUTH_MODE="local"
+JWT_SECRET="your-secret-key"
+```
+
+Registration and login work the same, but uses bcrypt + JWT instead of Supabase.
+
+### Making Authenticated Requests
+
+Include the token in the Authorization header:
+
+```bash
+TOKEN="your-jwt-token-here"
+
+curl -X POST http://localhost:3001/api/travel_plan/create_plan \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "title": "Beach Trip",
+    "location": "Boracay",
+    "start_date": "2025-07-01",
+    "end_date": "2025-07-07"
+  }'
+```
+
+### Protected Routes
+
+Routes marked with 🔒 require authentication:
+- All travel plan create/edit/delete operations
+- Business create/edit operations
+- Adding favorites and reviews
+- Blog create/update/delete
+
+### Role-Based Access Control
+
+**Travel Plans:**
+- **Owner** or **Admin participants**: Can edit plan, activities, participants
+- **Editor participants**: Can edit activities
+- **Viewer participants**: Read-only access
+
+**Businesses:**
+- **Owner only**: Can edit business details
+
+See `SUPABASE_INTEGRATION.md` for detailed auth setup.
+
 ## Database Schema
 
 The application uses Prisma ORM with the following models:

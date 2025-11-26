@@ -1,4 +1,10 @@
 import { prisma } from "../src/lib/prisma.js";
+import { supabaseAdmin, useSupabaseAuth } from "../src/lib/supabase.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+// Get secrets from env
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-prod";
 
 async function register(req, res) {
   try {
@@ -13,29 +19,92 @@ async function register(req, res) {
       return res.status(400).json({ error: "User with this email already exists" });
     }
 
-    // Create new user
-    // NOTE: In production, you should hash the password before storing!
-    const user = await prisma.user.create({
-      data: {
-        first_name,
-        last_name,
+    // Use Supabase Auth if configured
+    if (useSupabaseAuth()) {
+      // Register with Supabase Auth
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
-        contact_no,
-        password // TODO: Hash this password in production!
-      },
-      select: {
-        user_id: true,
-        first_name: true,
-        last_name: true,
-        email: true,
-        contact_no: true
-      }
-    });
+        password,
+        email_confirm: true, // Auto-confirm for simplicity
+        user_metadata: {
+          first_name,
+          last_name,
+          contact_no
+        }
+      });
 
-    res.status(201).json({ 
-      message: "User registered successfully",
-      user 
-    });
+      if (error) {
+        console.error("Supabase registration error:", error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      // Create user profile in our database
+      const user = await prisma.user.create({
+        data: {
+          auth_id: data.user.id,
+          email,
+          first_name,
+          last_name,
+          contact_no,
+          password: null // No password needed when using Supabase
+        },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true
+        }
+      });
+
+      // Generate session for immediate login
+      const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email
+      });
+
+      res.status(201).json({ 
+        message: "User registered successfully with Supabase",
+        user,
+        // Note: In production, client should use Supabase client SDK for auth
+        supabase_user_id: data.user.id
+      });
+    } else {
+      // Local JWT mode
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      const user = await prisma.user.create({
+        data: {
+          first_name,
+          last_name,
+          email,
+          contact_no,
+          password: hashedPassword
+        },
+        select: {
+          user_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true
+        }
+      });
+
+      // Generate JWT
+      const token = jwt.sign(
+        { id: user.user_id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: "24h" }
+      );
+
+      res.status(201).json({ 
+        message: "User registered successfully",
+        user,
+        token
+      });
+    }
   } catch (error) {
     console.error("Error in register:", error);
     res.status(500).json({ error: error.message });
@@ -46,32 +115,78 @@ async function login(req, res) {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    // Use Supabase Auth if configured
+    if (useSupabaseAuth()) {
+      // Login with Supabase
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Check password
-    // NOTE: In production, compare hashed password!
-    if (user.password !== password) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Return user data (excluding password)
-    res.json({
-      message: "Login successful",
-      user: {
-        user_id: user.user_id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        contact_no: user.contact_no
+      if (error) {
+        return res.status(401).json({ error: "Invalid credentials" });
       }
-    });
+
+      // Get user profile from our database
+      const user = await prisma.user.findUnique({
+        where: { auth_id: data.user.id },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User profile not found" });
+      }
+
+      res.json({
+        message: "Login successful",
+        user,
+        token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+        expires_at: data.session.expires_at
+      });
+    } else {
+      // Local JWT mode
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (!user || !user.password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Check password
+      const isMatch = await bcrypt.compare(password, user.password);
+      
+      if (!isMatch) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Generate JWT
+      const token = jwt.sign(
+        { id: user.user_id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: "24h" }
+      );
+
+      res.json({
+        message: "Login successful",
+        user: {
+          user_id: user.user_id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          contact_no: user.contact_no
+        },
+        token
+      });
+    }
   } catch (error) {
     console.error("Error in login:", error);
     res.status(500).json({ error: error.message });
@@ -80,7 +195,12 @@ async function login(req, res) {
 
 async function favorite(req, res) {
   try {
-    const { user_id, business_id, travel_plan_id } = req.body;
+    const user_id = req.user.id;
+    const { business_id, travel_plan_id } = req.body;
+
+    if (!user_id) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
     if (business_id) {
       // Add business favorite
@@ -111,6 +231,12 @@ async function favorite(req, res) {
     }
   } catch (error) {
     console.error("Error adding favorite:", error);
+    
+    // Handle duplicate favorite error
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: "Already in favorites" });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 }
@@ -171,10 +297,12 @@ async function user_id(req, res) {
       where: { user_id: parseInt(id) },
       select: {
         user_id: true,
+        auth_id: true,
         first_name: true,
         last_name: true,
         email: true,
-        contact_no: true
+        contact_no: true,
+        created_at: true
       }
     });
 

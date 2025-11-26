@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,269 +7,277 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
-enum StatusEnum {
+// Enums - Using database naming convention with @map for compatibility
+enum category {
+  food
+  drinks
+  accomodation
+  souvenir_shop @map("souvenir shop")
+  nature
+  night_life    @map("night life")
+  leisure
+  activities
+  local_offers  @map("local offers")
+}
+
+enum participant_role {
+  Admin
+  Editor
+  Viewer
+}
+
+enum range {
+  RANGE_0_100    @map("0-100")
+  RANGE_100_200  @map("100-200")
+  RANGE_200_400  @map("200-400")
+  RANGE_400_700  @map("400-700")
+  RANGE_700_1000 @map("700-1000")
+  RANGE_1000_1500 @map("1000-1500")
+  RANGE_1500_PLUS @map("1500+")
+}
+
+enum status_enum {
   Draft
   Active
   Completed
   Cancelled
 }
 
-enum ParticipantRole {
-  Admin
-  Editor
-  Viewer
-}
-
-enum Range {
-  RANGE_0_100      @map("0-100")
-  RANGE_100_200    @map("100-200")
-  RANGE_200_400    @map("200-400")
-  RANGE_400_700    @map("400-700")
-  RANGE_700_1000   @map("700-1000")
-  RANGE_1000_1500  @map("1000-1500")
-  RANGE_1500_PLUS  @map("1500+")
-}
-
-enum Category {
-  food
-  drinks
-  accomodation
-  souvenir_shop    @map("souvenir shop")
-  nature
-  night_life       @map("night life")
-  leisure
-  activities
-  local_offers     @map("local offers")
-}
-
 // User and Authentication
 model User {
-  user_id              Int                   @id @default(autoincrement())
-  first_name           String                @db.VarChar(100)
-  last_name            String                @db.VarChar(100)
-  email                String                @unique @db.VarChar(100)
-  contact_no           String?               @db.VarChar(50)
-  password             String
+  user_id               Int                  @id @default(autoincrement())
+  auth_id               String?              @unique @db.Uuid  // Link to Supabase auth.users.id
+  first_name            String               @db.VarChar(100)
+  last_name             String               @db.VarChar(100)
+  email                 String               @unique @db.VarChar(100)
+  contact_no            String?              @db.VarChar(50)
+  password              String?              @db.VarChar  // NULL when using Supabase Auth
+  created_at            DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?            @default(now()) @updatedAt @db.Timestamp(6)
 
   // Relations
-  blogs                Blog[]
-  businesses           Business[]
-  travel_plans         TravelPlan[]
-  activities           Activity[]
-  participants         Participant[]
-  business_favorites   BusinessFavorite[]
+  activities            Activity[]
+  Blog                  Blog[]               // Uppercase Blog for new schema
+  blog                  blog[]               // Lowercase blog for legacy
+  businesses            Business[]
+  business_favorites    BusinessFavorite[]
+  business_reviews      BusinessReview[]
+  participants          Participant[]
+  travel_plans          TravelPlan[]
   travel_plan_favorites TravelPlanFavorite[]
-  business_reviews     BusinessReview[]
-  travel_plan_reviews  TravelPlanReview[]
+  travel_plan_reviews   TravelPlanReview[]
 
   @@map("user")
 }
 
-// Blog Content
+// New Blog Content (uppercase B - UUID based)
 model Blog {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id          Int?
-  title            String    @db.VarChar(200)
-  slug             String    @unique @db.VarChar(200)
-  excerpt          String    @db.VarChar(500)
-  content          String    @db.Text
-  coverImageUrl    String
-  category         String    @db.VarChar(100)
-  isFeatured       Boolean   @default(false)
-  readingMinutes   Int
-  publishedAt      DateTime  @default(now())
-  author           String    @db.VarChar(100)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @default(now()) @updatedAt
-
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        Int?
+  title          String    @db.VarChar(200)
+  slug           String    @unique @db.VarChar(200)
+  excerpt        String    @db.VarChar(500)
+  content        String
+  coverImageUrl  String
+  category       String    @db.VarChar(100)
+  isFeatured     Boolean?  @default(false)
+  readingMinutes Int
+  publishedAt    DateTime? @default(now()) @db.Timestamp(6)
+  author         String    @db.VarChar(100)
+  createdAt      DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+  
   // Relations
-  user             User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user           User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([slug])
-  @@index([category])
-  @@index([isFeatured])
-  @@index([publishedAt])
+  @@index([category], map: "idx_blog_category")
+  @@index([isFeatured], map: "idx_blog_is_featured")
+  @@index([publishedAt], map: "idx_blog_published_at")
+  @@index([slug], map: "idx_blog_slug")
   @@map("Blog")
+}
+
+// Legacy blog table (lowercase b - will be deprecated)
+model blog {
+  blog_id     Int       @id @default(autoincrement())
+  user_id     Int?
+  title       String    @db.VarChar(200)
+  description String?
+  content     String?
+  blog_date   DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
+  user        User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 // Business and Related Tables
 model Business {
-  business_id          Int                  @id @default(autoincrement())
+  business_id          Int                @id @default(autoincrement())
   user_id              Int?
-  name                 String               @db.VarChar(200)
-  house_number         String?              @db.VarChar(300)
-  street               String?              @db.VarChar(300)
-  brgy                 String?              @db.VarChar(300)
-  city                 String?              @db.VarChar(300)
-  latitude             Float?               @db.DoublePrecision
-  longtitude           Float?               @db.DoublePrecision
-  description          String?              @db.Text
-  rating               Decimal?             @db.Decimal(3, 1)
-  google_authenticator String?              @db.VarChar(100)
-  status               Boolean              @default(false)
+  name                 String             @db.VarChar(200)
+  house_number         String?            @db.VarChar(300)
+  street               String?            @db.VarChar(300)
+  brgy                 String?            @db.VarChar(300)
+  city                 String?            @db.VarChar(300)
+  latitude             Float?
+  longtitude           Float?
+  description          String?
+  rating               Decimal?           @db.Decimal(3, 1)
+  google_authenticator String?            @db.VarChar(100)
+  status               Boolean?           @default(false)
   picture              String?
 
   // Relations
-  user                 User?                @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  activities           Activity[]
+  user                 User?              @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   categories           BusinessCategory[]
   favorites            BusinessFavorite[]
   business_hours       BusinessHours[]
-  activities           Activity[]
   reviews              BusinessReview[]
 
   @@map("business")
 }
 
 model BusinessCategory {
-  category_id    Int       @id @default(autoincrement())
-  business_id    Int
-  category_name  Category
-
-  // Relations
-  business       Business  @relation(fields: [business_id], references: [business_id], onDelete: Cascade)
-  price_ranges   PriceRange[]
+  category_id   Int          @id @default(autoincrement())
+  business_id   Int?
+  category_name category
+  business      Business?    @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+  price_ranges  PriceRange[]
 
   @@map("business_category")
 }
 
 model BusinessFavorite {
-  favorite_id  Int      @id @default(autoincrement())
-  user_id      Int
-  business_id  Int
+  favorite_id Int       @id @default(autoincrement())
+  user_id     Int?
+  business_id Int?
+  business    Business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+  user        User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations
-  user         User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  business     Business @relation(fields: [business_id], references: [business_id], onDelete: Cascade)
-
+  @@unique([user_id, business_id])
   @@map("business_favorite")
 }
 
 model BusinessHours {
-  id           Int       @id @default(autoincrement())
-  business_id  Int
-  day_of_week  String?   @db.VarChar(10)
-  open_time    DateTime? @db.Time
-  close_time   DateTime? @db.Time
-
-  // Relations
-  business     Business  @relation(fields: [business_id], references: [business_id], onDelete: Cascade)
+  id          Int       @id @default(autoincrement())
+  business_id Int?
+  day_of_week String?   @db.VarChar(10)
+  open_time   DateTime? @db.Time(6)
+  close_time  DateTime? @db.Time(6)
+  business    Business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("business_hours")
 }
 
 model PriceRange {
-  id           Int               @id @default(autoincrement())
-  category_id  Int?
-  min_price    Int
-  max_price    Int
-
-  // Relations
-  category     BusinessCategory? @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
+  id          Int               @id @default(autoincrement())
+  category_id Int?
+  min_price   Int
+  max_price   Int
+  category    BusinessCategory? @relation(fields: [category_id], references: [category_id], onUpdate: NoAction)
 
   @@map("price_range")
 }
 
 // Travel Plan and Related Tables
 model TravelPlan {
-  travel_plan_id        Int                    @id @default(autoincrement())
-  name                  String                 @db.VarChar(200)
-  user_id               Int
-  start_date            DateTime?              @db.Date
-  end_date              DateTime?              @db.Date
-  description           String?                @db.Text
-  visibility            Boolean                @default(false)
-  visibility_end_date   DateTime?              @db.Date
-  status                StatusEnum             @default(Draft)
-  max_slots             Int?
-  location              String?
-  visibility_timestamp  DateTime?
+  travel_plan_id       Int                  @id @default(autoincrement())
+  name                 String               @db.VarChar(200)
+  user_id              Int?
+  start_date           DateTime?            @db.Date
+  end_date             DateTime?            @db.Date
+  description          String?
+  visibility           Boolean?             @default(false)
+  visibility_end_date  DateTime?            @db.Date
+  status               status_enum          @default(Draft)
+  max_slots            Int?
+  location             String?
+  visibility_timestamp DateTime?            @db.Timestamp(6)
 
   // Relations
-  user                  User                   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  activities            Activity[]
-  participants          Participant[]
-  favorites             TravelPlanFavorite[]
-  reviews               TravelPlanReview[]
+  activities           Activity[]
+  participants         Participant[]
+  user                 User?                @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  favorites            TravelPlanFavorite[]
+  reviews              TravelPlanReview[]
 
   @@map("travel_plan")
 }
 
 model Activity {
-  activity_id      Int         @id @default(autoincrement())
-  travel_plan_id   Int
-  business_id      Int?
-  notes            String?     @db.Text
-  target_date      DateTime?   @db.Date
-  budget_range     Range?
-  user_id          Int
-  is_priority      Boolean     @default(false)
-  lat              Float?      @db.DoublePrecision
-  lng              Float?      @db.DoublePrecision
-
+  activity_id    Int         @id @default(autoincrement())
+  travel_plan_id Int?
+  business_id    Int?
+  notes          String?
+  target_date    DateTime?   @db.Date
+  budget_range   range?
+  user_id        Int?
+  is_priority    Boolean?    @default(false)
+  lat            Float?
+  lng            Float?
+  
   // Relations
-  travel_plan      TravelPlan  @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade)
-  business         Business?   @relation(fields: [business_id], references: [business_id], onDelete: SetNull)
-  user             User        @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  business       Business?   @relation(fields: [business_id], references: [business_id], onUpdate: NoAction)
+  travel_plan    TravelPlan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("activity")
 }
 
 model Participant {
-  participant_id   Int              @id @default(autoincrement())
-  travel_plan_id   Int
-  user_id          Int
-  role             ParticipantRole  @default(Viewer)
-  joined_at        DateTime         @default(now())
-  status           Boolean          @default(false)
-
+  participant_id Int              @id @default(autoincrement())
+  travel_plan_id Int?
+  user_id        Int?
+  role           participant_role @default(Viewer)
+  joined_at      DateTime?        @default(now()) @db.Timestamp(6)
+  status         Boolean?         @default(false)
+  
   // Relations
-  travel_plan      TravelPlan       @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade)
-  user             User             @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  travel_plan    TravelPlan?      @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           User?            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("participant")
 }
 
 model TravelPlanFavorite {
-  favorite_id      Int        @id @default(autoincrement())
-  user_id          Int
-  travel_plan_id   Int
-
+  favorite_id    Int         @id @default(autoincrement())
+  user_id        Int?
+  travel_plan_id Int?
+  
   // Relations
-  user             User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  travel_plan      TravelPlan @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade)
+  travel_plan    TravelPlan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@unique([user_id, travel_plan_id])
   @@map("travel_plan_favorite")
 }
 
 // Reviews
 model BusinessReview {
-  review_id    Int       @id @default(autoincrement())
-  user_id      Int
-  business_id  Int
-  rating       Decimal?  @db.Decimal(3, 1)
-  content      String?   @db.Text
-  review_date  DateTime  @default(now()) @db.Date
-
+  review_id   Int       @id @default(autoincrement())
+  user_id     Int?
+  business_id Int?
+  rating      Decimal?  @db.Decimal(3, 1)
+  content     String?
+  review_date DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
+  
   // Relations
-  user         User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  business     Business  @relation(fields: [business_id], references: [business_id], onDelete: Cascade)
+  business    Business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+  user        User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("business_review")
 }
 
 model TravelPlanReview {
-  review_id      Int        @id @default(autoincrement())
-  user_id        Int
-  travel_plan_id Int
-  rating         Decimal?   @db.Decimal(3, 1)
-  content        String?    @db.Text
-  review_date    DateTime   @default(now()) @db.Date
-
+  review_id      Int         @id @default(autoincrement())
+  user_id        Int?
+  travel_plan_id Int?
+  rating         Decimal?    @db.Decimal(3, 1)
+  content        String?
+  review_date    DateTime?   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  
   // Relations
-  user           User       @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  travel_plan    TravelPlan @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade)
+  travel_plan    TravelPlan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("travel_plan_review")
 }
-

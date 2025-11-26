@@ -17,6 +17,15 @@ get plans (for quick join)
 put join plan (for anyone na magjjoin)*/
 
 import { Router } from "express";
+import { authenticateToken } from "../src/middleware/auth.js";
+import { requirePlanOwnership, requireActivityAccess } from "../src/middleware/ownership.js";
+import {
+  validate,
+  createPlanSchema,
+  editPlanSchema,
+  createActivitySchema,
+  editActivitySchema
+} from "../src/schemas/validation.js";
 import {
   activity_edit,
   collaborators_edit,
@@ -35,30 +44,48 @@ import {
   quick_join,
   delete_activity,
   update_activity,
+  get_participants,
+  add_participant,
+  update_participant,
+  remove_participant,
 } from "../travel_plan/index.js";
 
 const router = Router();
 
-router.get("/ongoing_plan", ongoing_plan);
-router.get("/plans", fetch_plans);
-router.get("/previous_plans", previous_plans);
-router.get("/plans/:id", plans_id);
-router.get("/activities/:id", fetch_activities);
-
-router.post("/create_plan", create_plan);
-router.post("/create_activity", create_activity);
-
-router.put("/edit_plan/:id", plan_edit);
-router.put("/activity_edit/:id", activity_edit);
-router.put("/collaborators_edit/:id", collaborators_edit);
-router.put("/update_activity/:id", update_activity);
-
+// Public routes (no auth required)
 router.get("/public_plans", public_plans);
+router.post("/quick_join", quick_join); // Search is public, joining requires auth
+
+// Protected routes (authentication required)
+router.get("/ongoing_plan", authenticateToken, ongoing_plan);
+router.get("/plans", authenticateToken, fetch_plans);
+router.get("/previous_plans", authenticateToken, previous_plans);
+router.get("/plans/:id", authenticateToken, plans_id);
+router.get("/activities/:id", authenticateToken, fetch_activities);
+
+// Create routes (auth + validation)
+router.post("/create_plan", authenticateToken, validate(createPlanSchema), create_plan);
+router.post("/create_activity", authenticateToken, validate(createActivitySchema), create_activity);
+
+// Edit routes (auth + ownership + validation)
+router.put("/edit_plan/:id", authenticateToken, requirePlanOwnership, validate(editPlanSchema), plan_edit);
+router.put("/activity_edit/:id", authenticateToken, requireActivityAccess, validate(editActivitySchema), activity_edit);
+router.put("/collaborators_edit/:id", authenticateToken, requirePlanOwnership, collaborators_edit);
+router.put("/update_activity/:id", authenticateToken, requirePlanOwnership, update_activity);
+
+// Join/participant routes
+router.put("/join_plan", authenticateToken, join_plan);
+
+// Delete routes (auth + ownership)
+router.delete("/delete_activity/:id", authenticateToken, requireActivityAccess, delete_activity);
+
+// Participant management routes
+router.get("/:id/participants", authenticateToken, get_participants);
+router.post("/:id/participants", authenticateToken, requirePlanOwnership, add_participant);
+router.put("/:id/participants/:userId", authenticateToken, requirePlanOwnership, update_participant);
+router.delete("/:id/participants/:userId", authenticateToken, requirePlanOwnership, remove_participant);
+
+// Legacy/specific routes
 router.get("/specific_plans", specific_plans); //is this redudant?
-
-router.put("/join_plan", join_plan);
-router.post("/quick_join", quick_join);
-
-router.delete("/delete_activity/:id", delete_activity);
 
 export default router;

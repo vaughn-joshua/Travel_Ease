@@ -15,9 +15,8 @@ export async function create_business(req, res) {
     category,
   } = req.body;
 
-  const userId = req.body.user_id || 1; // Default to 1 if not provided
-
-  console.log("you are at backend create business");
+  // Use authenticated user ID from middleware
+  const userId = req.user.id;
 
   try {
     // Create business with related records in a transaction

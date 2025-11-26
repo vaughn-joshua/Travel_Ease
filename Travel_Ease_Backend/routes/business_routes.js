@@ -1,4 +1,12 @@
 import { Router } from "express";
+import { authenticateToken } from "../src/middleware/auth.js";
+import { requireBusinessOwnership } from "../src/middleware/ownership.js";
+import { 
+  validate, 
+  createBusinessSchema, 
+  editBusinessSchema,
+  priceRangeSchema
+} from "../src/schemas/validation.js";
 import { create_business } from "../business/index.js";
 import { price_range } from "../business/index.js";
 import { business_fetch } from "../business/index.js";
@@ -9,19 +17,25 @@ import { prisma } from "../src/lib/prisma.js";
 
 const router = Router();
 
-router.post("/create_business", create_business);
-router.post("/price_range", price_range);
+// Create routes (auth + validation)
+router.post("/create_business", authenticateToken, validate(createBusinessSchema), create_business);
+router.post("/price_range", authenticateToken, validate(priceRangeSchema), price_range);
 
+// Public read routes
 router.get("/fetch_business/:id", business_fetch);
 router.get("/fetch_categories/:id", categories_fetch);
 router.get("/businesses", get_businesses);
 
-router.put(`/edit_business/:id`, edit_business);
+// Edit routes (auth + ownership + validation)
+router.put("/edit_business/:id", authenticateToken, requireBusinessOwnership, validate(editBusinessSchema), edit_business);
 
-// Travel spots endpoints (business listings and reviews)
+// Travel spots endpoints (public for browsing)
 router.get("/travel_spots", async (req, res) => {
   try {
     const businesses = await prisma.business.findMany({
+      where: {
+        status: true // Only show approved/active businesses
+      },
       select: {
         business_id: true,
         user_id: true,
@@ -36,6 +50,9 @@ router.get("/travel_spots", async (req, res) => {
         rating: true,
         status: true,
         picture: true
+      },
+      orderBy: {
+        rating: 'desc'
       }
     });
     

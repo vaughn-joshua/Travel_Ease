@@ -9,6 +9,7 @@ import {
   business_routes,
 } from "./routes/index.js";
 import map_routes from "./routes/map_routes.js";
+import review_routes from "./routes/review_routes.js";
 import { blogRoutes } from "./src/routes/blogRoutes.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
 
@@ -26,6 +27,7 @@ app.use("/api/utils", utils_routes);
 app.use("/api/config", config_routes);
 app.use("/api/business", business_routes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/reviews", review_routes);
 app.use("/api", map_routes);
 
 // Health check
