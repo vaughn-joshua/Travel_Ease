@@ -4,6 +4,7 @@ routes
 post login
 post register
 post favorite
+delete favorite
 get favorites
 get user (own details)
 */
@@ -15,6 +16,7 @@ import {
   register,
   login,
   favorite,
+  remove_favorite,
   favorite_id,
   user_id,
 } from "../user/index.js";
@@ -27,6 +29,7 @@ router.post("/login", validate(loginSchema), login);
 
 // Protected routes (auth required)
 router.post("/favorite", authenticateToken, validate(createFavoriteSchema), favorite);
+router.delete("/favorite", authenticateToken, validate(createFavoriteSchema), remove_favorite);
 router.get("/favorite/:id", authenticateToken, favorite_id);
 router.get("/user/:id", authenticateToken, user_id);
 
