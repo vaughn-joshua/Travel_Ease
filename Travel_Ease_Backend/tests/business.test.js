@@ -43,7 +43,7 @@ describe('Business', () => {
           lng: 120.9842
         });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('business_id');
       expect(response.body.message).toContain('successfully');
 

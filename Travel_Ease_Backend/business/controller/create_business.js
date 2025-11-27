@@ -62,7 +62,7 @@ export async function create_business(req, res) {
       return business;
     });
 
-    res.json({ 
+    res.status(201).json({ 
       message: "successfully created a business",
       business_id: result.business_id
     });
