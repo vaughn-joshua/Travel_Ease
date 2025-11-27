@@ -45,6 +45,10 @@ import {
   create_activity,
   fetch_activities,
   quick_join,
+  request_join,
+  get_pending_requests,
+  approve_join,
+  deny_join,
   delete_activity,
   update_activity,
   get_participants,
@@ -58,6 +62,12 @@ const router = Router();
 // Public routes (no auth required)
 router.get("/public_plans", public_plans);
 router.post("/quick_join", quick_join); // Search is public, joining requires auth
+
+// Quick join queue routes (auth required)
+router.post("/request_join", authenticateToken, request_join);
+router.get("/:id/pending_requests", authenticateToken, requirePlanOwnership, get_pending_requests);
+router.put("/:id/approve/:participantId", authenticateToken, requirePlanOwnership, approve_join);
+router.delete("/:id/deny/:participantId", authenticateToken, requirePlanOwnership, deny_join);
 
 // Protected routes (authentication required)
 router.get("/ongoing_plan", authenticateToken, ongoing_plan);

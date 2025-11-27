@@ -80,7 +80,7 @@ describe('Ownership Access Control', () => {
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ title: 'Owner Edited' });
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
     });
 
     it('should allow admin participant to edit plan', async () => {
@@ -95,7 +95,7 @@ describe('Ownership Access Control', () => {
         .set('Authorization', `Bearer ${editorToken}`)
         .send({ title: 'Admin Edited' });
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
     });
 
     it('should reject edit by editor participant', async () => {
@@ -232,7 +232,7 @@ describe('Ownership Access Control', () => {
         .delete(`/api/travel_plan/delete_activity/${activityId}`)
         .set('Authorization', `Bearer ${ownerToken}`);
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
     });
   });
 });

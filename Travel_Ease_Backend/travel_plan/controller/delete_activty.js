@@ -11,8 +11,7 @@ export async function delete_activity(req, res) {
       }
     });
 
-    console.log("deleted activity successfully");
-    res.status(201).json({ message: "deleted activity successfully" });
+    res.status(200).json({ message: "Activity deleted successfully" });
   } catch (error) {
     console.error("Error deleting activity:", error);
     if (error.code === 'P2025') {

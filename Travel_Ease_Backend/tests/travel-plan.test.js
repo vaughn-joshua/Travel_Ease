@@ -108,7 +108,7 @@ describe('Travel Plans', () => {
           location: 'Cebu'
         });
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
       expect(response.body.message).toContain('successfully');
     });
 
@@ -142,7 +142,7 @@ describe('Travel Plans', () => {
           title: 'Admin Updated'
         });
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
     });
   });
 

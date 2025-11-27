@@ -5,7 +5,7 @@ import { prisma } from "../../src/lib/prisma.js";
  */
 export async function get_participants(req, res) {
   try {
-    const { id } = req.params; // travel_plan_id
+    const { id } = req.params;
 
     const participants = await prisma.participant.findMany({
       where: {
@@ -38,17 +38,18 @@ export async function get_participants(req, res) {
 
 /**
  * Add a participant to a travel plan
+ * Only counts APPROVED participants toward slot limits
  */
 export async function add_participant(req, res) {
   try {
-    const { id } = req.params; // travel_plan_id
+    const { id } = req.params;
     const { user_id, role = 'Viewer' } = req.body;
 
-    // Check if plan exists and has available slots
+    // Check if plan exists and get approved participant count
     const plan = await prisma.travelPlan.findUnique({
       where: { travel_plan_id: parseInt(id) },
       include: {
-        participants: true
+        _count: { select: { participants: { where: { status: true } } } }
       }
     });
 
@@ -56,9 +57,10 @@ export async function add_participant(req, res) {
       return res.status(404).json({ error: "Travel plan not found" });
     }
 
-    // Check slot limits
-    if (plan.max_slots && plan.participants.length >= plan.max_slots) {
-      return res.status(400).json({ 
+    // Check slot limits (only approved participants count)
+    const approvedCount = plan._count.participants;
+    if (plan.max_slots && approvedCount >= plan.max_slots) {
+      return res.status(400).json({
         error: "Plan is full",
         details: `Maximum slots (${plan.max_slots}) reached`
       });
@@ -76,13 +78,13 @@ export async function add_participant(req, res) {
       return res.status(409).json({ error: "User is already a participant" });
     }
 
-    // Add participant
+    // Add participant with approved status (owner/admin is adding directly)
     const participant = await prisma.participant.create({
       data: {
         travel_plan_id: parseInt(id),
         user_id,
         role,
-        status: false // Pending approval
+        status: true // Directly added = approved
       },
       include: {
         user: {
@@ -109,11 +111,12 @@ export async function add_participant(req, res) {
 }
 
 /**
- * Update participant role or status (approve/reject)
+ * Update participant role or status
+ * Prevents demoting/removing the last Admin
  */
 export async function update_participant(req, res) {
   try {
-    const { id, userId } = req.params; // travel_plan_id, user_id
+    const { id, userId } = req.params;
     const { role, status } = req.body;
 
     const participant = await prisma.participant.findFirst({
@@ -125,6 +128,41 @@ export async function update_participant(req, res) {
 
     if (!participant) {
       return res.status(404).json({ error: "Participant not found" });
+    }
+
+    // Safeguard: prevent demoting the last Admin
+    if (participant.role === 'Admin' && role && role !== 'Admin') {
+      const adminCount = await prisma.participant.count({
+        where: {
+          travel_plan_id: parseInt(id),
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          error: "Cannot demote the last admin",
+          details: "Promote another participant to Admin first"
+        });
+      }
+    }
+
+    // When approving, check slot limits
+    if (status === true && participant.status === false) {
+      const plan = await prisma.travelPlan.findUnique({
+        where: { travel_plan_id: parseInt(id) },
+        include: {
+          _count: { select: { participants: { where: { status: true } } } }
+        }
+      });
+
+      if (plan && plan.max_slots && plan._count.participants >= plan.max_slots) {
+        return res.status(400).json({
+          error: "Cannot approve - plan is full",
+          details: `Maximum slots (${plan.max_slots}) reached`
+        });
+      }
     }
 
     const updated = await prisma.participant.update({
@@ -158,10 +196,11 @@ export async function update_participant(req, res) {
 
 /**
  * Remove a participant from a travel plan
+ * Prevents removing the last Admin
  */
 export async function remove_participant(req, res) {
   try {
-    const { id, userId } = req.params; // travel_plan_id, user_id
+    const { id, userId } = req.params;
 
     const participant = await prisma.participant.findFirst({
       where: {
@@ -175,16 +214,17 @@ export async function remove_participant(req, res) {
     }
 
     // Prevent removing the last admin
-    if (participant.role === 'Admin') {
+    if (participant.role === 'Admin' && participant.status === true) {
       const adminCount = await prisma.participant.count({
         where: {
           travel_plan_id: parseInt(id),
-          role: 'Admin'
+          role: 'Admin',
+          status: true
         }
       });
 
       if (adminCount <= 1) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Cannot remove the last admin from the plan"
         });
       }
@@ -218,9 +258,32 @@ export async function collaborators_edit(req, res) {
       return res.status(400).json({ error: "collaborators array is required" });
     }
 
+    // Check admin count before bulk update
+    const currentAdmins = await prisma.participant.findMany({
+      where: {
+        travel_plan_id: parseInt(id),
+        role: 'Admin',
+        status: true
+      }
+    });
+
+    // Validate that at least one admin will remain after updates
+    const adminIds = currentAdmins.map(a => a.user_id);
+    const willHaveAdmin = collaborators.some(c => 
+      (c.role === 'Admin' && c.status !== false) || 
+      (adminIds.includes(c.user_id) && c.role !== 'Editor' && c.role !== 'Viewer')
+    );
+
+    if (currentAdmins.length > 0 && !willHaveAdmin) {
+      return res.status(400).json({
+        error: "Cannot remove all admins",
+        details: "At least one admin must remain on the plan"
+      });
+    }
+
     // Use transaction for bulk updates
     const result = await prisma.$transaction(
-      collaborators.map(collab => 
+      collaborators.map(collab =>
         prisma.participant.upsert({
           where: {
             participant_id: collab.participant_id || 0
