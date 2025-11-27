@@ -2,12 +2,9 @@ import { prisma } from "../../src/lib/prisma.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
 
 /**
- * Fetch upcoming (Draft status) plans for the authenticated user
- * Supports pagination and filtering via query params:
- * - page, pageSize: pagination
- * - search: search in name/description
- * - location: filter by location
- * - startDateFrom, startDateTo: filter by start_date range
+ * Fetch upcoming plans for the authenticated user:
+ * - Draft plans (being prepared)
+ * - Active plans with future start_date (scheduled but not yet started)
  */
 export async function fetch_plans(req, res) {
   try {
@@ -15,25 +12,37 @@ export async function fetch_plans(req, res) {
     const { page, pageSize, skip } = parsePagination(req.query);
     const filters = buildPlanFilters(req.query);
 
-    // User must be owner or participant
-    const where = {
-      status: 'Draft',
-      ...filters,
-      OR: [
-        { user_id: userId },
-        { participants: { some: { user_id: userId, status: true } } }
-      ]
-    };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Merge search OR with user access OR using AND
+    // User access filter
+    const userAccessFilter = [
+      { user_id: userId },
+      { participants: { some: { user_id: userId, status: true } } }
+    ];
+
+    // Status filter: Draft OR (Active with future start_date)
+    const statusFilter = [
+      { status: 'Draft' },
+      { status: 'Active', start_date: { gt: today } }
+    ];
+
+    // Build where clause with AND to combine all conditions
+    const conditions = [
+      { OR: statusFilter },
+      { OR: userAccessFilter }
+    ];
+
+    // Add search filter if present
     if (filters.OR) {
-      where.AND = [
-        { OR: filters.OR },
-        { OR: where.OR }
-      ];
-      delete where.OR;
+      conditions.push({ OR: filters.OR });
       delete filters.OR;
     }
+
+    const where = {
+      AND: conditions,
+      ...filters
+    };
 
     const [plans, total] = await Promise.all([
       prisma.travelPlan.findMany({

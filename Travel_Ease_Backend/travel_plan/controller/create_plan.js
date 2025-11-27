@@ -42,20 +42,29 @@ export async function create_plan(req, res) {
         }
       });
 
-      // Add collaborators if provided (as pending by default)
+      // Add collaborators with slot enforcement for approved ones
       if (collaborators?.length > 0) {
+        let approvedCount = 1; // Creator counts as 1 approved
+        
         for (const collab of collaborators) {
           // Skip if no user_id or same as creator
           if (!collab.user_id || collab.user_id === userId) continue;
+          
+          const wantsApproved = collab.status === true;
+          
+          // Skip approved collaborators if would exceed max_slots
+          if (wantsApproved && maxSlots && approvedCount >= maxSlots) continue;
           
           await tx.participant.create({
             data: {
               travel_plan_id: travelPlan.travel_plan_id,
               user_id: collab.user_id,
               role: collab.role || 'Viewer',
-              status: false // Pending approval
+              status: wantsApproved
             }
           });
+          
+          if (wantsApproved) approvedCount++;
         }
       }
 
