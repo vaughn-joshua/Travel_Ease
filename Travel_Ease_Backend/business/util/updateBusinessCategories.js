@@ -1,65 +1,52 @@
-export async function updateBusinessCategories(con, business_id, categories) {
-  try {
-    // Begin transaction
-    await con.query("BEGIN");
+import { prisma } from "../../src/lib/prisma.js";
 
-    console.log("starting category update");
+/**
+ * Update business categories - handles add/update/delete
+ * @param {number} business_id - Business ID
+ * @param {Array} categories - Array of {category_id?, category_name}
+ */
+export async function updateBusinessCategories(business_id, categories) {
+  // Use Prisma transaction for atomicity
+  return await prisma.$transaction(async (tx) => {
+    // 1. Get existing category IDs
+    const existing = await tx.businessCategory.findMany({
+      where: { business_id },
+      select: { category_id: true }
+    });
+    const existingIds = existing.map(c => c.category_id);
 
-    // 1. Get existing categories in DB
-    const existing = await con.query(
-      "SELECT category_id FROM public.business_category WHERE business_id = $1",
-      [business_id]
-    );
-
-    console.log({ existing });
-
-    const existingIds = existing.rows.map((r) => r.category_id);
-
-    // Get only incoming category IDs that are not null
+    // 2. Determine incoming IDs (existing categories to keep/update)
     const incomingIds = categories
-      .filter((c) => c.category_id !== "")
-      .map((c) => c.category_id);
+      .filter(c => c.category_id)
+      .map(c => c.category_id);
 
-    console.log(incomingIds);
+    // 3. Delete removed categories
+    const toDelete = existingIds.filter(id => !incomingIds.includes(id));
+    if (toDelete.length > 0) {
+      await tx.businessCategory.deleteMany({
+        where: { category_id: { in: toDelete } }
+      });
+    }
 
-    // 2. DELETE categories removed by user
-    for (let oldId of existingIds) {
-      if (!incomingIds.includes(oldId)) {
-        // await con.query(
-        //   "DELETE FROM public.business_category WHERE category_id = $1",
-        //   [oldId]
-        // );
-        console.log(`delete ${oldId}`);
+    // 4. Upsert categories (insert new, update existing)
+    for (const c of categories) {
+      if (c.category_id) {
+        // Update existing
+        await tx.businessCategory.update({
+          where: { category_id: c.category_id },
+          data: { category_name: c.category_name }
+        });
+      } else {
+        // Insert new
+        await tx.businessCategory.create({
+          data: {
+            business_id,
+            category_name: c.category_name
+          }
+        });
       }
     }
 
-    // 3. INSERT or UPDATE categories
-    for (let c of categories) {
-      // NEW CATEGORY (no ID)
-      if (c.category_id === null) {
-        // await con.query(
-        //   "INSERT INTO public.business_category (business_id, category_name) VALUES ($1, $2)",
-        //   [business_id, c.category_name]
-        // );
-        console.log(`add ${c.category_name}`);
-      }
-      // EXISTING CATEGORY → UPDATE
-      else {
-        // await con.query(
-        //   "UPDATE public.business_category SET category_name = $1 WHERE category_id = $2",
-        //   [c.category_name, c.category_id]
-        // );
-        console.log(`update ${c.category_name}`);
-      }
-    }
-
-    // Commit transaction
-    // await con.query("COMMIT");
     return { success: true, message: "Categories updated successfully" };
-  } catch (error) {
-    // Rollback if error happens
-    await con.query("ROLLBACK");
-    console.error("Error updating categories:", error);
-    throw error;
-  }
+  });
 }
