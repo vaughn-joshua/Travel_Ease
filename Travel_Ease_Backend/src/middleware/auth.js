@@ -66,15 +66,45 @@ export const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: "Invalid or expired token" });
     }
 
-    // Find linked user in our database
-    const user = await prisma.user.findUnique({
+    // Find or create linked user profile
+    let user = await prisma.user.findUnique({
       where: { auth_id: data.user.id }
     });
 
     if (!user) {
-      return res.status(404).json({ 
-        error: "User profile not found. Please complete registration." 
-      });
+      const meta = data.user.user_metadata || {};
+      const email = data.user.email;
+      const fallbackName = email ? email.split("@")[0] : "User";
+
+      const first_name =
+        meta.first_name ||
+        meta.firstName ||
+        meta.given_name ||
+        fallbackName ||
+        "User";
+      const last_name = meta.last_name || meta.lastName || meta.family_name || "";
+      const contact_no = meta.contact_no || meta.phone || meta.phone_number || null;
+
+      try {
+        user = await prisma.user.create({
+          data: {
+            auth_id: data.user.id,
+            email,
+            first_name,
+            last_name: last_name || "User",
+            contact_no
+          }
+        });
+      } catch (createError) {
+        // Handle race condition where another request created the user
+        if (createError.code === "P2002") {
+          user = await prisma.user.findUnique({
+            where: { auth_id: data.user.id }
+          });
+        } else {
+          throw createError;
+        }
+      }
     }
 
     req.user = { 

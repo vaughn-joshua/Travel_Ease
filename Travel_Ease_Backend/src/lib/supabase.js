@@ -28,13 +28,3 @@ export const supabase = supabaseUrl && supabaseAnonKey
 export const isSupabaseConfigured = () => {
   return Boolean(supabaseUrl && supabaseServiceKey);
 };
-
-// Get auth mode from environment
-export const getAuthMode = () => {
-  return process.env.AUTH_MODE || 'local';
-};
-
-// Check if using Supabase Auth
-export const useSupabaseAuth = () => {
-  return getAuthMode() === 'supabase' && isSupabaseConfigured();
-};

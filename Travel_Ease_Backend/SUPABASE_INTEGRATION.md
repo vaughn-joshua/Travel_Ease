@@ -4,19 +4,7 @@ This document explains how Travel_Ease integrates with Supabase Auth for user au
 
 ## Architecture Overview
 
-Travel_Ease supports **two authentication modes**:
-
-1. **Supabase Auth** (Recommended for production)
-   - Uses Supabase Auth service for user management
-   - Verifies JWTs server-side using Supabase Admin API
-   - User profiles synced to local `user` table via `auth_id`
-
-2. **Local JWT** (Development/Testing)
-   - Uses bcrypt for password hashing
-   - Issues JWTs signed with `JWT_SECRET`
-   - No external dependencies
-
-Mode is controlled by `AUTH_MODE` environment variable.
+Travel_Ease uses **Supabase Auth by default**. Local JWTs are only used in automated tests or as an explicit fallback when Supabase is unavailable. There is **no AUTH_MODE toggle** anymore—if Supabase env vars are present, we verify Supabase-issued JWTs; otherwise tests fall back to local JWT with `JWT_SECRET`.
 
 ## Setup Instructions
 
@@ -30,7 +18,7 @@ Mode is controlled by `AUTH_MODE` environment variable.
 SUPABASE_URL="https://your-project.supabase.co"
 SUPABASE_ANON_KEY="eyJ..."
 SUPABASE_SERVICE_ROLE_KEY="eyJ..."
-AUTH_MODE="supabase"
+JWT_SECRET="local-or-test-secret" # used only for automated tests/local fallback
 ```
 
 ### 2. Set Up User Profile Sync
@@ -150,34 +138,9 @@ fetch('/api/travel_plan/create_plan', {
 
 ## Server-Side Token Verification
 
-The `authenticateToken` middleware handles verification:
+The `authenticateToken` middleware verifies Supabase tokens via `supabaseAdmin.auth.getUser(token)`. If Supabase is configured, the token must be valid; otherwise, the middleware returns 401/403. In automated tests (NODE_ENV=test), a local JWT path is used with `JWT_SECRET` so tests can run without Supabase.
 
-```javascript
-// Travel_Ease_Backend/src/middleware/auth.js
-
-export const authenticateToken = async (req, res, next) => {
-  const token = req.headers["authorization"]?.split(" ")[1];
-
-  // Mode 1: Supabase Auth (if configured)
-  if (useSupabaseAuth()) {
-    const { data, error } = await supabaseAdmin.auth.getUser(token);
-    
-    if (!error && data.user) {
-      const user = await prisma.user.findUnique({
-        where: { auth_id: data.user.id }
-      });
-      
-      req.user = { id: user.user_id, email: user.email, ... };
-      return next();
-    }
-  }
-
-  // Mode 2: Local JWT (fallback or when AUTH_MODE=local)
-  const decoded = jwt.verify(token, JWT_SECRET);
-  req.user = { id: decoded.id, email: decoded.email };
-  next();
-};
-```
+Optional: instead of using the Supabase Admin client, you can verify tokens via JWKS (Supabase publishes a JWKS endpoint). If you choose JWKS, document the cache/rotation strategy and replace the admin client call accordingly.
 
 ## Database Schema
 
@@ -198,26 +161,8 @@ CREATE TABLE user (
 
 ## Testing
 
-### Local Development Without Supabase
-
-Set in `.env`:
-```env
-AUTH_MODE="local"
-# SUPABASE_* vars can be omitted
-```
-
-Register/login will use bcrypt + JWT.
-
-### With Supabase in Development
-
-Set in `.env`:
-```env
-AUTH_MODE="supabase"
-SUPABASE_URL="https://..."
-SUPABASE_SERVICE_ROLE_KEY="..."
-```
-
-Use Supabase dashboard or client SDK to create test users.
+- **With Supabase**: use a real Supabase project and real tokens. Protected routes should accept `Authorization: Bearer <supabase access token>`.
+- **Without Supabase (tests/CI)**: leave `SUPABASE_*` empty and set `JWT_SECRET`. In this case, automated tests use the local JWT path in `authenticateToken` to run without hitting Supabase.
 
 ## Common Operations
 
@@ -255,23 +200,6 @@ await prisma.user.update({
 3. **Supabase RLS** can be enabled for additional security
 4. **Token expiration**: Supabase tokens expire (configurable)
 5. **Refresh tokens**: Handle token refresh in frontend
-
-## Switching Modes
-
-To switch between Supabase and Local auth:
-
-```env
-# Supabase Mode
-AUTH_MODE="supabase"
-SUPABASE_URL="https://..."
-SUPABASE_SERVICE_ROLE_KEY="..."
-
-# Local Mode
-AUTH_MODE="local"
-JWT_SECRET="your-secret"
-```
-
-Restart server after changing modes.
 
 ## Troubleshooting
 
@@ -339,4 +267,3 @@ for (const user of users) {
 - [Supabase Auth Docs](https://supabase.com/docs/guides/auth)
 - [Supabase JS Client](https://supabase.com/docs/reference/javascript/introduction)
 - [Server-Side Auth](https://supabase.com/docs/guides/auth/server-side-rendering)
-
