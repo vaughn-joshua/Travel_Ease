@@ -96,6 +96,6 @@ router.get("/travel_spots/reviews/:id", async (req, res) => {
     console.error("Error fetching reviews:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
-});
+}); 
 
 export default router;

@@ -49,7 +49,6 @@ async function register(req, res) {
           password: null // No password needed when using Supabase
         },
         select: {
-          user_id: true,
           auth_id: true,
           first_name: true,
           last_name: true,

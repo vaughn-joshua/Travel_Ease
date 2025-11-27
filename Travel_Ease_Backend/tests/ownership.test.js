@@ -232,7 +232,7 @@ describe('Ownership Access Control', () => {
         .delete(`/api/travel_plan/delete_activity/${activityId}`)
         .set('Authorization', `Bearer ${ownerToken}`);
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
     });
   });
 });

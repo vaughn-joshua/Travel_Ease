@@ -51,5 +51,6 @@ app.use("*", (req, res) => {
 
 // Server
 app.listen(PORT, () => {
+  console.log("it's working na mga sis!")
   console.log(`Server is running on http://localhost:${PORT}`);
 });

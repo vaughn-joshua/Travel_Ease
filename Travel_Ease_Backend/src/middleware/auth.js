@@ -3,7 +3,7 @@ import { supabaseAdmin, useSupabaseAuth } from "../lib/supabase.js";
 import { prisma } from "../lib/prisma.js";
 
 // Get secret from env or use a default for dev
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-prod";
+const JWT_SECRET = "secretlangsecretlangsecretlangsecretlang"; // process.env.JWT_SECRET || your-secret-key-change-in-prod
 
 export const authenticateApiKey = (req, res, next) => {
   const apiKey = req.headers["x-api-key"];

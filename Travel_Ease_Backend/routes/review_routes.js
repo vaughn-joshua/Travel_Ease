@@ -100,7 +100,7 @@ router.post("/travel_plan", authenticateToken, validate(createReviewSchema), asy
     console.error("Error creating travel plan review:", error);
     res.status(500).json({ error: error.message });
   }
-});
+}); //di pa mareview cuz wala pa travel plan
 
 // Get reviews for a specific travel plan
 router.get("/travel_plan/:id", async (req, res) => {
