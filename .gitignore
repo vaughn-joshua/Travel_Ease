@@ -94,5 +94,5 @@ temp/
 *.sqlite
 
 # Prisma
-prisma/migrations/
+# Note: migrations/ should be tracked for consistent deployments
 
