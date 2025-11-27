@@ -1,7 +1,7 @@
 import { prisma } from "../../src/lib/prisma.js";
 
 export async function price_range(req, res) {
-  const { categories, menu, pictures, id } = req.body;
+  const { categories, pictures, id } = req.body;
 
   console.log("creating range...");
 
