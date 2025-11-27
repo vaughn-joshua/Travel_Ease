@@ -8,14 +8,15 @@ export async function create_plan(req, res) {
     start_date,
     end_date,
     slots,
+    max_slots: maxSlotsParam,
     collaborators,
   } = req.body;
   
-  // Use authenticated user ID from middleware
   const userId = req.user.id;
+  // Prefer max_slots, fallback to slots
+  const maxSlots = maxSlotsParam ?? slots ?? null;
 
   try {
-    // Use transaction to create plan and add creator as admin participant
     const result = await prisma.$transaction(async (tx) => {
       // Create travel plan
       const travelPlan = await tx.travelPlan.create({
@@ -25,13 +26,13 @@ export async function create_plan(req, res) {
           start_date: start_date ? new Date(start_date) : null,
           end_date: end_date ? new Date(end_date) : null,
           description,
-          max_slots: slots,
+          max_slots: maxSlots,
           location,
           status: 'Draft'
         }
       });
 
-      // Add creator as Admin participant
+      // Add creator as Admin participant (always approved)
       await tx.participant.create({
         data: {
           travel_plan_id: travelPlan.travel_plan_id,
@@ -40,6 +41,23 @@ export async function create_plan(req, res) {
           status: true
         }
       });
+
+      // Add collaborators if provided (as pending by default)
+      if (collaborators?.length > 0) {
+        for (const collab of collaborators) {
+          // Skip if no user_id or same as creator
+          if (!collab.user_id || collab.user_id === userId) continue;
+          
+          await tx.participant.create({
+            data: {
+              travel_plan_id: travelPlan.travel_plan_id,
+              user_id: collab.user_id,
+              role: collab.role || 'Viewer',
+              status: false // Pending approval
+            }
+          });
+        }
+      }
 
       return travelPlan;
     });

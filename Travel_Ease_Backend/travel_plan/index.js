@@ -79,6 +79,14 @@ async function join_plan(req, res) {
       return res.status(404).json({ error: "Travel plan not found" });
     }
 
+    // Check if plan is visible and joinable
+    if (!plan.visibility) {
+      return res.status(400).json({ error: "This plan is not open for joining" });
+    }
+    if (plan.status !== 'Draft' && plan.status !== 'Active') {
+      return res.status(400).json({ error: "This plan is not accepting new participants" });
+    }
+
     // Check for duplicate
     if (plan.participants.length > 0) {
       const existing = plan.participants[0];
