@@ -75,21 +75,40 @@ export const createBusinessSchema = z.object({
     day: z.string(),
     start: z.string().optional(),
     end: z.string().optional()
-  })).optional()
+  })).optional(),
+  min_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
+  max_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
 });
 
 export const editBusinessSchema = z.object({
   name: z.string().max(200).optional(),
+  // Accept both naming conventions (form sends house_no, controller expects house_number)
+  house_no: z.string().optional(),
   house_number: z.string().optional(),
   street: z.string().optional(),
   brgy: z.string().optional(),
   city: z.string().optional(),
   description: z.string().optional(),
+  // Accept both naming conventions for coordinates
+  lat: z.number().optional().or(z.string().transform(Number).optional()),
+  lng: z.number().optional().or(z.string().transform(Number).optional()),
   latitude: z.number().optional(),
   longtitude: z.number().optional(),
   rating: z.number().min(0).max(5).optional(),
   status: z.boolean().optional(),
-  picture: z.string().optional()
+  // Accept both naming conventions for picture
+  secure_url: z.string().optional(),
+  picture: z.string().optional(),
+  // Category and hours for updates
+  category: z.array(z.string()).optional(),
+  business_hrs: z.array(z.object({
+    day: z.string(),
+    start: z.string().optional(),
+    end: z.string().optional()
+  })).optional(),
+  // Price range fields
+  min_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
+  max_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
 });
 
 // Review Schemas

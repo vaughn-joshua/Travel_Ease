@@ -13,6 +13,8 @@ export async function create_business(req, res) {
     secure_url,
     business_hrs,
     category,
+    min_price,
+    max_price,
   } = req.body;
 
   // Use authenticated user ID from middleware
@@ -49,14 +51,33 @@ export async function create_business(req, res) {
         });
       }
 
-      // Create business categories
+      // Create business categories and price ranges
       if (category && category.length > 0) {
+        // Create categories first
         await tx.businessCategory.createMany({
           data: category.map((cat) => ({
             business_id: business.business_id,
             category_name: cat,
           })),
         });
+
+        // If price range provided, create price ranges for each category
+        if (min_price !== undefined || max_price !== undefined) {
+          const createdCategories = await tx.businessCategory.findMany({
+            where: { business_id: business.business_id },
+            select: { category_id: true },
+          });
+
+          if (createdCategories.length > 0) {
+            await tx.priceRange.createMany({
+              data: createdCategories.map((cat) => ({
+                category_id: cat.category_id,
+                min_price: min_price || 0,
+                max_price: max_price || 0,
+              })),
+            });
+          }
+        }
       }
 
       return business;

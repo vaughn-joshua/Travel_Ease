@@ -277,6 +277,8 @@ export default function BusinessForm() {
         business_hrs: formData.hours
           .filter((h) => !h.closed)
           .map((h) => ({ day: h.day, start: h.start, end: h.end })),
+        min_price: formData.priceMin ? parseInt(formData.priceMin) : 0,
+        max_price: formData.priceMax ? parseInt(formData.priceMax) : 0,
       };
 
       const url = isEdit ? endpoints.business.edit(id!) : endpoints.business.create;
