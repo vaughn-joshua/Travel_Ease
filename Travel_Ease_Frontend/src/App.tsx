@@ -5,6 +5,9 @@ import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import NewBlog from "./pages/NewBlog";
 import EditBlog from "./pages/EditBlog";
+import Businesses from "./pages/Businesses";
+import BusinessDetail from "./pages/BusinessDetail";
+import BusinessForm from "./pages/BusinessForm";
 import "./App.css";
 
 export default function App() {
@@ -18,6 +21,12 @@ export default function App() {
           <Route path="/blogs/new" element={<NewBlog />} />
           <Route path="/blogs/:slug/edit" element={<EditBlog />} />
           <Route path="/blogs/:slug" element={<BlogDetail />} />
+          
+          {/* Business routes */}
+          <Route path="/businesses" element={<Businesses />} />
+          <Route path="/businesses/new" element={<BusinessForm />} />
+          <Route path="/businesses/:id" element={<BusinessDetail />} />
+          <Route path="/businesses/:id/edit" element={<BusinessForm />} />
         </Routes>
       </main>
       <Footer />

@@ -33,11 +33,15 @@ export const endpoints = {
     businesses: `${API_BASE_URL}/business/businesses`,
     create: `${API_BASE_URL}/business/create_business`,
     byId: (id) => `${API_BASE_URL}/business/fetch_business/${id}`,
-    categories: (id) => `${API_BASE_URL}/business/fetch_categories/${id}`,
+    categoriesById: (id) => `${API_BASE_URL}/business/fetch_categories/${id}`,
     edit: (id) => `${API_BASE_URL}/business/edit_business/${id}`,
     priceRange: `${API_BASE_URL}/business/price_range`,
     travelSpots: `${API_BASE_URL}/business/travel_spots`,
     reviews: (id) => `${API_BASE_URL}/business/travel_spots/reviews/${id}`,
+    // New endpoints
+    categories: `${API_BASE_URL}/business/categories`,
+    menu: (id) => `${API_BASE_URL}/business/${id}/menu`,
+    menuItem: (id, itemId) => `${API_BASE_URL}/business/${id}/menu/${itemId}`,
   },
 
   // User endpoints
@@ -57,9 +61,11 @@ export const endpoints = {
 
   // Map endpoints
   map: {
-    search: `${API_BASE_URL}/search`,
-    suggestions: `${API_BASE_URL}/suggestions`,
-    geocode: `${API_BASE_URL}/geocode`,
+    search: `${API_BASE_URL}/map/search`,
+    suggestions: `${API_BASE_URL}/map/suggestions`,
+    geocode: `${API_BASE_URL}/map/geocode`,
+    reverse: `${API_BASE_URL}/map/reverse`,
+    route: `${API_BASE_URL}/map/route`,
   },
 
   // Blog endpoints (already handled by api.ts)

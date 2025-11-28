@@ -7,12 +7,19 @@ import {
   editBusinessSchema,
   priceRangeSchema
 } from "../src/schemas/validation.js";
-import { create_business } from "../business/index.js";
-import { price_range } from "../business/index.js";
-import { business_fetch } from "../business/index.js";
-import { categories_fetch } from "../business/index.js";
-import { edit_business } from "../business/index.js";
-import { get_businesses } from "../business/index.js";
+import {
+  create_business,
+  price_range,
+  business_fetch,
+  categories_fetch,
+  edit_business,
+  get_businesses,
+  getCategories,
+  getMenuItems,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+} from "../business/index.js";
 import { prisma } from "../src/lib/prisma.js";
 
 const router = Router();
@@ -25,9 +32,16 @@ router.post("/price_range", authenticateToken, validate(priceRangeSchema), price
 router.get("/fetch_business/:id", business_fetch);
 router.get("/fetch_categories/:id", categories_fetch);
 router.get("/businesses", get_businesses);
+router.get("/categories", getCategories);
 
 // Edit routes (auth + ownership + validation)
 router.put("/edit_business/:id", authenticateToken, requireBusinessOwnership, validate(editBusinessSchema), edit_business);
+
+// Menu item routes
+router.get("/:id/menu", getMenuItems);
+router.post("/:id/menu", authenticateToken, createMenuItem);
+router.put("/:id/menu/:itemId", authenticateToken, updateMenuItem);
+router.delete("/:id/menu/:itemId", authenticateToken, deleteMenuItem);
 
 // Travel spots endpoints (public for browsing)
 router.get("/travel_spots", async (req, res) => {

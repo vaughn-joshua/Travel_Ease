@@ -28,7 +28,7 @@ app.use("/api/config", config_routes);
 app.use("/api/business", business_routes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/reviews", review_routes);
-app.use("/api", map_routes);
+app.use("/api/map", map_routes);
 
 // Health check
 app.get("/api/health", (req, res) => {

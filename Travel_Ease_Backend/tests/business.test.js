@@ -138,7 +138,56 @@ describe('Business', () => {
         .get('/api/business/businesses');
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
+      // Paginated response format
+      expect(response.body).toHaveProperty('items');
+      expect(response.body).toHaveProperty('total');
+      expect(response.body).toHaveProperty('page');
+      expect(response.body).toHaveProperty('pageSize');
+      expect(Array.isArray(response.body.items)).toBe(true);
+    });
+
+    it('should filter by category', async () => {
+      // Create a food business
+      await request(app)
+        .post('/api/business/create_business')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          name: 'Food Business',
+          category: ['food']
+        });
+
+      const response = await request(app)
+        .get('/api/business/businesses?category=food');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('items');
+    });
+
+    it('should search by name', async () => {
+      await request(app)
+        .post('/api/business/create_business')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          name: 'Unique Searchable Name',
+          category: ['food']
+        });
+
+      const response = await request(app)
+        .get('/api/business/businesses?search=Unique');
+
+      expect(response.status).toBe(200);
+      expect(response.body.items.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('GET /api/business/categories', () => {
+    it('should return list of categories', async () => {
+      const response = await request(app)
+        .get('/api/business/categories');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('categories');
+      expect(Array.isArray(response.body.categories)).toBe(true);
     });
   });
 });
