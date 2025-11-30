@@ -1,27 +1,13 @@
 {
-  "name": "travel_ease",
+  "name": "travel-ease",
   "version": "1.0.0",
-  "main": "Travel_Ease_Backend/server.js",
+  "private": true,
+  "workspaces": ["Travel_Ease_Backend", "Travel_Ease_Frontend"],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon Travel_Ease_Backend/server.js"
-  },
-  "keywords": [],
-  "type": "module",
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "axios": "^1.13.2",
-    "cloudinary": "^2.8.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "multer": "^2.0.2",
-    "object-assign": "^4.1.1",
-    "pg": "^8.16.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.10"
+    "dev": "npm run dev --workspace=Travel_Ease_Backend",
+    "dev:frontend": "npm run dev --workspace=Travel_Ease_Frontend",
+    "dev:backend": "npm run dev --workspace=Travel_Ease_Backend",
+    "build": "npm run build --workspace=Travel_Ease_Frontend",
+    "test": "npm run test --workspaces --if-present"
   }
 }

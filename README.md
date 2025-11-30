@@ -13,12 +13,13 @@ A comprehensive travel planning and discovery platform built with the PERN stack
 - **User Management**: Registration, login, and favorites system
 
 ### Technical Stack
-- **Frontend**: React 19 with TypeScript, Tailwind CSS 4, React Router
+- **Frontend**: React 19 with TypeScript, Tailwind CSS 4 (CSS-first config), React Router
 - **Backend**: Express.js with unified API architecture
 - **Database**: PostgreSQL with Prisma ORM
 - **Maps**: Leaflet, React Leaflet, Leaflet Routing Machine
 - **Image Upload**: Cloudinary integration
 - **Geocoding**: OpenStreetMap Nominatim API
+- **Monorepo**: npm workspaces with single lockfile
 
 ## Quick Start
 
@@ -36,10 +37,7 @@ A comprehensive travel planning and discovery platform built with the PERN stack
    ```bash
    git clone <repository-url>
    cd Travel_Ease
-   cd Travel_Ease_Backend
-   npm install
-   cd ../Travel_Ease_Frontend
-   npm install
+   npm install   # Installs all dependencies for both frontend and backend via workspaces
    ```
 
 2. **Configure Backend Environment**:
@@ -72,16 +70,22 @@ A comprehensive travel planning and discovery platform built with the PERN stack
 
 4. **Start Development Servers**:
 
-   **Terminal 1 - Backend:**
+   **From the root directory:**
    ```bash
-   cd Travel_Ease_Backend
-   npm run dev
+   # Terminal 1 - Backend:
+   npm run dev:backend
+
+   # Terminal 2 - Frontend:
+   npm run dev:frontend
    ```
 
-   **Terminal 2 - Frontend:**
+   **Or from individual directories:**
    ```bash
-   cd Travel_Ease_Frontend
-   npm run dev
+   # Backend
+   cd Travel_Ease_Backend && npm run dev
+
+   # Frontend
+   cd Travel_Ease_Frontend && npm run dev
    ```
 
 The application will be available at:
@@ -498,19 +502,15 @@ Frontend uses a single API configuration file (`src/config/api.js`) that:
 If you encounter persistent issues, try a complete reset:
 
 ```bash
-# Backend
-cd Travel_Ease_Backend
+# From the root directory
 pkill -f nodemon  # Stop any running servers
+pkill -f vite     # Stop any running frontend servers
 rm -rf node_modules package-lock.json
+rm -rf Travel_Ease_Backend/node_modules Travel_Ease_Frontend/node_modules
 npm install
-npx prisma generate
-npm run dev
-
-# Frontend (in a new terminal)
-cd Travel_Ease_Frontend
-rm -rf node_modules package-lock.json
-npm install
-npm run dev
+cd Travel_Ease_Backend && npx prisma generate && cd ..
+npm run dev:backend   # In one terminal
+npm run dev:frontend  # In another terminal
 ```
 
 ### Verification Checklist
