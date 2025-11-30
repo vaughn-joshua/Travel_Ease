@@ -12,6 +12,7 @@ import EditBlog from "./pages/EditBlog";
 import Businesses from "./pages/Businesses";
 import BusinessDetail from "./pages/BusinessDetail";
 import BusinessForm from "./pages/BusinessForm";
+import MyBusinesses from "./pages/MyBusinesses";
 import Business_Page from "./pages/Business_Page";
 
 // Travel plan pages
@@ -28,6 +29,7 @@ import Main_Travel_Spots from "./pages/Travel_Spots/Main_Travel_Spots";
 // Auth pages
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Profile from "./pages/Profile";
 // Business landing
 import Landing_Page from "./pages/Landing_Page";
 
@@ -67,12 +69,14 @@ export default function App(): React.ReactElement {
           {/* Business directory routes */}
           <Route path="/businesses" element={<Businesses />} />
           <Route path="/businesses/new" element={<BusinessForm />} />
+          <Route path="/businesses/my" element={<MyBusinesses />} />
           <Route path="/businesses/:id" element={<BusinessDetail />} />
           <Route path="/businesses/:id/edit" element={<BusinessForm />} />
 
           {/* Auth routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/onboarding" element={<Onboarding />} />
         </Routes>

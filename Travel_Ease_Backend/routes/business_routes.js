@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Op } from "sequelize";
 import { authenticateToken } from "../src/middleware/auth.js";
 import { requireBusinessOwnership } from "../src/middleware/ownership.js";
 import { 
@@ -20,8 +21,8 @@ import {
   updateMenuItem,
   deleteMenuItem,
 } from "../business/index.js";
-import { Business, BusinessReview, User } from "../src/models/index.js";
-import { executeWithRetry } from "../src/lib/sequelize.js";
+import { Business, BusinessReview, BusinessCategory, BusinessHours, BusinessFavorite, PriceRange, MenuItem, User } from "../src/models/index.js";
+import { sequelize, executeWithRetry } from "../src/lib/sequelize.js";
 import { handleSequelizeError } from "../src/lib/queryHelpers.js";
 
 const router = Router();
@@ -38,6 +39,85 @@ router.get("/categories", getCategories);
 
 // Edit routes (auth + ownership + validation)
 router.put("/edit_business/:id", authenticateToken, requireBusinessOwnership, validate(editBusinessSchema), edit_business);
+
+// Get current user's businesses
+router.get("/my-businesses", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const businesses = await executeWithRetry(() =>
+      Business.findAll({
+        where: { user_id: userId },
+        include: [
+          {
+            model: BusinessCategory,
+            as: 'categories'
+          },
+          {
+            model: BusinessHours,
+            as: 'businessHours'
+          }
+        ],
+        order: [['business_id', 'DESC']]
+      })
+    );
+    
+    res.json({
+      message: "Success",
+      data: businesses,
+      count: businesses.length
+    });
+  } catch (error) {
+    console.error("Error fetching user's businesses:", error);
+    return handleSequelizeError(error, res, 'Fetching user businesses');
+  }
+});
+
+// Delete business (auth + ownership required)
+router.delete("/delete_business/:id", authenticateToken, requireBusinessOwnership, async (req, res) => {
+  const businessId = parseInt(req.params.id);
+  
+  try {
+    await sequelize.transaction(async (t) => {
+      // Get category IDs for this business
+      const categories = await BusinessCategory.findAll({
+        where: { business_id: businessId },
+        attributes: ['category_id'],
+        transaction: t
+      });
+      
+      const categoryIds = categories.map(c => c.category_id);
+      
+      // Delete price ranges
+      if (categoryIds.length > 0) {
+        await PriceRange.destroy({
+          where: { category_id: { [Op.in]: categoryIds } },
+          transaction: t
+        });
+      }
+      
+      // Delete related records
+      await Promise.all([
+        BusinessCategory.destroy({ where: { business_id: businessId }, transaction: t }),
+        BusinessHours.destroy({ where: { business_id: businessId }, transaction: t }),
+        BusinessReview.destroy({ where: { business_id: businessId }, transaction: t }),
+        BusinessFavorite.destroy({ where: { business_id: businessId }, transaction: t }),
+        MenuItem.destroy({ where: { business_id: businessId }, transaction: t })
+      ]);
+      
+      // Delete the business
+      await Business.destroy({
+        where: { business_id: businessId },
+        transaction: t
+      });
+    });
+    
+    res.json({ message: "Business deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting business:", error);
+    return handleSequelizeError(error, res, 'Deleting business');
+  }
+});
 
 // Menu item routes
 router.get("/:id/menu", getMenuItems);

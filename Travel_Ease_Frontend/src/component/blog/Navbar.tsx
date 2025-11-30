@@ -140,9 +140,13 @@ const Navbar: React.FC = () => {
                   Link Google
                 </button>
               )}
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white">
+              <Link
+                to="/profile"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white hover:ring-2 hover:ring-primary-red hover:ring-offset-2 transition-all"
+                title="View Profile"
+              >
                 {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
-              </div>
+              </Link>
               <button onClick={handleSignOut} className="btn-secondary text-sm">
                 Sign Out
               </button>
@@ -252,14 +256,19 @@ const Navbar: React.FC = () => {
               </div>
             ) : user ? (
               <div className="mt-2 flex flex-col gap-2 border-t border-gray-100 pt-3">
-                <div className="flex items-center gap-2 px-2">
+                <Link to="/profile" className="flex items-center gap-2 px-2 hover:bg-gray-50 rounded-lg py-2 transition-colors">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white">
                     {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
                   </div>
-                  <span className="truncate text-sm text-gray-600">
-                    {user.email}
-                  </span>
-                </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900">
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <span className="truncate text-xs text-gray-500">
+                      {user.email}
+                    </span>
+                  </div>
+                </Link>
                 {/* Show Google sign-in prompt for logged-in users who are NOT Google-authenticated */}
                 {!isGoogleAuth && isConfigured && (
                   <button

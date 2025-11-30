@@ -1,17 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { userApi } from "../services/api";
-
-interface UserProfile {
-  user_id: number;
-  auth_id: string | null;
-  first_name: string;
-  last_name: string;
-  email: string;
-  contact_no: string | null;
-  created_at: string;
-}
+import { authApi } from "../services/auth";
 
 interface FormData {
   first_name: string;
@@ -19,352 +9,397 @@ interface FormData {
   contact_no: string;
 }
 
-export default function Profile(): React.ReactElement {
+export default function Profile() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isConfigured } = useAuth();
-
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const { user, loading: authLoading, updateProfile, signOut } = useAuth();
 
   const [formData, setFormData] = useState<FormData>({
     first_name: "",
     last_name: "",
     contact_no: "",
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Pre-fill form with user data
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.firstName || "",
+        last_name: user.lastName || "",
+        contact_no: user.contactNo || "",
+      });
+    }
+  }, [user]);
 
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/", { replace: true });
+      navigate("/login", { replace: true });
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch profile data
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await userApi.getProfile("me");
-        setProfile(data);
-        setFormData({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          contact_no: data.contact_no || "",
-        });
-      } catch (err: any) {
-        console.error("Error fetching profile:", err);
-        setError(err.response?.data?.error || "Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+    setSubmitError("");
+    setSuccessMessage("");
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = "First name is required";
+    }
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = "Last name is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setSubmitError("");
+    setSuccessMessage("");
+
+    if (!validate()) return;
+
+    setSubmitting(true);
 
     try {
-      setSaving(true);
-      const result = await userApi.updateProfile("me", formData);
-      setProfile(result.user);
-      setSuccess("Profile updated successfully!");
+      await updateProfile({
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        contact_no: formData.contact_no.trim() || undefined,
+      });
+
+      setSuccessMessage("Profile updated successfully!");
       setIsEditing(false);
-    } catch (err: any) {
-      console.error("Error updating profile:", err);
-      setError(err.response?.data?.error || "Failed to update profile");
+    } catch (err: unknown) {
+      console.error("Profile update error:", err);
+      setSubmitError("Failed to update profile. Please try again.");
     } finally {
-      setSaving(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await authApi.deleteAccount();
+      await signOut();
+      navigate("/", { replace: true });
+    } catch (err: unknown) {
+      console.error("Delete account error:", err);
+      setSubmitError("Failed to delete account. Please try again.");
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleCancel = () => {
-    if (profile) {
+    if (user) {
       setFormData({
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        contact_no: profile.contact_no || "",
+        first_name: user.firstName || "",
+        last_name: user.lastName || "",
+        contact_no: user.contactNo || "",
       });
     }
     setIsEditing(false);
-    setError(null);
+    setErrors({});
+    setSubmitError("");
   };
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary-red" />
-          <p className="text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isConfigured) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="max-w-md text-center">
-          <h1 className="mb-4 text-2xl font-bold text-gray-900">
-            Authentication Not Configured
-          </h1>
-          <p className="text-gray-600">
-            Please configure Supabase to use profile features.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="max-w-md text-center">
-          <h1 className="mb-4 text-2xl font-bold text-gray-900">
-            Sign In Required
-          </h1>
-          <p className="mb-6 text-gray-600">
-            Please sign in to view your profile.
-          </p>
-          <button
-            onClick={() => navigate("/")}
-            className="btn-primary"
-          >
-            Go to Home
-          </button>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your account information
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg bg-red-50 p-4 text-red-700">
-          {error}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            to="/"
+            className="inline-flex items-center text-primary-red hover:text-primary-red-dark transition-colors mb-4"
+          >
+            ← Back to Home
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
+          <p className="text-gray-600 mt-1">Manage your account information</p>
         </div>
-      )}
 
-      {success && (
-        <div className="mb-6 rounded-lg bg-green-50 p-4 text-green-700">
-          {success}
-        </div>
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
+            <p className="text-green-800 font-medium">{successMessage}</p>
+          </div>
+        )}
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Avatar Section */}
-          <div className="flex items-center gap-4 border-b border-gray-100 pb-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary-red to-primary-red-dark text-2xl font-bold text-white">
-              {profile?.first_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
+        {/* Error Message */}
+        {submitError && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+            <p className="text-red-800 font-medium">{submitError}</p>
+          </div>
+        )}
+
+        {/* Profile Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          {/* Profile Header */}
+          <div className="bg-gradient-to-r from-primary-red to-primary-red-dark p-6 text-white">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+                {(user?.firstName || user?.email)?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {user?.firstName} {user?.lastName}
+                </h2>
+                <p className="text-white/80">{user?.email}</p>
+                {user?.source === "google" && (
+                  <span className="inline-flex items-center gap-1 mt-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    </svg>
+                    Connected with Google
+                  </span>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Profile Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Email (read-only) */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {profile?.first_name} {profile?.last_name}
-              </h2>
-              <p className="text-gray-500">{profile?.email}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <div className="flex items-center px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className="text-gray-600">{user?.email}</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
             </div>
-          </div>
 
-          {/* First Name */}
-          <div>
-            <label
-              htmlFor="first_name"
-              className="block text-sm font-medium text-gray-700"
-            >
-              First Name
-            </label>
-            <input
-              type="text"
-              id="first_name"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className={`mt-1 block w-full rounded-lg border px-4 py-3 transition ${
-                isEditing
-                  ? "border-gray-300 focus:border-primary-red focus:outline-none focus:ring-1 focus:ring-primary-red"
-                  : "border-transparent bg-gray-50 text-gray-700"
-              }`}
-              required
-            />
-          </div>
-
-          {/* Last Name */}
-          <div>
-            <label
-              htmlFor="last_name"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Last Name
-            </label>
-            <input
-              type="text"
-              id="last_name"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className={`mt-1 block w-full rounded-lg border px-4 py-3 transition ${
-                isEditing
-                  ? "border-gray-300 focus:border-primary-red focus:outline-none focus:ring-1 focus:ring-primary-red"
-                  : "border-transparent bg-gray-50 text-gray-700"
-              }`}
-              required
-            />
-          </div>
-
-          {/* Email (read-only) */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email
-              <span className="ml-2 text-xs text-gray-400">(cannot be changed)</span>
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={profile?.email || ""}
-              disabled
-              className="mt-1 block w-full rounded-lg border border-transparent bg-gray-100 px-4 py-3 text-gray-500"
-            />
-          </div>
-
-          {/* Contact Number */}
-          <div>
-            <label
-              htmlFor="contact_no"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Contact Number
-            </label>
-            <input
-              type="tel"
-              id="contact_no"
-              name="contact_no"
-              value={formData.contact_no}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              placeholder="Enter your phone number"
-              className={`mt-1 block w-full rounded-lg border px-4 py-3 transition ${
-                isEditing
-                  ? "border-gray-300 focus:border-primary-red focus:outline-none focus:ring-1 focus:ring-primary-red"
-                  : "border-transparent bg-gray-50 text-gray-700"
-              }`}
-            />
-          </div>
-
-          {/* Member Since */}
-          {profile?.created_at && (
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm text-gray-500">
-                Member since:{" "}
-                <span className="font-medium text-gray-700">
-                  {new Date(profile.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-              </p>
+            {/* First Name */}
+            <div>
+              <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                First Name
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    id="first_name"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors ${
+                      errors.first_name ? "border-red-500 bg-red-50" : "border-gray-300"
+                    }`}
+                  />
+                  {errors.first_name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
+                  )}
+                </>
+              ) : (
+                <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                  {formData.first_name || "-"}
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 border-t border-gray-100 pt-6">
-            {isEditing ? (
-              <>
+            {/* Last Name */}
+            <div>
+              <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name
+              </label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors ${
+                      errors.last_name ? "border-red-500 bg-red-50" : "border-gray-300"
+                    }`}
+                  />
+                  {errors.last_name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>
+                  )}
+                </>
+              ) : (
+                <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                  {formData.last_name || "-"}
+                </div>
+              )}
+            </div>
+
+            {/* Contact Number */}
+            <div>
+              <label htmlFor="contact_no" className="block text-sm font-medium text-gray-700 mb-2">
+                Contact Number <span className="text-gray-400">(Optional)</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  id="contact_no"
+                  name="contact_no"
+                  value={formData.contact_no}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors"
+                  placeholder="+63 912 345 6789"
+                />
+              ) : (
+                <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                  {formData.contact_no || "-"}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              {isEditing ? (
+                <>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 py-3 px-4 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? "Saving..." : "Save Changes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={submitting}
+                    className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
-                  onClick={handleCancel}
-                  disabled={saving}
-                  className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => setIsEditing(true)}
+                  className="flex-1 py-3 px-4 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors"
+                >
+                  Edit Profile
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Quick Links */}
+          <div className="border-t border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                to="/businesses/my"
+                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">My Businesses</p>
+                  <p className="text-xs text-gray-500">Manage your listings</p>
+                </div>
+              </Link>
+              <Link
+                to="/user/favorites"
+                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-10 h-10 bg-pink-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Favorites</p>
+                  <p className="text-xs text-gray-500">Saved places & plans</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="border-t border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Danger Zone</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Once you delete your account, there is no going back. Please be certain.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="py-2 px-4 border border-red-500 text-red-500 font-medium rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+            >
+              Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Account?</h3>
+              <p className="text-gray-600 mb-6">
+                This action cannot be undone. All your data, including favorites and preferences, will be permanently deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="rounded-lg bg-primary-red px-6 py-2.5 text-sm font-medium text-white transition hover:bg-primary-red-dark disabled:opacity-50"
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="flex-1 py-2 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Save Changes"}
+                  {deleting ? "Deleting..." : "Delete Account"}
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="rounded-lg bg-primary-red px-6 py-2.5 text-sm font-medium text-white transition hover:bg-primary-red-dark"
-              >
-                Edit Profile
-              </button>
-            )}
+              </div>
+            </div>
           </div>
-        </form>
-      </div>
-
-      {/* Quick Links */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-primary-red/30 hover:shadow-md"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-red/10 text-primary-red">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900">My Travel Plans</h3>
-            <p className="text-sm text-gray-500">View and manage your plans</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate("/profile/favorites")}
-          className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-primary-red/30 hover:shadow-md"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-red/10 text-primary-red">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900">My Favorites</h3>
-            <p className="text-sm text-gray-500">Saved businesses and plans</p>
-          </div>
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
-

@@ -82,6 +82,14 @@ export const authApi = {
     const { data } = await api.put<{ message: string; user: AuthUser }>("/user/profile", payload);
     return data;
   },
+
+  /**
+   * Delete user account
+   */
+  async deleteAccount() {
+    const { data } = await api.delete<{ message: string }>("/user/account");
+    return data;
+  },
 };
 
 export default authApi;

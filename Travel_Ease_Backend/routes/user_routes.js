@@ -25,6 +25,7 @@ import {
   oauth_sync,
   update_profile,
   get_me,
+  delete_account,
 } from "../user/index.js";
 
 const router = Router();
@@ -39,6 +40,7 @@ router.post("/oauth", authenticateToken, oauth_sync);
 // Current user routes
 router.get("/me", authenticateToken, get_me);
 router.put("/profile", authenticateToken, update_profile);
+router.delete("/account", authenticateToken, delete_account);
 
 // Protected routes (auth required)
 router.post("/favorite", authenticateToken, validate(createFavoriteSchema), favorite);

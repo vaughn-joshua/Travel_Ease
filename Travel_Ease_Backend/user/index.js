@@ -392,4 +392,50 @@ async function get_me(req, res) {
   }
 }
 
-export { register, login, favorite, remove_favorite, favorite_id, user_id, oauth_sync, update_profile, get_me };
+/**
+ * Delete current user's account
+ */
+async function delete_account(req, res) {
+  try {
+    const userId = req.user.id;
+    const authId = req.user.auth_id;
+
+    const user = await executeWithRetry(() =>
+      User.findByPk(userId)
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Delete user from Supabase Auth if configured
+    if (isSupabaseConfigured() && authId) {
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authId);
+      } catch (supabaseError) {
+        console.error("Error deleting user from Supabase:", supabaseError);
+        // Continue with local deletion even if Supabase deletion fails
+      }
+    }
+
+    // Delete associated favorites first
+    await executeWithRetry(() =>
+      Promise.all([
+        BusinessFavorite.destroy({ where: { user_id: userId } }),
+        TravelPlanFavorite.destroy({ where: { user_id: userId } })
+      ])
+    );
+
+    // Delete user from local database
+    await executeWithRetry(() =>
+      user.destroy()
+    );
+
+    res.json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    return handleSequelizeError(error, res, 'Deleting account');
+  }
+}
+
+export { register, login, favorite, remove_favorite, favorite_id, user_id, oauth_sync, update_profile, get_me, delete_account };
