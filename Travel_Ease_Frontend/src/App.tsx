@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
-import Navbar from "./component/blog/components/Navbar";
-import Footer from "./component/blog/components/Footer";
+import Navbar from "./component/blog/Navbar";
+import Footer from "./component/blog/Footer";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import NewBlog from "./pages/NewBlog";
@@ -8,6 +8,7 @@ import EditBlog from "./pages/EditBlog";
 import Businesses from "./pages/Businesses";
 import BusinessDetail from "./pages/BusinessDetail";
 import BusinessForm from "./pages/BusinessForm";
+import AuthCallback from "./pages/AuthCallback";
 import "./App.css";
 
 export default function App() {
@@ -27,6 +28,9 @@ export default function App() {
           <Route path="/businesses/new" element={<BusinessForm />} />
           <Route path="/businesses/:id" element={<BusinessDetail />} />
           <Route path="/businesses/:id/edit" element={<BusinessForm />} />
+          
+          {/* Auth routes */}
+          <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </main>
       <Footer />

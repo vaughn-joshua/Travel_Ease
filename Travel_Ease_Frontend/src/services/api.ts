@@ -11,9 +11,15 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
-// Request interceptor
+// Request interceptor - adds auth header and logging
 api.interceptors.request.use(
   (config) => {
+    // Attach auth token from localStorage if available
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     console.log(
       `Making ${config.method?.toUpperCase()} request to: ${config.url}`
     );
