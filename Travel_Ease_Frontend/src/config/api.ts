@@ -28,6 +28,9 @@ export const endpoints: Endpoints = {
     editActivity: (id) => `${API_BASE_URL}/travel_plan/activity_edit/${id}`,
     updateActivity: (id) => `${API_BASE_URL}/travel_plan/update_activity/${id}`,
     deleteActivity: (id) => `${API_BASE_URL}/travel_plan/delete_activity/${id}`,
+    // Participant/Collaborator endpoints
+    participants: (id) => `${API_BASE_URL}/travel_plan/${id}/participants`,
+    participantById: (planId, userId) => `${API_BASE_URL}/travel_plan/${planId}/participants/${userId}`,
   },
 
   // Business endpoints

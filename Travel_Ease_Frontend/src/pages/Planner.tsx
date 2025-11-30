@@ -6,16 +6,18 @@ import { edit_plan } from "../utils/travel_plan/edit_plan";
 import Activities from "../component/main_page/Activities";
 import Edit_Plan from "../component/main_page/Edit_Plan";
 import Create_Activity from "../component/main_page/Create_Activity";
+import Collaborators from "../component/main_page/Collaborators";
 import React from "react";
 import Landing_Page from "./Landing_Page";
 import type { TravelPlan, TravelPlanDates } from "../types/travelPlan";
 import type { Business } from "../types/business";
+import { useAuth } from "../context/AuthContext";
 
 const itineraryRoute = {
   start: [14.1154, 120.9618] as [number, number],
 };
 
-type ModalType = "" | "activity" | "plan";
+type ModalType = "" | "activity" | "plan" | "collaborators";
 
 interface ClickedActivity {
   start: [number, number] | null;
@@ -25,6 +27,7 @@ interface ClickedActivity {
 export default function Planner(): React.ReactElement {
   const { id, status } = useParams<{ id: string; status: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [plan, setPlan] = useState<TravelPlan[] | undefined>();
   const [days, setDays] = useState<number>(0);
@@ -218,7 +221,12 @@ export default function Planner(): React.ReactElement {
                 edit
               </button>
             )}
-            <button className="hard_btn">Collaborators</button>
+            <button 
+              className="hard_btn"
+              onClick={() => setActiveModal("collaborators")}
+            >
+              Collaborators
+            </button>
           </div>
         </div>
 
@@ -242,6 +250,13 @@ export default function Planner(): React.ReactElement {
       )}
       {activeModal === "plan" && id && (
         <Edit_Plan data={plan} travel_plan={id} on_close={handle_close} />
+      )}
+      {activeModal === "collaborators" && id && (
+        <Collaborators
+          planId={id}
+          isOwner={plan[0]?.user_id === user?.id}
+          on_close={() => setActiveModal("")}
+        />
       )}
     </div>
   );

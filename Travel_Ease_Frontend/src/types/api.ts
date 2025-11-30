@@ -58,6 +58,9 @@ export interface TravelPlanEndpoints {
   editActivity: (id: number | string) => string;
   updateActivity: (id: number | string) => string;
   deleteActivity: (id: number | string) => string;
+  // Participant/Collaborator endpoints
+  participants: (id: number | string) => string;
+  participantById: (planId: number | string, userId: number | string) => string;
 }
 
 export interface BusinessEndpoints {
