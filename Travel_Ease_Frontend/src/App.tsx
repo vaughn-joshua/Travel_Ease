@@ -25,6 +25,9 @@ import Main_Map_Page from "./component/map_components/Main_Map_Page";
 // Travel spots
 import Main_Travel_Spots from "./pages/Travel_Spots/Main_Travel_Spots";
 
+// Auth pages
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 // Business landing
 import Landing_Page from "./pages/Landing_Page";
 
@@ -67,6 +70,8 @@ export default function App(): React.ReactElement {
           <Route path="/businesses/:id/edit" element={<BusinessForm />} />
 
           {/* Auth routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
       </main>

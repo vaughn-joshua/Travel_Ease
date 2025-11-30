@@ -327,6 +327,17 @@ npm run test             # Run tests
 npm run test:ui          # Run tests with UI
 ```
 
+### Authentication UI
+
+- `/login` and `/signup` handle email/password flows against `/api/user/register` and `/api/user/login` (Supabase-backed in production).
+- Google OAuth uses Supabase (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` required) and returns to `/auth/callback`; tokens are stored in `localStorage` for API calls.
+
+### Testing & QA
+
+- Backend auth flow: `npm run test --workspace=Travel_Ease_Backend -- tests/auth-flow.test.js`
+- Frontend auth components: `npm run test --workspace=Travel_Ease_Frontend -- --run src/pages/__tests__/AuthPages.test.tsx`
+- Frontend linting: `npm run lint --workspace=Travel_Ease_Frontend`
+
 ### Database Management
 
 The database schema is managed with Prisma. Key commands:

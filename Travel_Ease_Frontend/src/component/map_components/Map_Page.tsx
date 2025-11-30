@@ -48,7 +48,7 @@ export default function Map_Page({
       maxBoundsViscosity={1.0}
       minZoom={Max_Zoom}
       zoomControl={false}
-      className="w-full h-full"
+      className="w-full h-screen"
     >
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"

@@ -9,7 +9,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Map", path: "/map" },
-  { label: "Spots", path: "/spots" },
+  { label: "Spots", path: "/travel_spots_page" },
   { label: "Blogs", path: "/blogs" },
 ];
 
@@ -97,27 +97,34 @@ const Navbar: React.FC = () => {
           <a href="#featured-blogs" className="btn-primary">
             Explore Blogs
           </a>
-          
-          {/* Auth UI - only show if Supabase is configured */}
-          {isConfigured && (
-            loading ? (
-              <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
-            ) : user ? (
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white">
-                  {user.email?.charAt(0).toUpperCase() || "U"}
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="btn-secondary text-sm"
-                >
-                  Sign Out
-                </button>
+
+          {!user && (
+            <>
+              <Link to="/login" className="btn-secondary text-sm">
+                Log in
+              </Link>
+              <Link to="/signup" className="btn-primary text-sm">
+                Sign up
+              </Link>
+            </>
+          )}
+
+          {loading ? (
+            <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
+          ) : user ? (
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white">
+                {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
               </div>
-            ) : (
+              <button onClick={handleSignOut} className="btn-secondary text-sm">
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            isConfigured && (
               <button
                 onClick={handleSignIn}
-                className="btn-primary flex items-center gap-2"
+                className="btn-secondary flex items-center gap-2 text-sm"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
                   <path
@@ -228,34 +235,41 @@ const Navbar: React.FC = () => {
             <a href="#featured-blogs" className="btn-primary text-center">
               Explore Blogs
             </a>
-            
-            {/* Mobile Auth UI - only show if Supabase is configured */}
-            {isConfigured && (
-              loading ? (
-                <div className="flex justify-center py-2">
-                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
-                </div>
-              ) : user ? (
-                <div className="flex flex-col gap-2 border-t border-gray-100 pt-3 mt-2">
-                  <div className="flex items-center gap-2 px-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white">
-                      {user.email?.charAt(0).toUpperCase() || "U"}
-                    </div>
-                    <span className="text-sm text-gray-600 truncate">
-                      {user.email}
-                    </span>
+
+            {!user && (
+              <>
+                <Link to="/login" className="btn-secondary text-center">
+                  Log in
+                </Link>
+                <Link to="/signup" className="btn-primary text-center">
+                  Sign up
+                </Link>
+              </>
+            )}
+
+            {loading ? (
+              <div className="flex justify-center py-2">
+                <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
+              </div>
+            ) : user ? (
+              <div className="mt-2 flex flex-col gap-2 border-t border-gray-100 pt-3">
+                <div className="flex items-center gap-2 px-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-red text-sm font-medium text-white">
+                    {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
                   </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="btn-secondary text-center"
-                  >
-                    Sign Out
-                  </button>
+                  <span className="truncate text-sm text-gray-600">
+                    {user.email}
+                  </span>
                 </div>
-              ) : (
+                <button onClick={handleSignOut} className="btn-secondary text-center">
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              isConfigured && (
                 <button
                   onClick={handleSignIn}
-                  className="btn-primary flex items-center justify-center gap-2 mt-2"
+                  className="btn-primary mt-2 flex items-center justify-center gap-2"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path

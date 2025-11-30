@@ -31,7 +31,7 @@ export default function Main_Map_Page(): React.ReactElement {
   };
 
   return (
-    <>
+    <div className="h-[calc(100vh-64px)] w-full">  {/* Add height wrapper - adjust 64px for your navbar height */}
       <div className="relative z-[1000] w-full">
         <div className="absolute top-3 left-3 z-[9999] flex flex-col gap-2">
           <Search_Box onSearch={handleSearch} />
@@ -63,7 +63,7 @@ export default function Main_Map_Page(): React.ReactElement {
         end={end}
         onMapClear={handleClearMap}
       />
-    </>
+    </div>
   );
 }
 
