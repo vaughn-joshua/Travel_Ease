@@ -1,6 +1,16 @@
 import { endpoints } from "../../config/api";
 import type { TravelPlan } from "../../types/travelPlan";
 
+interface PaginatedResponse {
+  data: TravelPlan[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export async function fetch_public_plans(): Promise<TravelPlan[]> {
   try {
     const result = await fetch(endpoints.travelPlan.public, {
@@ -14,8 +24,9 @@ export async function fetch_public_plans(): Promise<TravelPlan[]> {
       throw new Error(`Failed to fetch public plans: ${result.status}`);
     }
 
-    const data: TravelPlan[] = await result.json();
-    return data;
+    const response: PaginatedResponse = await result.json();
+    // Backend returns paginated response with data array
+    return response.data || [];
   } catch (e) {
     console.error("Error fetching public plans:", e);
     return [];
