@@ -1,0 +1,50 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { fetch_public_plans } from "../../utils/travel_plan/fetch_public_plans";
+import type { TravelPlan } from "../../types/travelPlan";
+
+export default function Public_Plans(): React.ReactElement {
+  const navigate = useNavigate();
+  const [plans, setPlans] = useState<TravelPlan[]>([]);
+
+  useEffect(() => {
+    const load_plans = async (): Promise<void> => {
+      try {
+        const data = await fetch_public_plans();
+        setPlans(data);
+      } catch (e) {
+        console.error("Error fetching public plans:", e);
+      }
+    };
+    load_plans();
+  }, []);
+
+  const handle_click = (id: number): void => {
+    navigate(`/planner/join/${id}`);
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      {plans.length === 0 && <p>No public plans available</p>}
+      {plans.map((plan) => (
+        <div
+          key={plan.id}
+          className="card cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => handle_click(plan.id)}
+        >
+          <h3 className="font-semibold">{plan.title}</h3>
+          <p className="text-sm text-gray-600">{plan.location}</p>
+          <p className="text-sm text-gray-500">
+            {plan.start_date} - {plan.end_date}
+          </p>
+          {plan.slots && (
+            <p className="text-sm text-gray-500">
+              {plan.collaborators || 0}/{plan.slots} slots
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+

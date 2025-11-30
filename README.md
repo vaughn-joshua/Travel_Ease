@@ -420,7 +420,7 @@ Migrated from raw SQL queries to Prisma for:
 - Improved developer experience
 
 ### Centralized API Configuration
-Frontend uses a single API configuration file (`src/config/api.js`) that:
+Frontend uses a single API configuration file (`src/config/api.ts`) that:
 - Eliminates hardcoded URLs
 - Works with Vite proxy in development
 - Easy to update for production
