@@ -73,9 +73,9 @@ export const createBusinessSchema = z.object({
   brgy: z.string().optional(),
   city: z.string().optional(),
   description: z.string().optional(),
-  lat: z.number().or(z.string()).optional(),
-  lng: z.number().or(z.string()).optional(),
-  secure_url: z.string().url().optional().or(z.string().optional()),
+  lat: z.number().or(z.string()).nullable().optional(),
+  lng: z.number().or(z.string()).nullable().optional(),
+  secure_url: z.string().optional(), // Can be JSON string or URL
   category: z.array(z.string()).min(1, "At least one category is required"),
   business_hrs: z.array(z.object({
     day: z.string(),

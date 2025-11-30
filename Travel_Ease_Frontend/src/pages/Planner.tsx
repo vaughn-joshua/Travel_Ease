@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetch_plan_id } from "../utils/travel_plan/fetch_plan_id";
 import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
+import { edit_plan } from "../utils/travel_plan/edit_plan";
 import Activities from "../component/main_page/Activities";
 import Edit_Plan from "../component/main_page/Edit_Plan";
 import Create_Activity from "../component/main_page/Create_Activity";
@@ -61,11 +62,13 @@ export default function Planner(): React.ReactElement {
         const plan_data = await fetch_plan_id(id);
 
         if (plan_data) {
-          setPlan([plan_data]);
+          // Handle both array and single object responses
+          const planArray = Array.isArray(plan_data) ? plan_data : [plan_data];
+          setPlan(planArray);
         }
         setBusinesses(business_data);
       } catch (e) {
-        console.log({ e });
+        console.error("Error loading planner data:", e);
       }
     };
 
@@ -74,8 +77,26 @@ export default function Planner(): React.ReactElement {
 
   useEffect(() => {
     if (plan && plan.length > 0) {
-      const start = new Date(plan[0].start_date);
-      const end = new Date(plan[0].end_date);
+      const planData = plan[0];
+      
+      // Handle null/undefined dates
+      if (!planData.start_date || !planData.end_date) {
+        console.warn("Plan dates are missing");
+        setDays(1);
+        setDates({ start: "", end: "" });
+        return;
+      }
+
+      const start = new Date(planData.start_date);
+      const end = new Date(planData.end_date);
+
+      // Validate dates
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        console.warn("Invalid date values:", planData.start_date, planData.end_date);
+        setDays(1);
+        setDates({ start: "", end: "" });
+        return;
+      }
 
       const diff = end.getTime() - start.getTime();
       const dayCount = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
@@ -90,10 +111,24 @@ export default function Planner(): React.ReactElement {
     setDaySelected(i);
   };
 
-  const handle_start = (): void => {
+  const [isStarting, setIsStarting] = useState<boolean>(false);
+
+  const handle_start = async (): Promise<void> => {
     if (!id) return;
-    // Navigate and update status (status would need backend support)
-    navigate(`/planner/view/${id}`);
+    
+    setIsStarting(true);
+    try {
+      // Update the plan status from Draft to Active
+      await edit_plan(id, { status: "Active" });
+      
+      // Navigate to view mode after successfully starting the plan
+      navigate(`/planner/view/${id}`);
+    } catch (error) {
+      console.error("Error starting plan:", error);
+      alert("Failed to start the plan. Please try again.");
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   if (!plan) {
@@ -162,11 +197,16 @@ export default function Planner(): React.ReactElement {
                 <button
                   onClick={() => setActiveModal("plan")}
                   className="soft_btn"
+                  disabled={isStarting}
                 >
                   edit
                 </button>
-                <button className="hard_btn" onClick={handle_start}>
-                  start now
+                <button 
+                  className="hard_btn" 
+                  onClick={handle_start}
+                  disabled={isStarting}
+                >
+                  {isStarting ? "Starting..." : "start now"}
                 </button>
               </>
             )}

@@ -54,16 +54,18 @@ export interface Activity {
 
 export interface CreatePlanPayload {
   title: string;
-  description: string;
-  location: string;
-  start_date: string;
-  end_date: string;
+  description?: string;
+  location?: string;
+  start_date?: string;
+  end_date?: string;
   slots?: number;
   collaborators?: number;
   is_public?: boolean;
 }
 
-export interface UpdatePlanPayload extends Partial<CreatePlanPayload> {}
+export interface UpdatePlanPayload extends Partial<CreatePlanPayload> {
+  status?: "Draft" | "Active" | "Completed" | "Cancelled";
+}
 
 export interface CreateActivityPayload {
   travel_plan_id: number;

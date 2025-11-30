@@ -6,15 +6,26 @@ export async function edit_activity(
   data: UpdateActivityPayload
 ): Promise<Activity | undefined> {
   try {
+    // Get the auth token from localStorage
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      throw new Error("Authentication required. Please log in.");
+    }
+
     const result = await fetch(endpoints.travelPlan.editActivity(id), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!result.ok) {
+      if (result.status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
       throw new Error(`Failed to update activity: ${result.status}`);
     }
 
@@ -25,4 +36,3 @@ export async function edit_activity(
     throw e;
   }
 }
-

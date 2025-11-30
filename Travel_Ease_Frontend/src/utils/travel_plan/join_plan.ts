@@ -1,5 +1,4 @@
 import { endpoints } from "../../config/api";
-import type { TravelPlan } from "../../types/travelPlan";
 
 interface JoinPlanPayload {
   travel_plan_id: number | string;
@@ -18,16 +17,26 @@ interface JoinPlanResponse {
 
 export async function join_plan(data: JoinPlanPayload): Promise<JoinPlanResponse | undefined> {
   try {
-    // First get the plan details to use in quick join
+    // Get the auth token from localStorage
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      throw new Error("Authentication required. Please log in.");
+    }
+
     const result = await fetch(endpoints.travelPlan.quickJoin, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
     if (!result.ok) {
+      if (result.status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
       throw new Error(`Failed to join plan: ${result.status}`);
     }
 
@@ -38,4 +47,3 @@ export async function join_plan(data: JoinPlanPayload): Promise<JoinPlanResponse
     throw e;
   }
 }
-

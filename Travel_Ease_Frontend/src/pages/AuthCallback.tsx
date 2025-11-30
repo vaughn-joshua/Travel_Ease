@@ -19,32 +19,66 @@ export default function AuthCallback() {
       }
 
       try {
-        setStatus("Exchanging authorization code...");
+        // Check for hash fragment (implicit flow) or query params (PKCE flow)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
         
-        // Exchange the code for a session (handles PKCE flow)
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-          window.location.href
-        );
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const code = queryParams.get("code");
+        
+        let session = null;
+        
+        if (accessToken) {
+          // Implicit flow - set session from hash fragment
+          setStatus("Setting up session...");
+          const { data, error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+          });
+          
+          if (setSessionError) {
+            console.error("Set session error:", setSessionError);
+            setError(setSessionError.message);
+            return;
+          }
+          session = data.session;
+        } else if (code) {
+          // PKCE flow - exchange code for session
+          setStatus("Exchanging authorization code...");
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+            window.location.href
+          );
 
-        if (exchangeError) {
-          console.error("Session exchange error:", exchangeError);
-          setError(exchangeError.message);
-          return;
-        }
+          if (exchangeError) {
+            console.error("Session exchange error:", exchangeError);
+            setError(exchangeError.message);
+            return;
+          }
 
-        // Get the session to store the token
-        setStatus("Retrieving session...");
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          // Get the session after exchange
+          setStatus("Retrieving session...");
+          const { data: { session: exchangedSession }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError) {
-          console.error("Get session error:", sessionError);
-          setError(sessionError.message);
-          return;
+          if (sessionError) {
+            console.error("Get session error:", sessionError);
+            setError(sessionError.message);
+            return;
+          }
+          session = exchangedSession;
+        } else {
+          // No auth params - try to get existing session
+          setStatus("Checking session...");
+          const { data: { session: existingSession } } = await supabase.auth.getSession();
+          session = existingSession;
         }
 
         if (session?.access_token) {
           // Store token for API calls
           localStorage.setItem("token", session.access_token);
+          
+          // Clean up URL (remove auth params)
+          window.history.replaceState({}, document.title, window.location.pathname);
           
           // Sync OAuth user with backend to create/retrieve internal profile
           setStatus("Syncing your profile...");

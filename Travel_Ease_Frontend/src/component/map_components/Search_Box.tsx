@@ -1,13 +1,14 @@
 import React, { useReducer, useRef, useEffect, useCallback } from "react";
-import { endpoints } from "../../config/api";
 import type {
   SearchResult,
   NormalizedPlace,
   SearchState,
   SearchAction,
-  BackendPlace,
   NominatimPlace,
 } from "../../types/map";
+
+// Tagaytay City viewbox bounds (west, north, east, south)
+const TAGAYTAY_VIEWBOX = "120.92,14.15,120.97,14.07";
 
 const initialState: SearchState = {
   status: "idle",
@@ -35,19 +36,7 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
   }
 }
 
-function normalizePlace(place: BackendPlace | NominatimPlace): NormalizedPlace {
-  if ("placeId" in place) {
-    return {
-      id: place.placeId,
-      name: place.label?.split(",")[0]?.trim() || "",
-      fullLabel: place.label || "",
-      lat: place.coordinates?.lat || 0,
-      lng: place.coordinates?.lng || 0,
-      type: place.type,
-      address: place.address,
-    };
-  }
-
+function normalizeNominatimPlace(place: NominatimPlace): NormalizedPlace {
   const parts = (place.display_name || "").split(",").map((p) => p.trim());
   return {
     id: place.place_id?.toString() || "",
@@ -100,17 +89,24 @@ export default function Search_Box({
     };
   }, []);
 
-  const fetchSuggestions = useCallback(async (value: string): Promise<void> => {
+  const fetchSuggestions = useCallback(async (query: string): Promise<void> => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
     dispatch({ type: "FETCH_START" });
 
     try {
-      const response = await fetch(
-        `${endpoints.map.suggestions}?query=${encodeURIComponent(value)}`,
-        { signal: abortControllerRef.current.signal }
-      );
+      // Use Nominatim API directly with viewbox for Tagaytay City
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        query
+      )},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=${TAGAYTAY_VIEWBOX}`;
+
+      const response = await fetch(nominatimUrl, {
+        signal: abortControllerRef.current.signal,
+        headers: {
+          "Accept": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(
@@ -120,9 +116,8 @@ export default function Search_Box({
         );
       }
 
-      const data = await response.json();
-      const suggestions = data.suggestions || data || [];
-      const normalized = suggestions.map(normalizePlace);
+      const data: NominatimPlace[] = await response.json();
+      const normalized = data.map(normalizeNominatimPlace);
 
       dispatch({ type: "FETCH_SUCCESS", payload: normalized });
     } catch (error: unknown) {
@@ -171,28 +166,35 @@ export default function Search_Box({
     dispatch({ type: "FETCH_START" });
 
     try {
-      const response = await fetch(
-        `${endpoints.map.geocode}?address=${encodeURIComponent(state.query)}`
-      );
+      // Use Nominatim API directly with viewbox for Tagaytay City
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        state.query
+      )},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=${TAGAYTAY_VIEWBOX}&limit=1`;
+
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          "Accept": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Location not found");
       }
 
-      const data = await response.json();
-      const place = data.place || (data[0] ? normalizePlace(data[0]) : null);
+      const data: NominatimPlace[] = await response.json();
 
-      if (place) {
-        const normalized = "placeId" in place ? normalizePlace(place) : place;
+      if (data.length > 0) {
+        const place = normalizeNominatimPlace(data[0]);
         onSearch({
-          lat: normalized.lat || place.coordinates?.lat,
-          lng: normalized.lng || place.coordinates?.lng,
-          name: normalized.name || place.label?.split(",")[0],
-          label: normalized.fullLabel || place.label,
+          lat: place.lat,
+          lng: place.lng,
+          name: place.name,
+          label: place.fullLabel,
+          address: place.address,
         });
         dispatch({ type: "CLEAR_SUGGESTIONS" });
       } else {
-        dispatch({ type: "FETCH_ERROR", payload: "Location not found" });
+        dispatch({ type: "FETCH_ERROR", payload: "Location not found in Tagaytay" });
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -204,35 +206,44 @@ export default function Search_Box({
   };
 
   return (
-    <div ref={boxRef} className="relative w-64">
-      <form onSubmit={handleSearch}>
+    <div ref={boxRef} className="relative w-72">
+      <form onSubmit={handleSearch} className="relative">
         <input
           ref={inputRef}
           type="text"
           value={state.query}
           onChange={handleInputChange}
           placeholder={placeholder}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+          className="w-full px-4 py-3 pr-12 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-gray-800 placeholder-gray-400"
         />
+        <button
+          type="submit"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-primary-red transition-colors"
+          aria-label="Search"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
       </form>
 
       {state.status === "loading" && (
-        <div className="absolute right-3 top-2.5">
-          <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+        <div className="absolute right-12 top-3.5">
+          <div className="w-5 h-5 border-2 border-primary-red border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
       {state.suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <ul className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-xl shadow-black/10 max-h-60 overflow-y-auto">
           {state.suggestions.map((place) => (
             <li
               key={place.id}
               onClick={() => handleSelect(place)}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+              className="px-4 py-3 hover:bg-primary-red/10 cursor-pointer text-sm border-b border-gray-100 last:border-0 transition-colors"
             >
-              <span className="font-medium">{place.name}</span>
+              <span className="font-medium text-gray-800">{place.name}</span>
               {place.fullLabel !== place.name && (
-                <span className="text-gray-500 text-xs block">
+                <span className="text-gray-500 text-xs block mt-0.5 truncate">
                   {place.fullLabel}
                 </span>
               )}
@@ -242,11 +253,10 @@ export default function Search_Box({
       )}
 
       {state.error && (
-        <div className="absolute w-full mt-1 p-2 bg-red-50 text-red-600 text-sm rounded-lg">
+        <div className="absolute w-full mt-2 p-3 bg-red-50/95 backdrop-blur-md text-red-600 text-sm rounded-xl shadow-lg border border-red-100">
           {state.error}
         </div>
       )}
     </div>
   );
 }
-

@@ -3,15 +3,6 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { endpoints } from "../config/api.js";
 import { useAuth } from "../context/AuthContext";
 
-interface MenuItem {
-  id?: number;
-  name: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  category: string;
-}
-
 interface BusinessHours {
   day: string;
   start: string;
@@ -28,7 +19,6 @@ interface FormData {
   priceMax: string;
   coverImage: string;
   gallery: string[];
-  menuItems: MenuItem[];
   houseNumber: string;
   street: string;
   brgy: string;
@@ -67,7 +57,6 @@ const initialFormData: FormData = {
   priceMax: "",
   coverImage: "",
   gallery: [],
-  menuItems: [],
   houseNumber: "",
   street: "",
   brgy: "",
@@ -127,7 +116,6 @@ export default function BusinessForm() {
         priceMax: data.priceRange?.max?.toString() || "",
         coverImage: data.media?.cover || "",
         gallery: data.media?.gallery || [],
-        menuItems: data.menuItems || [],
         houseNumber: data.location?.houseNumber || "",
         street: data.location?.street || "",
         brgy: data.location?.brgy || "",
@@ -214,33 +202,6 @@ export default function BusinessForm() {
     }));
   };
 
-  // Menu item handlers
-  const addMenuItem = () => {
-    setFormData((prev) => ({
-      ...prev,
-      menuItems: [
-        ...prev.menuItems,
-        { name: "", description: "", price: 0, imageUrl: "", category: "" },
-      ],
-    }));
-  };
-
-  const updateMenuItem = (index: number, field: keyof MenuItem, value: string | number) => {
-    setFormData((prev) => ({
-      ...prev,
-      menuItems: prev.menuItems.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      ),
-    }));
-  };
-
-  const removeMenuItem = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      menuItems: prev.menuItems.filter((_, i) => i !== index),
-    }));
-  };
-
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -304,33 +265,18 @@ export default function BusinessForm() {
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.error || "Failed to save business");
+        // Build a more detailed error message
+        let errorMessage = errData.error || "Failed to save business";
+        if (errData.details && Array.isArray(errData.details)) {
+          errorMessage = errData.details.map((d: { field: string; message: string }) => 
+            `${d.field}: ${d.message}`
+          ).join(", ");
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
       setSuccessMessage(isEdit ? "Business updated!" : "Business created!");
-
-      // Save menu items if any
-      if (formData.menuItems.length > 0) {
-        const businessId = result.business_id || id;
-        for (const item of formData.menuItems) {
-          if (!item.name || !item.price) continue;
-          await fetch(`${endpoints.business.base}/${businessId}/menu`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              name: item.name,
-              description: item.description,
-              price: item.price,
-              imageUrl: item.imageUrl,
-              category: item.category,
-            }),
-          });
-        }
-      }
 
       setTimeout(() => {
         navigate(`/businesses/${result.business_id || id}`);
@@ -666,83 +612,6 @@ export default function BusinessForm() {
                   <p className="text-sm text-gray-500 mt-2">Uploading...</p>
                 )}
               </div>
-            </div>
-
-            {/* Menu Items */}
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Menu Items</h2>
-                <button
-                  type="button"
-                  onClick={addMenuItem}
-                  className="inline-flex items-center px-3 py-1.5 text-sm text-primary-red border border-primary-red rounded-lg hover:bg-primary-red hover:text-white transition-colors"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add Item
-                </button>
-              </div>
-
-              {formData.menuItems.length === 0 ? (
-                <p className="text-gray-500 text-sm">No menu items added yet.</p>
-              ) : (
-                <div className="space-y-4">
-                  {formData.menuItems.map((item, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
-                        <span className="text-sm font-medium text-gray-700">Item {index + 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeMenuItem(index)}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          placeholder="Item name"
-                          value={item.name}
-                          onChange={(e) => updateMenuItem(index, "name", e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Price"
-                          value={item.price || ""}
-                          onChange={(e) => updateMenuItem(index, "price", parseFloat(e.target.value) || 0)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Category"
-                          value={item.category}
-                          onChange={(e) => updateMenuItem(index, "category", e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Image URL (optional)"
-                          value={item.imageUrl}
-                          onChange={(e) => updateMenuItem(index, "imageUrl", e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                        />
-                      </div>
-                      <textarea
-                        placeholder="Description"
-                        value={item.description}
-                        onChange={(e) => updateMenuItem(index, "description", e.target.value)}
-                        className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red resize-none"
-                        rows={2}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Location */}

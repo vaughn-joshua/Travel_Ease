@@ -1,6 +1,6 @@
 import React from "react";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, ZoomControl, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, ZoomControl, useMap } from "react-leaflet";
 import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import Pin_Icon from "../../assets/pin.png";
 import { Map_Mover } from "./Map_Mover";
@@ -18,6 +18,26 @@ const custom_icon = new Icon({
   iconSize: [30, 30],
 });
 
+// Component to enable scroll wheel zoom
+function ScrollWheelZoom() {
+  const map = useMap();
+  
+  React.useEffect(() => {
+    // Enable scroll wheel zoom
+    map.scrollWheelZoom.enable();
+    
+    // Disable default scroll behavior on the map container
+    const container = map.getContainer();
+    container.style.outline = 'none';
+    
+    return () => {
+      map.scrollWheelZoom.disable();
+    };
+  }, [map]);
+  
+  return null;
+}
+
 export default function Map_Page({
   search_result,
   start,
@@ -26,10 +46,11 @@ export default function Map_Page({
 }: MapPageProps): React.ReactElement {
   const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
   const zoom = 14;
-  const Max_Zoom = 13;
+  const Min_Zoom = 12;
+  const Max_Zoom = 19;
   const Max_Bounds: LatLngBoundsExpression = [
-    [14.05217, 120.876775],
-    [14.18201, 121.048989],
+    [14.0, 120.8],
+    [14.25, 121.1],
   ];
 
   const getPosition = (): LatLngExpression | null => {
@@ -46,15 +67,28 @@ export default function Map_Page({
       zoom={zoom}
       maxBounds={Max_Bounds}
       maxBoundsViscosity={1.0}
-      minZoom={Max_Zoom}
+      minZoom={Min_Zoom}
+      maxZoom={Max_Zoom}
       zoomControl={false}
-      className="w-full h-screen"
+      scrollWheelZoom={true}
+      className="w-full h-full"
+      style={{ 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
     >
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
       />
 
+      {/* Enable scroll wheel zoom */}
+      <ScrollWheelZoom />
+
+      {/* Zoom controls at bottom right */}
       <ZoomControl position="bottomright" />
 
       {position && <Marker position={position} icon={custom_icon} />}
@@ -65,4 +99,3 @@ export default function Map_Page({
     </MapContainer>
   );
 }
-

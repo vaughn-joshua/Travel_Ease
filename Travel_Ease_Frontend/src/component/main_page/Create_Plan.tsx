@@ -36,6 +36,16 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
 
   const [counter, setCounter] = useState<number>(0);
   const [dateRange, setDateRange] = useState<Date[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Helper to format date as YYYY-MM-DD for API
+  const formatDateForApi = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const handle_change = (
     selectedDates: Date[],
@@ -76,22 +86,42 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
       return;
     }
 
+    setSubmitError(null);
+    setIsSubmitting(true);
+
     try {
-      console.log(d);
+      // Check if user is logged in
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setSubmitError("Please log in to create a travel plan.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Convert dates to YYYY-MM-DD format for the API
+      const startDateForApi = dateRange[0] ? formatDateForApi(dateRange[0]) : undefined;
+      const endDateForApi = dateRange[1] ? formatDateForApi(dateRange[1]) : undefined;
+
       const payload: CreatePlanPayload = {
         title: d.title,
         description: d.description,
         location: d.location,
-        start_date: d.start_date,
-        end_date: d.end_date,
+        start_date: startDateForApi,
+        end_date: endDateForApi,
         slots: d.slots ? parseInt(d.slots, 10) : undefined,
-        collaborators: d.collaborators ? parseInt(d.collaborators, 10) : undefined,
+        // collaborators is an array of user objects, not a number
+        // For now, we'll send an empty array since this is just the initial plan creation
       };
       await create_plan(payload);
       setCounter(0);
       on_close();
+      // Refresh the page to show the new plan
+      window.location.reload();
     } catch (e) {
-      console.error({ e });
+      console.error("Error creating plan:", e);
+      setSubmitError(e instanceof Error ? e.message : "Failed to create plan. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -236,19 +266,26 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
             </>
           )}
 
+          {/* Error message */}
+          {submitError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600 text-sm">{submitError}</p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
-            <button type="button" onClick={on_close} className="soft_btn">
+            <button type="button" onClick={on_close} className="soft_btn" disabled={isSubmitting}>
               Exit
             </button>
 
             {(counter === 1 || counter === 2) && (
-              <button type="button" className="soft_btn" onClick={handle_back}>
+              <button type="button" className="soft_btn" onClick={handle_back} disabled={isSubmitting}>
                 Back
               </button>
             )}
 
-            <button type="submit" className="hard_btn">
-              {counter === 2 ? "Submit" : "Next"}
+            <button type="submit" className="hard_btn" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : counter === 2 ? "Submit" : "Next"}
             </button>
           </div>
         </form>

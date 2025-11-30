@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./component/blog/Navbar";
 import Footer from "./component/blog/Footer";
 
@@ -39,7 +39,24 @@ import Onboarding from "./pages/Onboarding";
 
 import "./App.css";
 
+// Pages that should be fullscreen (no navbar/footer)
+const fullscreenRoutes = ["/map"];
+
 export default function App(): React.ReactElement {
+  const location = useLocation();
+  const isFullscreen = fullscreenRoutes.some(route => location.pathname.startsWith(route));
+
+  // Fullscreen layout (for map)
+  if (isFullscreen) {
+    return (
+      <Routes>
+        <Route path="/map" element={<Main_Map_Page />} />
+        <Route path="/map/div" element={<Main_Landing_Page />} />
+      </Routes>
+    );
+  }
+
+  // Normal layout with navbar and footer
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -48,10 +65,6 @@ export default function App(): React.ReactElement {
           {/* Travel Plan routes */}
           <Route path="/" element={<Main_Page />} />
           <Route path="/planner/:status/:id" element={<Planner />} />
-
-          {/* Map routes */}
-          <Route path="/map" element={<Main_Map_Page />} />
-          <Route path="/map/div" element={<Main_Landing_Page />} />
 
           {/* Travel spots */}
           <Route path="/travel_spots_page" element={<Main_Travel_Spots />} />
