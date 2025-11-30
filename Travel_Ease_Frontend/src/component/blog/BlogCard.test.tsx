@@ -1,8 +1,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import BlogCard from "../../components/BlogCard";
-import type { Blog } from "../../../types/blog";
+import BlogCard from "./BlogCard";
+import type { Blog } from "../../types/blog";
 
 const mockBlog: Blog = {
   id: "1",

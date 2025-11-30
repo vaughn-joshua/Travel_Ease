@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import Carousel from "../component/blog/components/Carousel";
-import Section from "../component/blog/components/Section";
+import Carousel from "../component/blog/Carousel";
+import Section from "../component/blog/Section";
 import { blogApi } from "../services/api";
 import type { Blog } from "../types/blog";
 
