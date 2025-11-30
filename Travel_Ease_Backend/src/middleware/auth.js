@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { supabaseAdmin, isSupabaseConfigured } from "../lib/supabase.js";
-import { prisma } from "../lib/prisma.js";
+import { User } from "../models/index.js";
+import { executeWithRetry } from "../lib/sequelize.js";
 
 // Test mode uses local JWT for testing without Supabase
 const isTestMode = process.env.NODE_ENV === 'test';
@@ -34,9 +35,9 @@ export const authenticateToken = async (req, res, next) => {
     // Test mode: use local JWT verification
     if (isTestMode && JWT_SECRET) {
       const decoded = jwt.verify(token, JWT_SECRET);
-      const user = await prisma.user.findUnique({
-        where: { user_id: decoded.id }
-      });
+      const user = await executeWithRetry(() =>
+        User.findByPk(decoded.id)
+      );
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -67,9 +68,9 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     // Find or create linked user profile
-    let user = await prisma.user.findUnique({
-      where: { auth_id: data.user.id }
-    });
+    let user = await executeWithRetry(() =>
+      User.findOne({ where: { auth_id: data.user.id } })
+    );
 
     if (!user) {
       const meta = data.user.user_metadata || {};
@@ -86,21 +87,21 @@ export const authenticateToken = async (req, res, next) => {
       const contact_no = meta.contact_no || meta.phone || meta.phone_number || null;
 
       try {
-        user = await prisma.user.create({
-          data: {
+        user = await executeWithRetry(() =>
+          User.create({
             auth_id: data.user.id,
             email,
             first_name,
             last_name: last_name || "User",
             contact_no
-          }
-        });
+          })
+        );
       } catch (createError) {
         // Handle race condition where another request created the user
-        if (createError.code === "P2002") {
-          user = await prisma.user.findUnique({
-            where: { auth_id: data.user.id }
-          });
+        if (createError.name === "SequelizeUniqueConstraintError") {
+          user = await executeWithRetry(() =>
+            User.findOne({ where: { auth_id: data.user.id } })
+          );
         } else {
           throw createError;
         }

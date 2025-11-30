@@ -1,4 +1,6 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { TravelPlan, Activity } from "../../src/models/index.js";
+import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 /**
  * Bulk update activity dates for a travel plan
@@ -22,26 +24,28 @@ export async function update_activity(req, res) {
       });
     }
 
-    // Get the travel plan and its activities
-    const plan = await prisma.travelPlan.findUnique({
-      where: { travel_plan_id: parseInt(id) },
-      select: {
-        travel_plan_id: true,
-        start_date: true,
-        activities: {
-          select: {
-            activity_id: true,
-            target_date: true
-          }
-        }
-      }
-    });
+    const planId = parseInt(id);
+
+    // Get the travel plan
+    const plan = await executeWithRetry(() =>
+      TravelPlan.findByPk(planId, {
+        attributes: ['travel_plan_id', 'start_date']
+      })
+    );
 
     if (!plan) {
       return res.status(404).json({ error: "Travel plan not found" });
     }
 
-    if (plan.activities.length === 0) {
+    // Get activities with dates
+    const activities = await executeWithRetry(() =>
+      Activity.findAll({
+        where: { travel_plan_id: planId },
+        attributes: ['activity_id', 'target_date']
+      })
+    );
+
+    if (activities.length === 0) {
       return res.status(404).json({ error: "No activities found for this travel plan" });
     }
 
@@ -62,8 +66,8 @@ export async function update_activity(req, res) {
       });
     }
 
-    // Filter activities with dates and prepare updates
-    const activitiesWithDates = plan.activities.filter(a => a.target_date !== null);
+    // Filter activities with dates
+    const activitiesWithDates = activities.filter(a => a.target_date !== null);
     
     if (activitiesWithDates.length === 0) {
       return res.status(200).json({
@@ -73,17 +77,14 @@ export async function update_activity(req, res) {
     }
 
     // Use transaction for atomic updates
-    const updates = activitiesWithDates.map(activity => {
-      const currentDate = new Date(activity.target_date);
-      const newDate = new Date(currentDate.getTime() + shiftMs);
-      
-      return prisma.activity.update({
-        where: { activity_id: activity.activity_id },
-        data: { target_date: newDate }
-      });
+    await sequelize.transaction(async (t) => {
+      for (const activity of activitiesWithDates) {
+        const currentDate = new Date(activity.target_date);
+        const newDate = new Date(currentDate.getTime() + shiftMs);
+        
+        await activity.update({ target_date: newDate }, { transaction: t });
+      }
     });
-
-    await prisma.$transaction(updates);
 
     res.status(200).json({
       message: "Activities updated successfully",
@@ -92,6 +93,6 @@ export async function update_activity(req, res) {
     });
   } catch (error) {
     console.error("Error updating activities:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Updating activities');
   }
 }

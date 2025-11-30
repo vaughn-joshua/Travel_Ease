@@ -1,4 +1,6 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Activity } from "../../src/models/index.js";
+import { executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 export async function create_activity(req, res) {
   const {
@@ -18,8 +20,8 @@ export async function create_activity(req, res) {
   const userId = req.user.id;
 
   try {
-    const activity = await prisma.activity.create({
-      data: {
+    const activity = await executeWithRetry(() =>
+      Activity.create({
         travel_plan_id: parseInt(travel_plan_id),
         notes,
         target_date: target_date ? new Date(target_date) : null,
@@ -27,8 +29,8 @@ export async function create_activity(req, res) {
         user_id: userId,
         lat: lat ? parseFloat(lat) : null,
         lng: lng ? parseFloat(lng) : null
-      }
-    });
+      })
+    );
 
     console.log("created activity successfully");
     res.status(201).json({ 
@@ -37,6 +39,6 @@ export async function create_activity(req, res) {
     });
   } catch (error) {
     console.error("Error creating activity:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Creating activity');
   }
 }

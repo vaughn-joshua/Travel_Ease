@@ -1,31 +1,28 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Activity, User, Business } from "../../src/models/index.js";
+import { executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 export async function fetch_activities(req, res) {
   try {
     const { id } = req.params;
 
-    const activities = await prisma.activity.findMany({
-      where: {
-        travel_plan_id: parseInt(id)
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
+    const activities = await executeWithRetry(() =>
+      Activity.findAll({
+        where: { travel_plan_id: parseInt(id) },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['user_id', 'first_name', 'last_name']
+          },
+          {
+            model: Business,
+            as: 'business',
+            attributes: ['business_id', 'name', 'latitude', 'longtitude']
           }
-        },
-        business: {
-          select: {
-            business_id: true,
-            name: true,
-            latitude: true,
-            longtitude: true
-          }
-        }
-      }
-    });
+        ]
+      })
+    );
 
     // Flatten the response to match original format
     const formattedActivities = activities.map(activity => ({
@@ -37,12 +34,12 @@ export async function fetch_activities(req, res) {
       is_priority: activity.is_priority,
       lat: activity.lat,
       lng: activity.lng,
-      first_name: activity.user.first_name
+      first_name: activity.user?.first_name
     }));
 
     res.json(formattedActivities);
   } catch (error) {
     console.error("Error fetching activities:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Fetching activities');
   }
 }

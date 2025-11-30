@@ -234,4 +234,104 @@ export const businessApi = {
   },
 };
 
+// User types
+interface AuthUser {
+  user_id: number;
+  auth_id?: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  contact_no?: string | null;
+}
+
+interface AuthResponse {
+  message: string;
+  user: AuthUser;
+  token: string;
+  refresh_token?: string;
+  expires_at?: number;
+}
+
+interface RegisterPayload {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  contact_no?: string;
+}
+
+interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+interface FavoritesResponse {
+  business_favorites: Array<{
+    favorite_id: number;
+    business: {
+      business_id: number;
+      name: string;
+      description: string | null;
+      picture: string | null;
+      rating: number | null;
+      city: string | null;
+    } | null;
+  }>;
+  travel_plan_favorites: Array<{
+    favorite_id: number;
+    travel_plan: {
+      travel_plan_id: number;
+      name: string;
+      description: string | null;
+      start_date: string | null;
+      end_date: string | null;
+      location: string | null;
+    } | null;
+  }>;
+}
+
+export const userApi = {
+  // Register new user
+  register: async (data: RegisterPayload): Promise<AuthResponse> => {
+    const response = await api.post("/user/register", data);
+    return response.data;
+  },
+
+  // Login user
+  login: async (data: LoginPayload): Promise<AuthResponse> => {
+    const response = await api.post("/user/login", data);
+    return response.data;
+  },
+
+  // Get user profile
+  getProfile: async (id: string | number): Promise<AuthUser> => {
+    const response = await api.get(`/user/user/${id}`);
+    return response.data;
+  },
+
+  // Update user profile
+  updateProfile: async (id: string | number, data: Partial<AuthUser>): Promise<AuthUser> => {
+    const response = await api.put(`/user/user/${id}`, data);
+    return response.data;
+  },
+
+  // Get user favorites
+  getFavorites: async (id: string | number): Promise<FavoritesResponse> => {
+    const response = await api.get(`/user/favorite/${id}`);
+    return response.data;
+  },
+
+  // Add favorite
+  addFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<any> => {
+    const response = await api.post("/user/favorite", data);
+    return response.data;
+  },
+
+  // Remove favorite
+  removeFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<any> => {
+    const response = await api.delete("/user/favorite", { data });
+    return response.data;
+  },
+};
+
 export default api;

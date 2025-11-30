@@ -2,7 +2,8 @@
  * Ownership and role-based access control middleware
  */
 
-import { prisma } from "../lib/prisma.js";
+import { TravelPlan, Business, Activity, Participant } from "../models/index.js";
+import { executeWithRetry } from "../lib/sequelize.js";
 
 /**
  * Verify user owns or has admin rights to a travel plan
@@ -16,14 +17,14 @@ export const requirePlanOwnership = async (req, res, next) => {
   }
 
   try {
-    const plan = await prisma.travelPlan.findUnique({
-      where: { travel_plan_id: planId },
-      include: {
-        participants: {
-          where: { user_id: userId }
-        }
-      }
-    });
+    const [plan, participant] = await executeWithRetry(() =>
+      Promise.all([
+        TravelPlan.findByPk(planId),
+        Participant.findOne({
+          where: { travel_plan_id: planId, user_id: userId }
+        })
+      ])
+    );
 
     if (!plan) {
       return res.status(404).json({ error: "Travel plan not found" });
@@ -31,7 +32,6 @@ export const requirePlanOwnership = async (req, res, next) => {
 
     // Check if user is owner or admin participant
     const isOwner = plan.user_id === userId;
-    const participant = plan.participants[0];
     const isAdmin = participant?.role === 'Admin';
 
     if (!isOwner && !isAdmin) {
@@ -64,9 +64,9 @@ export const requireBusinessOwnership = async (req, res, next) => {
   }
 
   try {
-    const business = await prisma.business.findUnique({
-      where: { business_id: businessId }
-    });
+    const business = await executeWithRetry(() =>
+      Business.findByPk(businessId)
+    );
 
     if (!business) {
       return res.status(404).json({ error: "Business not found" });
@@ -100,32 +100,34 @@ export const requireActivityAccess = async (req, res, next) => {
   }
 
   try {
-    const activity = await prisma.activity.findUnique({
-      where: { activity_id: activityId },
-      include: {
-        travel_plan: {
-          include: {
-            participants: {
-              where: { user_id: userId }
-            }
-          }
-        }
-      }
-    });
+    const activity = await executeWithRetry(() =>
+      Activity.findByPk(activityId, {
+        include: [{
+          model: TravelPlan,
+          as: 'travelPlan'
+        }]
+      })
+    );
 
     if (!activity) {
       return res.status(404).json({ error: "Activity not found" });
     }
 
-    const plan = activity.travel_plan;
+    const plan = activity.travelPlan;
     if (!plan) {
       return res.status(404).json({ error: "Associated travel plan not found" });
     }
 
+    // Get participant info
+    const participant = await executeWithRetry(() =>
+      Participant.findOne({
+        where: { travel_plan_id: plan.travel_plan_id, user_id: userId }
+      })
+    );
+
     // Check if user is plan owner, admin participant, or activity creator
     const isOwner = plan.user_id === userId;
     const isActivityCreator = activity.user_id === userId;
-    const participant = plan.participants[0];
     const isAdmin = participant?.role === 'Admin';
     const isEditor = participant?.role === 'Editor';
 

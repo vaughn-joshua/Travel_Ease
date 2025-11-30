@@ -1,4 +1,6 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Activity } from "../../src/models/index.js";
+import { executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 export async function activity_edit(req, res) {
   const { id } = req.params;
@@ -9,25 +11,25 @@ export async function activity_edit(req, res) {
   console.log({ budget_range, is_priority, notes, target_date });
 
   try {
-    const activity = await prisma.activity.update({
-      where: {
-        activity_id: parseInt(id)
-      },
-      data: {
-        budget_range,
-        is_priority,
-        notes,
-        target_date: target_date ? new Date(target_date) : null
-      }
+    const activity = await executeWithRetry(() =>
+      Activity.findByPk(parseInt(id))
+    );
+
+    if (!activity) {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+
+    await activity.update({
+      budget_range,
+      is_priority,
+      notes,
+      target_date: target_date ? new Date(target_date) : null
     });
 
     console.log("edited activity successfully");
     res.json({ message: "Activity updated successfully", activity });
   } catch (error) {
     console.error("Error editing activity:", error);
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: "Activity not found" });
-    }
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Editing activity');
   }
 }

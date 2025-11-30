@@ -2,7 +2,9 @@ import { Router } from "express";
 import { authenticateToken } from "../src/middleware/auth.js";
 import { validate } from "../src/schemas/validation.js";
 import { createReviewSchema } from "../src/schemas/validation.js";
-import { prisma } from "../src/lib/prisma.js";
+import { Business, TravelPlan, BusinessReview, TravelPlanReview, User } from "../src/models/index.js";
+import { executeWithRetry } from "../src/lib/sequelize.js";
+import { handleSequelizeError } from "../src/lib/queryHelpers.js";
 
 const router = Router();
 
@@ -17,40 +19,42 @@ router.post("/business", authenticateToken, validate(createReviewSchema), async 
     }
 
     // Check if business exists
-    const business = await prisma.business.findUnique({
-      where: { business_id }
-    });
+    const business = await executeWithRetry(() =>
+      Business.findByPk(business_id)
+    );
 
     if (!business) {
       return res.status(404).json({ error: "Business not found" });
     }
 
     // Create review
-    const review = await prisma.businessReview.create({
-      data: {
+    const review = await executeWithRetry(() =>
+      BusinessReview.create({
         user_id,
         business_id,
         rating,
         content
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
-          }
-        }
-      }
-    });
+      })
+    );
+
+    // Fetch with user info
+    const reviewWithUser = await executeWithRetry(() =>
+      BusinessReview.findByPk(review.review_id, {
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name']
+        }]
+      })
+    );
 
     res.status(201).json({
       message: "Review created successfully",
-      review
+      review: reviewWithUser
     });
   } catch (error) {
     console.error("Error creating business review:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Creating business review');
   }
 });
 
@@ -65,63 +69,61 @@ router.post("/travel_plan", authenticateToken, validate(createReviewSchema), asy
     }
 
     // Check if travel plan exists
-    const travelPlan = await prisma.travelPlan.findUnique({
-      where: { travel_plan_id }
-    });
+    const travelPlan = await executeWithRetry(() =>
+      TravelPlan.findByPk(travel_plan_id)
+    );
 
     if (!travelPlan) {
       return res.status(404).json({ error: "Travel plan not found" });
     }
 
     // Create review
-    const review = await prisma.travelPlanReview.create({
-      data: {
+    const review = await executeWithRetry(() =>
+      TravelPlanReview.create({
         user_id,
         travel_plan_id,
         rating,
         content
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
-          }
-        }
-      }
-    });
+      })
+    );
+
+    // Fetch with user info
+    const reviewWithUser = await executeWithRetry(() =>
+      TravelPlanReview.findByPk(review.review_id, {
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name']
+        }]
+      })
+    );
 
     res.status(201).json({
       message: "Review created successfully",
-      review
+      review: reviewWithUser
     });
   } catch (error) {
     console.error("Error creating travel plan review:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Creating travel plan review');
   }
-}); //di pa mareview cuz wala pa travel plan
+});
 
 // Get reviews for a specific travel plan
 router.get("/travel_plan/:id", async (req, res) => {
   try {
     const travel_plan_id = parseInt(req.params.id);
 
-    const reviews = await prisma.travelPlanReview.findMany({
-      where: { travel_plan_id },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
-          }
-        }
-      },
-      orderBy: {
-        review_date: 'desc'
-      }
-    });
+    const reviews = await executeWithRetry(() =>
+      TravelPlanReview.findAll({
+        where: { travel_plan_id },
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name']
+        }],
+        order: [['review_date', 'DESC']]
+      })
+    );
 
     res.json({
       message: "Success",
@@ -129,7 +131,7 @@ router.get("/travel_plan/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching travel plan reviews:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Fetching travel plan reviews');
   }
 });
 

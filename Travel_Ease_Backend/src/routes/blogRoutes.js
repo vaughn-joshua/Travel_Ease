@@ -1,8 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../lib/prisma.js";
+import { Op } from "sequelize";
+import { Blog } from "../models/index.js";
+import { executeWithRetry } from "../lib/sequelize.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { createBlogSchema, updateBlogSchema, blogQuerySchema } from "../schemas/blogSchemas.js";
+import { 
+  parsePagination, 
+  buildPaginationMeta, 
+  handleSequelizeError 
+} from "../lib/queryHelpers.js";
 
 export const blogRoutes = Router();
 
@@ -10,32 +17,37 @@ export const blogRoutes = Router();
 blogRoutes.get("/", async (req, res, next) => {
   try {
     const query = blogQuerySchema.parse(req.query);
-    const { category, page, pageSize, q } = query;
+    const { category, q } = query;
+    const { page, pageSize, limit, offset } = parsePagination(query);
+
+    // Build where clause
     const where = {};
     if (category) {
       where.category = category;
     }
     if (q) {
-      where.OR = [
-        { title: { contains: q, mode: "insensitive" } },
-        { excerpt: { contains: q, mode: "insensitive" } }
+      where[Op.or] = [
+        { title: { [Op.iLike]: `%${q}%` } },
+        { excerpt: { [Op.iLike]: `%${q}%` } }
       ];
     }
-    const [blogs, total] = await Promise.all([
-      prisma.blog.findMany({
-        where,
-        orderBy: { publishedAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize
-      }),
-      prisma.blog.count({ where })
-    ]);
+
+    // Execute queries with retry for transient failures
+    const [blogs, total] = await executeWithRetry(() => 
+      Promise.all([
+        Blog.findAll({
+          where,
+          order: [['publishedAt', 'DESC']],
+          limit,
+          offset
+        }),
+        Blog.count({ where })
+      ])
+    );
+
     res.json({
       items: blogs,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize)
+      ...buildPaginationMeta(total, page, pageSize)
     });
   } catch (error) {
     // Handle Zod validation errors
@@ -45,59 +57,23 @@ blogRoutes.get("/", async (req, res, next) => {
         details: error.errors
       });
     }
-    // Handle connection errors explicitly (including PrismaClientInitializationError with undefined code)
-    if (
-      error.constructor?.name === 'PrismaClientInitializationError' ||
-      error.code === 'P1001' || error.code === 'P1002' || error.code === 'P1017'
-    ) {
-      return res.status(503).json({
-        error: 'Service temporarily unavailable',
-        message: 'Database connection failed. Please try again later.',
-        code: error.code || 'CONNECTION_ERROR'
-      });
-    }
-    // Handle missing table error
-    if (error.code === 'P2021') {
-      return res.status(500).json({
-        error: 'Database schema error',
-        message: 'Blog table not found. Please run migrations.',
-        code: error.code
-      });
-    }
-    next(error);
+    return handleSequelizeError(error, res, 'Fetching blogs');
   }
 });
 
 // GET /api/blogs/featured - Get featured blogs (public)
 blogRoutes.get("/featured", async (req, res, next) => {
   try {
-    const blogs = await prisma.blog.findMany({
-      where: { isFeatured: true },
-      orderBy: { publishedAt: "desc" },
-      take: 5
-    });
+    const blogs = await executeWithRetry(() =>
+      Blog.findAll({
+        where: { isFeatured: true },
+        order: [['publishedAt', 'DESC']],
+        limit: 5
+      })
+    );
     res.json(blogs);
   } catch (error) {
-    // Handle connection errors explicitly (including PrismaClientInitializationError with undefined code)
-    if (
-      error.constructor?.name === 'PrismaClientInitializationError' ||
-      error.code === 'P1001' || error.code === 'P1002' || error.code === 'P1017'
-    ) {
-      return res.status(503).json({
-        error: 'Service temporarily unavailable',
-        message: 'Database connection failed. Please try again later.',
-        code: error.code || 'CONNECTION_ERROR'
-      });
-    }
-    // Handle missing table error
-    if (error.code === 'P2021') {
-      return res.status(500).json({
-        error: 'Database schema error',
-        message: 'Blog table not found. Please run migrations.',
-        code: error.code
-      });
-    }
-    next(error);
+    return handleSequelizeError(error, res, 'Fetching featured blogs');
   }
 });
 
@@ -105,15 +81,16 @@ blogRoutes.get("/featured", async (req, res, next) => {
 blogRoutes.get("/:slug", async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const blog = await prisma.blog.findUnique({
-      where: { slug }
-    });
+    const blog = await executeWithRetry(() =>
+      Blog.findOne({ where: { slug } })
+    );
+    
     if (!blog) {
       return res.status(404).json({ error: "Blog not found" });
     }
     res.json(blog);
   } catch (error) {
-    next(error);
+    return handleSequelizeError(error, res, 'Fetching blog');
   }
 });
 
@@ -124,13 +101,13 @@ blogRoutes.post("/", authenticateToken, async (req, res, next) => {
     const publishedAt = data.publishedAt ? new Date(data.publishedAt) : new Date();
     
     // Create blog with authenticated user as author
-    const blog = await prisma.blog.create({
-      data: {
+    const blog = await executeWithRetry(() =>
+      Blog.create({
         ...data,
         user_id: req.user.id,
         publishedAt
-      }
-    });
+      })
+    );
     res.status(201).json(blog);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -139,7 +116,7 @@ blogRoutes.post("/", authenticateToken, async (req, res, next) => {
         details: error.errors
       });
     }
-    next(error);
+    return handleSequelizeError(error, res, 'Creating blog');
   }
 });
 
@@ -149,9 +126,9 @@ blogRoutes.put("/:id", authenticateToken, async (req, res, next) => {
     const { id } = req.params;
     
     // Check ownership
-    const existingBlog = await prisma.blog.findUnique({
-      where: { id }
-    });
+    const existingBlog = await executeWithRetry(() =>
+      Blog.findByPk(id)
+    );
     
     if (!existingBlog) {
       return res.status(404).json({ error: "Blog not found" });
@@ -170,11 +147,8 @@ blogRoutes.put("/:id", authenticateToken, async (req, res, next) => {
       updateData.publishedAt = new Date(data.publishedAt);
     }
     
-    const blog = await prisma.blog.update({
-      where: { id },
-      data: updateData
-    });
-    res.json(blog);
+    await existingBlog.update(updateData);
+    res.json(existingBlog);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
@@ -182,7 +156,7 @@ blogRoutes.put("/:id", authenticateToken, async (req, res, next) => {
         details: error.errors
       });
     }
-    next(error);
+    return handleSequelizeError(error, res, 'Updating blog');
   }
 });
 
@@ -192,9 +166,9 @@ blogRoutes.delete("/:id", authenticateToken, async (req, res, next) => {
     const { id } = req.params;
     
     // Check ownership
-    const existingBlog = await prisma.blog.findUnique({
-      where: { id }
-    });
+    const existingBlog = await executeWithRetry(() =>
+      Blog.findByPk(id)
+    );
     
     if (!existingBlog) {
       return res.status(404).json({ error: "Blog not found" });
@@ -207,11 +181,9 @@ blogRoutes.delete("/:id", authenticateToken, async (req, res, next) => {
       });
     }
     
-    await prisma.blog.delete({
-      where: { id }
-    });
+    await existingBlog.destroy();
     res.status(204).send();
   } catch (error) {
-    next(error);
+    return handleSequelizeError(error, res, 'Deleting blog');
   }
 });

@@ -1,4 +1,6 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Business, BusinessHours, BusinessCategory, PriceRange } from "../../src/models/index.js";
+import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 export async function create_business(req, res) {
   const {
@@ -22,61 +24,55 @@ export async function create_business(req, res) {
 
   try {
     // Create business with related records in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await sequelize.transaction(async (t) => {
       // Create business
-      const business = await tx.business.create({
-        data: {
-          user_id: userId,
-          name,
-          house_number: house_no,
-          street,
-          brgy,
-          city,
-          latitude: lat,
-          longtitude: lng,
-          description,
-          picture: secure_url,
-        },
-      });
+      const business = await Business.create({
+        user_id: userId,
+        name,
+        house_number: house_no,
+        street,
+        brgy,
+        city,
+        latitude: lat,
+        longtitude: lng,
+        description,
+        picture: secure_url,
+      }, { transaction: t });
 
       // Create business hours
       if (business_hrs && business_hrs.length > 0) {
-        await tx.businessHours.createMany({
-          data: business_hrs.map((hrs) => ({
+        await BusinessHours.bulkCreate(
+          business_hrs.map((hrs) => ({
             business_id: business.business_id,
             day_of_week: hrs.day,
             open_time: hrs.start ? new Date(`1970-01-01T${hrs.start}`) : null,
             close_time: hrs.end ? new Date(`1970-01-01T${hrs.end}`) : null,
           })),
-        });
+          { transaction: t }
+        );
       }
 
       // Create business categories and price ranges
       if (category && category.length > 0) {
-        // Create categories first
-        await tx.businessCategory.createMany({
-          data: category.map((cat) => ({
+        // Create categories
+        const createdCategories = await BusinessCategory.bulkCreate(
+          category.map((cat) => ({
             business_id: business.business_id,
             category_name: cat,
           })),
-        });
+          { transaction: t, returning: true }
+        );
 
         // If price range provided, create price ranges for each category
         if (min_price !== undefined || max_price !== undefined) {
-          const createdCategories = await tx.businessCategory.findMany({
-            where: { business_id: business.business_id },
-            select: { category_id: true },
-          });
-
-          if (createdCategories.length > 0) {
-            await tx.priceRange.createMany({
-              data: createdCategories.map((cat) => ({
-                category_id: cat.category_id,
-                min_price: min_price || 0,
-                max_price: max_price || 0,
-              })),
-            });
-          }
+          await PriceRange.bulkCreate(
+            createdCategories.map((cat) => ({
+              category_id: cat.category_id,
+              min_price: min_price || 0,
+              max_price: max_price || 0,
+            })),
+            { transaction: t }
+          );
         }
       }
 
@@ -89,6 +85,6 @@ export async function create_business(req, res) {
     });
   } catch (error) {
     console.error("Error creating business:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Creating business');
   }
 }

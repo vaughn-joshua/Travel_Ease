@@ -1,56 +1,61 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Business, BusinessCategory, BusinessHours, BusinessReview, MenuItem, PriceRange, User } from "../../src/models/index.js";
+import { executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 export async function business_fetch(req, res) {
   const { id } = req.params;
 
   try {
-    const business = await prisma.business.findUnique({
-      where: {
-        business_id: parseInt(id)
-      },
-      include: {
-        categories: {
-          include: {
-            price_ranges: true,
+    const business = await executeWithRetry(() =>
+      Business.findByPk(parseInt(id), {
+        include: [
+          {
+            model: BusinessCategory,
+            as: 'categories',
+            include: [{
+              model: PriceRange,
+              as: 'priceRanges'
+            }]
           },
-        },
-        business_hours: true,
-        menu_items: {
-          where: { is_available: true },
-          orderBy: [{ category: 'asc' }, { name: 'asc' }],
-        },
-        reviews: {
-          take: 5,
-          orderBy: { review_date: 'desc' },
-          include: {
-            user: {
-              select: {
-                user_id: true,
-                first_name: true,
-                last_name: true,
-              },
-            },
+          {
+            model: BusinessHours,
+            as: 'businessHours'
           },
-        },
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true,
-            email: true
+          {
+            model: MenuItem,
+            as: 'menuItems',
+            where: { is_available: true },
+            required: false,
+            order: [['category', 'ASC'], ['name', 'ASC']]
+          },
+          {
+            model: BusinessReview,
+            as: 'reviews',
+            limit: 5,
+            order: [['review_date', 'DESC']],
+            include: [{
+              model: User,
+              as: 'user',
+              attributes: ['user_id', 'first_name', 'last_name']
+            }]
+          },
+          {
+            model: User,
+            as: 'user',
+            attributes: ['user_id', 'first_name', 'last_name', 'email']
           }
-        }
-      }
-    });
+        ]
+      })
+    );
 
     if (!business) {
       return res.status(404).json({ error: "Business not found" });
     }
 
-    res.json(normalizeBusiness(business));
+    res.json(normalizeBusiness(business.toJSON()));
   } catch (error) {
     console.error("Error fetching business:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Fetching business');
   }
 }
 
@@ -63,7 +68,7 @@ function normalizeBusiness(business) {
   let maxPrice = null;
 
   for (const cat of business.categories || []) {
-    for (const pr of cat.price_ranges || []) {
+    for (const pr of cat.priceRanges || []) {
       if (minPrice === null || pr.min_price < minPrice) minPrice = pr.min_price;
       if (maxPrice === null || pr.max_price > maxPrice) maxPrice = pr.max_price;
     }
@@ -93,7 +98,7 @@ function normalizeBusiness(business) {
 
   // Normalize hours
   const hours = {};
-  for (const h of business.business_hours || []) {
+  for (const h of business.businessHours || []) {
     const day = h.day_of_week?.toLowerCase();
     if (day) {
       hours[day] = {
@@ -104,7 +109,7 @@ function normalizeBusiness(business) {
   }
 
   // Normalize menu items
-  const menuItems = (business.menu_items || []).map(item => ({
+  const menuItems = (business.menuItems || []).map(item => ({
     id: item.menu_item_id,
     name: item.name,
     description: item.description,

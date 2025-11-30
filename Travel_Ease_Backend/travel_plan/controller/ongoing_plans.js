@@ -1,5 +1,8 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Op, fn, col } from "sequelize";
+import { TravelPlan, Participant } from "../../src/models/index.js";
+import { executeWithRetry } from "../../src/lib/sequelize.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 /**
  * Fetch ongoing (Active status) plans for the authenticated user
@@ -8,59 +11,84 @@ import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pa
 export async function ongoing_plan(req, res) {
   try {
     const userId = req.user.id;
-    const { page, pageSize, skip } = parsePagination(req.query);
+    const { page, pageSize, limit, offset } = parsePagination(req.query);
     const filters = buildPlanFilters(req.query);
 
-    // User must be owner or approved participant
+    // Get plan IDs where user is a participant
+    const participantPlanIds = await executeWithRetry(() =>
+      Participant.findAll({
+        where: { user_id: userId, status: true },
+        attributes: ['travel_plan_id'],
+        raw: true
+      })
+    );
+    const planIds = participantPlanIds.map(p => p.travel_plan_id);
+
+    // Build where clause: Active plans where user is owner or participant
     const where = {
       status: 'Active',
-      ...filters,
-      OR: [
+      [Op.or]: [
         { user_id: userId },
-        { participants: { some: { user_id: userId, status: true } } }
-      ]
+        ...(planIds.length > 0 ? [{ travel_plan_id: { [Op.in]: planIds } }] : [])
+      ],
+      ...filters
     };
 
-    // Merge search OR with user access OR using AND
-    if (filters.OR) {
-      where.AND = [
-        { OR: filters.OR },
-        { OR: where.OR }
-      ];
-      delete where.OR;
-      delete filters.OR;
-    }
+    const [plans, total] = await executeWithRetry(() =>
+      Promise.all([
+        TravelPlan.findAll({
+          where,
+          attributes: [
+            'travel_plan_id',
+            'name',
+            'start_date',
+            'end_date',
+            'description',
+            'location',
+            'status',
+            'max_slots'
+          ],
+          order: [['start_date', 'ASC NULLS LAST']],
+          limit,
+          offset
+        }),
+        TravelPlan.count({ where })
+      ])
+    );
 
-    const [plans, total] = await Promise.all([
-      prisma.travelPlan.findMany({
-        where,
-        select: {
-          travel_plan_id: true,
-          name: true,
-          start_date: true,
-          end_date: true,
-          description: true,
-          location: true,
-          status: true,
-          max_slots: true,
-          _count: { select: { participants: { where: { status: true } } } }
-        },
-        orderBy: { start_date: 'asc' },
-        skip,
-        take: pageSize
-      }),
-      prisma.travelPlan.count({ where })
-    ]);
+    // Get participant counts for each plan
+    const planIdList = plans.map(p => p.travel_plan_id);
+    const participantCounts = planIdList.length > 0 
+      ? await executeWithRetry(() =>
+          Participant.findAll({
+            where: { 
+              travel_plan_id: { [Op.in]: planIdList },
+              status: true 
+            },
+            attributes: [
+              'travel_plan_id',
+              [fn('COUNT', col('participant_id')), 'count']
+            ],
+            group: ['travel_plan_id'],
+            raw: true
+          })
+        )
+      : [];
+
+    // Create a map for quick lookup
+    const countMap = {};
+    participantCounts.forEach(c => {
+      countMap[c.travel_plan_id] = parseInt(c.count);
+    });
 
     const data = plans.map(p => ({
-      ...p,
-      approvedParticipants: p._count.participants,
-      _count: undefined
+      ...p.toJSON(),
+      approvedParticipants: countMap[p.travel_plan_id] || 0
     }));
 
     res.json(paginatedResponse(data, total, { page, pageSize }));
   } catch (error) {
     console.error("Error fetching ongoing plans:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Fetching ongoing plans');
   }
 }

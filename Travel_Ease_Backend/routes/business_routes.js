@@ -20,7 +20,9 @@ import {
   updateMenuItem,
   deleteMenuItem,
 } from "../business/index.js";
-import { prisma } from "../src/lib/prisma.js";
+import { Business, BusinessReview, User } from "../src/models/index.js";
+import { executeWithRetry } from "../src/lib/sequelize.js";
+import { handleSequelizeError } from "../src/lib/queryHelpers.js";
 
 const router = Router();
 
@@ -46,29 +48,27 @@ router.delete("/:id/menu/:itemId", authenticateToken, deleteMenuItem);
 // Travel spots endpoints (public for browsing)
 router.get("/travel_spots", async (req, res) => {
   try {
-    const businesses = await prisma.business.findMany({
-      where: {
-        status: true // Only show approved/active businesses
-      },
-      select: {
-        business_id: true,
-        user_id: true,
-        name: true,
-        house_number: true,
-        street: true,
-        brgy: true,
-        city: true,
-        latitude: true,
-        longtitude: true,
-        description: true,
-        rating: true,
-        status: true,
-        picture: true
-      },
-      orderBy: {
-        rating: 'desc'
-      }
-    });
+    const businesses = await executeWithRetry(() =>
+      Business.findAll({
+        where: { status: true }, // Only show approved/active businesses
+        attributes: [
+          'business_id',
+          'user_id',
+          'name',
+          'house_number',
+          'street',
+          'brgy',
+          'city',
+          'latitude',
+          'longtitude',
+          'description',
+          'rating',
+          'status',
+          'picture'
+        ],
+        order: [['rating', 'DESC NULLS LAST']]
+      })
+    );
     
     res.json({
       message: "Success",
@@ -76,7 +76,7 @@ router.get("/travel_spots", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching travel spots:", error);
-    res.status(500).json({ message: "Server Error", error: error.message });
+    return handleSequelizeError(error, res, 'Fetching travel spots');
   }
 });
 
@@ -84,23 +84,17 @@ router.get("/travel_spots/reviews/:id", async (req, res) => {
   const businessId = parseInt(req.params.id);
   
   try {
-    const reviews = await prisma.businessReview.findMany({
-      where: {
-        business_id: businessId
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
-          }
-        }
-      },
-      orderBy: {
-        review_date: 'desc'
-      }
-    });
+    const reviews = await executeWithRetry(() =>
+      BusinessReview.findAll({
+        where: { business_id: businessId },
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name']
+        }],
+        order: [['review_date', 'DESC']]
+      })
+    );
     
     res.json({
       message: "Success",
@@ -108,7 +102,7 @@ router.get("/travel_spots/reviews/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching reviews:", error);
-    res.status(500).json({ message: "Server Error", error: error.message });
+    return handleSequelizeError(error, res, 'Fetching reviews');
   }
 }); 
 

@@ -1,4 +1,7 @@
-import { prisma } from "../../src/lib/prisma.js";
+import { Op, fn, col } from "sequelize";
+import { TravelPlan, Participant, User } from "../../src/models/index.js";
+import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
+import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 
 /**
  * Get all participants for a travel plan
@@ -7,24 +10,17 @@ export async function get_participants(req, res) {
   try {
     const { id } = req.params;
 
-    const participants = await prisma.participant.findMany({
-      where: {
-        travel_plan_id: parseInt(id)
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: {
-        joined_at: 'asc'
-      }
-    });
+    const participants = await executeWithRetry(() =>
+      Participant.findAll({
+        where: { travel_plan_id: parseInt(id) },
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name', 'email']
+        }],
+        order: [['joined_at', 'ASC']]
+      })
+    );
 
     res.json({
       message: "Success",
@@ -32,7 +28,7 @@ export async function get_participants(req, res) {
     });
   } catch (error) {
     console.error("Error fetching participants:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Fetching participants');
   }
 }
 
@@ -44,21 +40,25 @@ export async function add_participant(req, res) {
   try {
     const { id } = req.params;
     const { user_id, role = 'Viewer' } = req.body;
+    const planId = parseInt(id);
 
-    // Check if plan exists and get approved participant count
-    const plan = await prisma.travelPlan.findUnique({
-      where: { travel_plan_id: parseInt(id) },
-      include: {
-        _count: { select: { participants: { where: { status: true } } } }
-      }
-    });
+    // Check if plan exists
+    const plan = await executeWithRetry(() =>
+      TravelPlan.findByPk(planId)
+    );
 
     if (!plan) {
       return res.status(404).json({ error: "Travel plan not found" });
     }
 
+    // Get approved participant count
+    const approvedCount = await executeWithRetry(() =>
+      Participant.count({
+        where: { travel_plan_id: planId, status: true }
+      })
+    );
+
     // Check slot limits (only approved participants count)
-    const approvedCount = plan._count.participants;
     if (plan.max_slots && approvedCount >= plan.max_slots) {
       return res.status(400).json({
         error: "Plan is full",
@@ -67,46 +67,47 @@ export async function add_participant(req, res) {
     }
 
     // Check if user already a participant
-    const existing = await prisma.participant.findFirst({
-      where: {
-        travel_plan_id: parseInt(id),
-        user_id: user_id
-      }
-    });
+    const existing = await executeWithRetry(() =>
+      Participant.findOne({
+        where: { travel_plan_id: planId, user_id }
+      })
+    );
 
     if (existing) {
       return res.status(409).json({ error: "User is already a participant" });
     }
 
     // Add participant with approved status (owner/admin is adding directly)
-    const participant = await prisma.participant.create({
-      data: {
-        travel_plan_id: parseInt(id),
+    const participant = await executeWithRetry(() =>
+      Participant.create({
+        travel_plan_id: planId,
         user_id,
         role,
         status: true // Directly added = approved
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
-          }
-        }
-      }
-    });
+      })
+    );
+
+    // Fetch with user info
+    const participantWithUser = await executeWithRetry(() =>
+      Participant.findByPk(participant.participant_id, {
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name']
+        }]
+      })
+    );
 
     res.status(201).json({
       message: "Participant added successfully",
-      participant
+      participant: participantWithUser
     });
   } catch (error) {
     console.error("Error adding participant:", error);
-    if (error.code === 'P2002') {
+    if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: "User is already a participant" });
     }
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Adding participant');
   }
 }
 
@@ -118,13 +119,14 @@ export async function update_participant(req, res) {
   try {
     const { id, userId } = req.params;
     const { role, status } = req.body;
+    const planId = parseInt(id);
+    const userIdInt = parseInt(userId);
 
-    const participant = await prisma.participant.findFirst({
-      where: {
-        travel_plan_id: parseInt(id),
-        user_id: parseInt(userId)
-      }
-    });
+    const participant = await executeWithRetry(() =>
+      Participant.findOne({
+        where: { travel_plan_id: planId, user_id: userIdInt }
+      })
+    );
 
     if (!participant) {
       return res.status(404).json({ error: "Participant not found" });
@@ -132,13 +134,11 @@ export async function update_participant(req, res) {
 
     // Safeguard: prevent demoting the last Admin
     if (participant.role === 'Admin' && role && role !== 'Admin') {
-      const adminCount = await prisma.participant.count({
-        where: {
-          travel_plan_id: parseInt(id),
-          role: 'Admin',
-          status: true
-        }
-      });
+      const adminCount = await executeWithRetry(() =>
+        Participant.count({
+          where: { travel_plan_id: planId, role: 'Admin', status: true }
+        })
+      );
 
       if (adminCount <= 1) {
         return res.status(400).json({
@@ -150,14 +150,17 @@ export async function update_participant(req, res) {
 
     // When approving, check slot limits
     if (status === true && participant.status === false) {
-      const plan = await prisma.travelPlan.findUnique({
-        where: { travel_plan_id: parseInt(id) },
-        include: {
-          _count: { select: { participants: { where: { status: true } } } }
-        }
-      });
+      const plan = await executeWithRetry(() =>
+        TravelPlan.findByPk(planId)
+      );
 
-      if (plan && plan.max_slots && plan._count.participants >= plan.max_slots) {
+      const approvedCount = await executeWithRetry(() =>
+        Participant.count({
+          where: { travel_plan_id: planId, status: true }
+        })
+      );
+
+      if (plan && plan.max_slots && approvedCount >= plan.max_slots) {
         return res.status(400).json({
           error: "Cannot approve - plan is full",
           details: `Maximum slots (${plan.max_slots}) reached`
@@ -165,24 +168,23 @@ export async function update_participant(req, res) {
       }
     }
 
-    const updated = await prisma.participant.update({
-      where: {
-        participant_id: participant.participant_id
-      },
-      data: {
-        ...(role && { role }),
-        ...(status !== undefined && { status })
-      },
-      include: {
-        user: {
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true
-          }
-        }
-      }
-    });
+    // Update participant
+    const updateData = {};
+    if (role) updateData.role = role;
+    if (status !== undefined) updateData.status = status;
+
+    await participant.update(updateData);
+
+    // Fetch updated with user info
+    const updated = await executeWithRetry(() =>
+      Participant.findByPk(participant.participant_id, {
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'first_name', 'last_name']
+        }]
+      })
+    );
 
     res.json({
       message: "Participant updated successfully",
@@ -190,7 +192,7 @@ export async function update_participant(req, res) {
     });
   } catch (error) {
     console.error("Error updating participant:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Updating participant');
   }
 }
 
@@ -201,13 +203,14 @@ export async function update_participant(req, res) {
 export async function remove_participant(req, res) {
   try {
     const { id, userId } = req.params;
+    const planId = parseInt(id);
+    const userIdInt = parseInt(userId);
 
-    const participant = await prisma.participant.findFirst({
-      where: {
-        travel_plan_id: parseInt(id),
-        user_id: parseInt(userId)
-      }
-    });
+    const participant = await executeWithRetry(() =>
+      Participant.findOne({
+        where: { travel_plan_id: planId, user_id: userIdInt }
+      })
+    );
 
     if (!participant) {
       return res.status(404).json({ error: "Participant not found" });
@@ -215,13 +218,11 @@ export async function remove_participant(req, res) {
 
     // Prevent removing the last admin
     if (participant.role === 'Admin' && participant.status === true) {
-      const adminCount = await prisma.participant.count({
-        where: {
-          travel_plan_id: parseInt(id),
-          role: 'Admin',
-          status: true
-        }
-      });
+      const adminCount = await executeWithRetry(() =>
+        Participant.count({
+          where: { travel_plan_id: planId, role: 'Admin', status: true }
+        })
+      );
 
       if (adminCount <= 1) {
         return res.status(400).json({
@@ -230,18 +231,14 @@ export async function remove_participant(req, res) {
       }
     }
 
-    await prisma.participant.delete({
-      where: {
-        participant_id: participant.participant_id
-      }
-    });
+    await participant.destroy();
 
     res.json({
       message: "Participant removed successfully"
     });
   } catch (error) {
     console.error("Error removing participant:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Removing participant');
   }
 }
 
@@ -253,19 +250,18 @@ export async function collaborators_edit(req, res) {
   try {
     const { id } = req.params;
     const { collaborators } = req.body;
+    const planId = parseInt(id);
 
     if (!collaborators || !Array.isArray(collaborators)) {
       return res.status(400).json({ error: "collaborators array is required" });
     }
 
     // Check admin count before bulk update
-    const currentAdmins = await prisma.participant.findMany({
-      where: {
-        travel_plan_id: parseInt(id),
-        role: 'Admin',
-        status: true
-      }
-    });
+    const currentAdmins = await executeWithRetry(() =>
+      Participant.findAll({
+        where: { travel_plan_id: planId, role: 'Admin', status: true }
+      })
+    );
 
     // Validate that at least one admin will remain after updates
     const adminIds = currentAdmins.map(a => a.user_id);
@@ -282,32 +278,39 @@ export async function collaborators_edit(req, res) {
     }
 
     // Use transaction for bulk updates
-    const result = await prisma.$transaction(
-      collaborators.map(collab =>
-        prisma.participant.upsert({
-          where: {
-            participant_id: collab.participant_id || 0
+    let count = 0;
+    await sequelize.transaction(async (t) => {
+      for (const collab of collaborators) {
+        const [participant, created] = await Participant.findOrCreate({
+          where: { 
+            travel_plan_id: planId, 
+            user_id: collab.user_id 
           },
-          create: {
-            travel_plan_id: parseInt(id),
+          defaults: {
+            travel_plan_id: planId,
             user_id: collab.user_id,
             role: collab.role || 'Viewer',
             status: collab.status !== undefined ? collab.status : false
           },
-          update: {
+          transaction: t
+        });
+
+        if (!created) {
+          await participant.update({
             role: collab.role,
             status: collab.status
-          }
-        })
-      )
-    );
+          }, { transaction: t });
+        }
+        count++;
+      }
+    });
 
     res.json({
       message: "Collaborators updated successfully",
-      count: result.length
+      count
     });
   } catch (error) {
     console.error("Error updating collaborators:", error);
-    res.status(500).json({ error: error.message });
+    return handleSequelizeError(error, res, 'Updating collaborators');
   }
 }
