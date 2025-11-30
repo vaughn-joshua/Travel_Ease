@@ -24,9 +24,9 @@ export default function Public_Plans(): React.ReactElement {
   };
 
   // Get ID from either id or travel_plan_id (backend returns travel_plan_id)
-  const getPlanId = (plan: TravelPlan): number => plan.id || plan.travel_plan_id || 0;
+  const getPlanId = (plan: TravelPlan): number => plan.travel_plan_id ?? plan.id;
   // Get title from either title or name (backend returns name)
-  const getPlanTitle = (plan: TravelPlan): string => plan.title || (plan as any).name || 'Untitled';
+  const getPlanTitle = (plan: TravelPlan): string => plan.name ?? plan.title ?? 'Untitled';
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -42,9 +42,9 @@ export default function Public_Plans(): React.ReactElement {
           <p className="text-sm text-gray-500">
             {plan.start_date} - {plan.end_date}
           </p>
-          {(plan.slots || (plan as any).max_slots) && (
+          {(plan.slots || plan.max_slots) && (
             <p className="text-sm text-gray-500">
-              {(plan as any).approvedParticipants || 0}/{plan.slots || (plan as any).max_slots} slots
+              {plan.approvedParticipants || 0}/{plan.slots || plan.max_slots} slots
             </p>
           )}
         </div>

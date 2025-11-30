@@ -20,13 +20,18 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    console.log(
-      `Making ${config.method?.toUpperCase()} request to: ${config.url}`
-    );
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log(
+        `Making ${config.method?.toUpperCase()} request to: ${config.url}`
+      );
+    }
     return config;
   },
   (error) => {
-    console.error("Request error:", error);
+    if (import.meta.env.DEV) {
+      console.error("Request error:", error);
+    }
     return Promise.reject(error);
   }
 );
@@ -34,7 +39,10 @@ api.interceptors.request.use(
 // Response interceptor for global error handling
 api.interceptors.response.use(
   (response) => {
-    console.log(`Response received: ${response.status} ${response.config.url}`);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log(`Response received: ${response.status} ${response.config.url}`);
+    }
     // Handle 204 No Content responses (empty body)
     if (response.status === 204) {
       return { ...response, data: null };
@@ -42,20 +50,25 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error("API Error:", {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      message: error.message,
-      url: error.config?.url,
-    });
+    // Only log detailed errors in development
+    if (import.meta.env.DEV) {
+      console.error("API Error:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        url: error.config?.url,
+      });
 
-    // Handle specific error cases
-    if (error.response?.status === 500) {
-      console.error("Internal server error - check backend logs");
-    } else if (error.code === "ECONNREFUSED") {
-      console.error("Connection refused - is the backend server running?");
-    } else if (error.code === "ERR_NETWORK") {
-      console.error("Network error - check your internet connection");
+      // Handle specific error cases with helpful messages
+      if (error.response?.status === 500) {
+        console.error("Internal server error - check backend logs");
+      } else if (error.response?.status === 503) {
+        console.error("Service unavailable - database may be down");
+      } else if (error.code === "ECONNREFUSED") {
+        console.error("Connection refused - is the backend server running?");
+      } else if (error.code === "ERR_NETWORK") {
+        console.error("Network error - check your internet connection");
+      }
     }
 
     return Promise.reject(error);

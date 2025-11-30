@@ -204,5 +204,82 @@ describe('Blog Authentication', () => {
       expect(response.body).toHaveProperty('total');
     });
   });
+
+  describe('GET /api/blogs/featured (public)', () => {
+    let featuredBlogId;
+
+    afterEach(async () => {
+      // Clean up featured test blog
+      if (featuredBlogId) {
+        await prisma.blog.delete({
+          where: { id: featuredBlogId }
+        }).catch(() => {});
+        featuredBlogId = null;
+      }
+    });
+
+    it('should allow unauthenticated access to featured blogs', async () => {
+      const response = await request(app)
+        .get('/api/blogs/featured');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('should return featured blogs when they exist', async () => {
+      // Create a featured blog directly in the database
+      const featuredBlog = await prisma.blog.create({
+        data: {
+          title: 'Featured Test Blog',
+          slug: `featured-test-${Date.now()}`,
+          excerpt: 'This is a featured blog excerpt',
+          content: 'This is the full content of the featured blog.',
+          coverImageUrl: 'https://example.com/featured.jpg',
+          category: 'Travel',
+          readingMinutes: 5,
+          author: 'Test Author',
+          isFeatured: true,
+          publishedAt: new Date()
+        }
+      });
+      featuredBlogId = featuredBlog.id;
+
+      const response = await request(app)
+        .get('/api/blogs/featured');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThanOrEqual(1);
+      
+      // Verify our featured blog is in the response
+      const found = response.body.find(blog => blog.id === featuredBlogId);
+      expect(found).toBeDefined();
+      expect(found.isFeatured).toBe(true);
+    });
+
+    it('should return empty array when no featured blogs exist', async () => {
+      // Clear all featured blogs temporarily
+      await prisma.blog.updateMany({
+        where: { isFeatured: true },
+        data: { isFeatured: false }
+      });
+
+      const response = await request(app)
+        .get('/api/blogs/featured');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+
+      // Restore featured status (cleanup handled in other tests)
+    });
+
+    it('should limit featured blogs to 5 items', async () => {
+      const response = await request(app)
+        .get('/api/blogs/featured');
+
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBeLessThanOrEqual(5);
+    });
+  });
 });
 

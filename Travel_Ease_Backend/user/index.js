@@ -66,7 +66,15 @@ async function register(req, res) {
     });
   } catch (error) {
     console.error("Error in register:", error);
-    res.status(500).json({ error: error.message });
+    // Handle database connection errors
+    if (error.constructor?.name === 'PrismaClientInitializationError' ||
+        error.code?.startsWith('P1')) {
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: 'Database unavailable. Please try again later.'
+      });
+    }
+    res.status(500).json({ error: 'Registration failed. Please try again.' });
   }
 }
 
@@ -118,7 +126,15 @@ async function login(req, res) {
     });
   } catch (error) {
     console.error("Error in login:", error);
-    res.status(500).json({ error: error.message });
+    // Handle database connection errors
+    if (error.constructor?.name === 'PrismaClientInitializationError' ||
+        error.code?.startsWith('P1')) {
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: 'Database unavailable. Please try again later.'
+      });
+    }
+    res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 }
 

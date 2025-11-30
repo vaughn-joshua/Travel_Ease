@@ -1,6 +1,16 @@
 import { endpoints } from "../../config/api";
 import type { TravelPlan } from "../../types/travelPlan";
 
+interface PaginatedResponse {
+  data: TravelPlan[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export async function fetch_ongoing_plans(): Promise<TravelPlan[]> {
   // Skip API call if not authenticated
   const token = localStorage.getItem("token");
@@ -26,8 +36,9 @@ export async function fetch_ongoing_plans(): Promise<TravelPlan[]> {
       throw new Error(`Failed to fetch ongoing plans: ${result.status}`);
     }
 
-    const data: TravelPlan[] = await result.json();
-    return data;
+    const response: PaginatedResponse = await result.json();
+    // Backend returns paginated response with data array
+    return response.data || [];
   } catch (e) {
     console.error("Error fetching ongoing plans:", e);
     return [];

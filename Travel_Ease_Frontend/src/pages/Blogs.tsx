@@ -54,16 +54,27 @@ export default function Blogs() {
         setTipsBlogs(tips.items);
         setClientEducationBlogs(clientEducation.items);
       } catch (err: any) {
-        console.error("Error fetching blogs:", err);
+        // Only log errors in development to avoid noisy console
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Error fetching blogs:", err);
+        }
 
-        if (err.response?.status === 500) {
+        // Handle specific HTTP status codes
+        const status = err.response?.status;
+        const errorCode = err.response?.data?.code;
+        
+        if (status === 503 || errorCode === 'P1001' || errorCode === 'P1002') {
+          setError("Service temporarily unavailable. Please try again in a few moments.");
+        } else if (status === 500) {
           setError("Server error: Please try again later or contact support.");
         } else if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
           setError(
             "Cannot connect to server. Please check your connection and try again."
           );
-        } else if (err.response?.status === 404) {
+        } else if (status === 404) {
           setError("Blog data not found. Please try again later.");
+        } else if (status === 400) {
+          setError("Invalid request. Please refresh the page.");
         } else {
           setError("Failed to load blogs. Please try again later.");
         }
@@ -319,7 +330,7 @@ export default function Blogs() {
             finish.
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row">
-            <a href="/spots" className="btn-primary">
+            <a href="/travel_spots_page" className="btn-primary">
               Browse Featured Spots
             </a>
             <a href="/map" className="btn-secondary">

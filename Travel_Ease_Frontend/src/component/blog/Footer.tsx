@@ -129,7 +129,7 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link className="transition hover:text-primary-red" to="/spots">
+                <Link className="transition hover:text-primary-red" to="/travel_spots_page">
                   Featured Spots
                 </Link>
               </li>

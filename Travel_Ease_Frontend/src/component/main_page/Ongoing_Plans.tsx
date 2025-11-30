@@ -23,16 +23,21 @@ export default function Ongoing_Plans(): React.ReactElement {
     navigate(`/planner/view/${id}`);
   };
 
+  // Get the plan ID - backend returns travel_plan_id, frontend type has id
+  const getPlanId = (plan: TravelPlan): number => plan.travel_plan_id ?? plan.id;
+  // Get the plan title - backend returns name, frontend type has title
+  const getPlanTitle = (plan: TravelPlan): string => plan.name ?? plan.title;
+
   return (
     <div className="grid grid-cols-3 gap-4">
       {plans.length === 0 && <p>No ongoing plans</p>}
       {plans.map((plan) => (
         <div
-          key={plan.id}
+          key={getPlanId(plan)}
           className="card cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => handle_click(plan.id)}
+          onClick={() => handle_click(getPlanId(plan))}
         >
-          <h3 className="font-semibold">{plan.title}</h3>
+          <h3 className="font-semibold">{getPlanTitle(plan)}</h3>
           <p className="text-sm text-gray-600">{plan.location}</p>
           <p className="text-sm text-gray-500">
             {plan.start_date} - {plan.end_date}

@@ -38,6 +38,32 @@ blogRoutes.get("/", async (req, res, next) => {
       totalPages: Math.ceil(total / pageSize)
     });
   } catch (error) {
+    // Handle Zod validation errors
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: error.errors
+      });
+    }
+    // Handle connection errors explicitly (including PrismaClientInitializationError with undefined code)
+    if (
+      error.constructor?.name === 'PrismaClientInitializationError' ||
+      error.code === 'P1001' || error.code === 'P1002' || error.code === 'P1017'
+    ) {
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: 'Database connection failed. Please try again later.',
+        code: error.code || 'CONNECTION_ERROR'
+      });
+    }
+    // Handle missing table error
+    if (error.code === 'P2021') {
+      return res.status(500).json({
+        error: 'Database schema error',
+        message: 'Blog table not found. Please run migrations.',
+        code: error.code
+      });
+    }
     next(error);
   }
 });
@@ -52,6 +78,25 @@ blogRoutes.get("/featured", async (req, res, next) => {
     });
     res.json(blogs);
   } catch (error) {
+    // Handle connection errors explicitly (including PrismaClientInitializationError with undefined code)
+    if (
+      error.constructor?.name === 'PrismaClientInitializationError' ||
+      error.code === 'P1001' || error.code === 'P1002' || error.code === 'P1017'
+    ) {
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: 'Database connection failed. Please try again later.',
+        code: error.code || 'CONNECTION_ERROR'
+      });
+    }
+    // Handle missing table error
+    if (error.code === 'P2021') {
+      return res.status(500).json({
+        error: 'Database schema error',
+        message: 'Blog table not found. Please run migrations.',
+        code: error.code
+      });
+    }
     next(error);
   }
 });

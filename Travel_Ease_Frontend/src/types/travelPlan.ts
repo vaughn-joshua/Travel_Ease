@@ -1,16 +1,28 @@
 // Travel Plan domain types
+// Note: Backend uses travel_plan_id/name, frontend historically used id/title
+// Both are supported for compatibility
 
 export interface TravelPlan {
+  // ID fields - backend returns travel_plan_id
   id: number;
   travel_plan_id?: number;
+  // Title/name - backend returns name
   title: string;
+  name?: string;
   description: string;
   location: string;
   start_date: string;
   end_date: string;
-  status?: "draft" | "ongoing" | "completed" | "cancelled";
+  // Status - backend uses PascalCase: Draft, Active, Completed, Cancelled
+  status?: "Draft" | "Active" | "Completed" | "Cancelled" | "draft" | "ongoing" | "completed" | "cancelled";
+  // Visibility - backend uses visibility boolean
   is_public?: boolean;
+  visibility?: boolean;
+  // Slots - backend uses max_slots
   slots?: number;
+  max_slots?: number;
+  // Participant count from backend
+  approvedParticipants?: number;
   collaborators?: number;
   user_id?: number;
   created_at?: string;
