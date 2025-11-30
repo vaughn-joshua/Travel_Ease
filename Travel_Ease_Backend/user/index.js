@@ -41,7 +41,7 @@ async function register(req, res) {
       return res.status(400).json({ error: error.message });
     }
 
-    // Create user profile in our database
+    // Create user profile in our database with auth_provider set to 'password'
     const user = await executeWithRetry(() =>
       User.create({
         auth_id: data.user.id,
@@ -49,7 +49,9 @@ async function register(req, res) {
         first_name,
         last_name,
         contact_no,
-        password: null
+        password: null,
+        auth_provider: 'password',
+        profile_completed: true  // Email registrations have complete profiles
       })
     );
 
@@ -61,7 +63,9 @@ async function register(req, res) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no
+        contact_no: user.contact_no,
+        auth_provider: user.auth_provider,
+        profile_completed: user.profile_completed
       },
       supabase_user_id: data.user.id
     });
@@ -97,7 +101,7 @@ async function login(req, res) {
     const user = await executeWithRetry(() =>
       User.findOne({
         where: { auth_id: data.user.id },
-        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no']
+        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'auth_provider', 'profile_completed']
       })
     );
 
@@ -107,7 +111,16 @@ async function login(req, res) {
 
     res.json({
       message: "Login successful",
-      user,
+      user: {
+        user_id: user.user_id,
+        auth_id: user.auth_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        contact_no: user.contact_no,
+        auth_provider: user.auth_provider || 'password',
+        profile_completed: user.profile_completed
+      },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at
@@ -256,4 +269,127 @@ async function user_id(req, res) {
   }
 }
 
-export { register, login, favorite, remove_favorite, favorite_id, user_id };
+/**
+ * OAuth sync endpoint - called after Supabase OAuth (e.g., Google sign-in)
+ * Creates or retrieves the internal user profile linked to the Supabase auth_id
+ * Returns the user profile + indicates if this is a new user (for onboarding)
+ */
+async function oauth_sync(req, res) {
+  try {
+    // The authenticateToken middleware already verified the token and attached req.user
+    // req.user contains: { id, auth_id, email, first_name, last_name }
+    const { id, auth_id, email, first_name, last_name } = req.user;
+
+    // Fetch full user profile
+    const user = await executeWithRetry(() =>
+      User.findByPk(id, {
+        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'auth_provider', 'profile_completed', 'created_at']
+      })
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User profile not found" });
+    }
+
+    // Check if this is a newly created user (profile not completed)
+    const isNewUser = !user.profile_completed;
+
+    // If auth_provider is not set, update it to 'google' (for OAuth users)
+    if (!user.auth_provider) {
+      await user.update({ auth_provider: 'google' });
+    }
+
+    res.json({
+      message: isNewUser ? "Welcome! Please complete your profile." : "OAuth sync successful",
+      user: {
+        user_id: user.user_id,
+        auth_id: user.auth_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        contact_no: user.contact_no,
+        auth_provider: user.auth_provider || 'google',
+        profile_completed: user.profile_completed
+      },
+      isNewUser,
+      needsOnboarding: isNewUser
+    });
+  } catch (error) {
+    console.error("Error in oauth_sync:", error);
+    return handleSequelizeError(error, res, 'OAuth sync');
+  }
+}
+
+/**
+ * Update user profile (for onboarding or profile edits)
+ */
+async function update_profile(req, res) {
+  try {
+    const userId = req.user.id;
+    const { first_name, last_name, contact_no } = req.body;
+
+    const user = await executeWithRetry(() =>
+      User.findByPk(userId)
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Update fields
+    const updateData = {};
+    if (first_name !== undefined) updateData.first_name = first_name;
+    if (last_name !== undefined) updateData.last_name = last_name;
+    if (contact_no !== undefined) updateData.contact_no = contact_no;
+    
+    // Mark profile as completed if basic info is provided
+    if (first_name && last_name) {
+      updateData.profile_completed = true;
+    }
+
+    await user.update(updateData);
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        user_id: user.user_id,
+        auth_id: user.auth_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        contact_no: user.contact_no,
+        auth_provider: user.auth_provider,
+        profile_completed: user.profile_completed
+      }
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return handleSequelizeError(error, res, 'Updating profile');
+  }
+}
+
+/**
+ * Get current user's own profile (from token)
+ */
+async function get_me(req, res) {
+  try {
+    const userId = req.user.id;
+
+    const user = await executeWithRetry(() =>
+      User.findByPk(userId, {
+        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'auth_provider', 'profile_completed', 'created_at']
+      })
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    return handleSequelizeError(error, res, 'Fetching profile');
+  }
+}
+
+export { register, login, favorite, remove_favorite, favorite_id, user_id, oauth_sync, update_profile, get_me };

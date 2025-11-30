@@ -6,9 +6,10 @@ import {
   type AuthUser,
   type LoginPayload,
   type RegisterPayload,
+  type UpdateProfilePayload,
 } from "../services/auth";
 
-type AuthSource = "supabase" | "password";
+type AuthSource = "supabase" | "password" | "google";
 
 export interface AppUser {
   id?: number;
@@ -17,6 +18,7 @@ export interface AppUser {
   firstName?: string | null;
   lastName?: string | null;
   contactNo?: string | null;
+  profileCompleted?: boolean;
   source: AuthSource;
 }
 
@@ -25,9 +27,13 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isConfigured: boolean;
+  needsOnboarding: boolean;
+  isGoogleAuth: boolean;  // True if user authenticated via Google
   signInWithGoogle: () => Promise<void>;
   loginWithEmail: (payload: LoginPayload) => Promise<void>;
   registerWithEmail: (payload: RegisterPayload) => Promise<void>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
+  syncOAuthUser: () => Promise<{ isNewUser: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -56,28 +62,32 @@ const mapSupabaseUser = (supabaseUser: User | null): AppUser | null => {
   };
 };
 
-const mapApiUser = (user: AuthUser): AppUser => ({
+const mapApiUser = (user: AuthUser, source: AuthSource = "password"): AppUser => ({
   id: user.user_id,
   authId: user.auth_id ?? null,
   email: user.email,
   firstName: user.first_name,
   lastName: user.last_name,
   contactNo: user.contact_no ?? null,
-  source: "password",
+  profileCompleted: user.profile_completed ?? true,
+  source,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const persistAuth = (profile: AppUser | null, token?: string | null) => {
     setUser(profile);
 
     if (profile) {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      setNeedsOnboarding(!profile.profileCompleted && profile.source === "google");
     } else {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
+      setNeedsOnboarding(false);
     }
 
     if (token) {
@@ -91,7 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (storedProfile) {
       try {
-        setUser(JSON.parse(storedProfile) as AppUser);
+        const parsed = JSON.parse(storedProfile) as AppUser;
+        setUser(parsed);
+        setNeedsOnboarding(!parsed.profileCompleted && parsed.source === "google");
       } catch (error) {
         localStorage.removeItem(PROFILE_STORAGE_KEY);
       }
@@ -104,8 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.access_token) {
+        // Store token for API calls
+        localStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
+      }
       const profile = mapSupabaseUser(session?.user ?? null);
-      if (profile) {
+      if (profile && !user) {
+        // Only set if we don't already have a user from localStorage
         persistAuth(profile, session?.access_token ?? undefined);
       }
       setLoading(false);
@@ -115,8 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      const profile = mapSupabaseUser(nextSession?.user ?? null);
-      persistAuth(profile, nextSession?.access_token ?? null);
+      if (nextSession?.access_token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, nextSession.access_token);
+      }
+      // Don't overwrite user profile on auth state change - let syncOAuthUser handle it
     });
 
     return () => subscription.unsubscribe();
@@ -142,9 +161,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * Sync OAuth user with backend after Supabase OAuth callback
+   * Creates or retrieves the internal user profile
+   */
+  const syncOAuthUser = async (): Promise<{ isNewUser: boolean }> => {
+    try {
+      const data = await authApi.oauthSync();
+      const profile = mapApiUser(data.user, "google");
+      persistAuth(profile);
+      setNeedsOnboarding(data.needsOnboarding);
+      return { isNewUser: data.isNewUser };
+    } catch (error) {
+      console.error("OAuth sync error:", error);
+      throw error;
+    }
+  };
+
   const loginWithEmail = async (payload: LoginPayload) => {
     const data = await authApi.login(payload);
-    const profile = mapApiUser(data.user);
+    const profile = mapApiUser(data.user, "password");
 
     persistAuth(profile, data.token);
     setSession(null);
@@ -166,6 +202,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loginWithEmail({ email: payload.email, password: payload.password });
   };
 
+  const updateProfile = async (payload: UpdateProfilePayload) => {
+    const data = await authApi.updateProfile(payload);
+    const profile = mapApiUser(data.user, user?.source || "password");
+    persistAuth(profile);
+    setNeedsOnboarding(false);
+  };
+
   const signOut = async () => {
     if (isSupabaseConfigured) {
       const { error } = await supabase.auth.signOut();
@@ -177,16 +220,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     persistAuth(null, null);
     setSession(null);
+    setNeedsOnboarding(false);
   };
+
+  // Check if user is authenticated via Google
+  const isGoogleAuth = user?.source === "google";
 
   const value = {
     user,
     session,
     loading,
     isConfigured: isSupabaseConfigured,
+    needsOnboarding,
+    isGoogleAuth,
     signInWithGoogle,
     loginWithEmail,
     registerWithEmail,
+    updateProfile,
+    syncOAuthUser,
     signOut,
   };
 

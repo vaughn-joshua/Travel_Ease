@@ -7,11 +7,14 @@ post favorite
 delete favorite
 get favorites
 get user (own details)
+post oauth (sync OAuth user)
+get me (current user profile)
+put profile (update profile)
 */
 
 import { Router } from "express";
 import { authenticateToken } from "../src/middleware/auth.js";
-import { validate, registerSchema, loginSchema, createFavoriteSchema } from "../src/schemas/validation.js";
+import { validate, registerSchema, loginSchema, createFavoriteSchema, updateProfileSchema } from "../src/schemas/validation.js";
 import {
   register,
   login,
@@ -19,6 +22,9 @@ import {
   remove_favorite,
   favorite_id,
   user_id,
+  oauth_sync,
+  update_profile,
+  get_me,
 } from "../user/index.js";
 
 const router = Router();
@@ -26,6 +32,13 @@ const router = Router();
 // Public routes (no auth required)
 router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
+
+// OAuth sync route (called after Supabase OAuth callback)
+router.post("/oauth", authenticateToken, oauth_sync);
+
+// Current user routes
+router.get("/me", authenticateToken, get_me);
+router.put("/profile", authenticateToken, update_profile);
 
 // Protected routes (auth required)
 router.post("/favorite", authenticateToken, validate(createFavoriteSchema), favorite);

@@ -33,6 +33,7 @@ import Landing_Page from "./pages/Landing_Page";
 
 // Auth
 import AuthCallback from "./pages/AuthCallback";
+import Onboarding from "./pages/Onboarding";
 
 import "./App.css";
 
@@ -73,6 +74,7 @@ export default function App(): React.ReactElement {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/onboarding" element={<Onboarding />} />
         </Routes>
       </main>
       <Footer />

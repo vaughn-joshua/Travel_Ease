@@ -47,7 +47,8 @@ export const authenticateToken = async (req, res, next) => {
         id: user.user_id, 
         email: user.email,
         first_name: user.first_name,
-        last_name: user.last_name
+        last_name: user.last_name,
+        auth_provider: user.auth_provider || 'password'
       };
       return next();
     }
@@ -93,7 +94,8 @@ export const authenticateToken = async (req, res, next) => {
             email,
             first_name,
             last_name: last_name || "User",
-            contact_no
+            contact_no,
+            auth_provider: 'google'
           })
         );
       } catch (createError) {
@@ -113,7 +115,8 @@ export const authenticateToken = async (req, res, next) => {
       auth_id: data.user.id, 
       email: data.user.email,
       first_name: user.first_name,
-      last_name: user.last_name
+      last_name: user.last_name,
+      auth_provider: user.auth_provider || 'google'
     };
     next();
   } catch (error) {

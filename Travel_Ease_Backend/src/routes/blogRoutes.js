@@ -13,6 +13,20 @@ import {
 
 export const blogRoutes = Router();
 
+/**
+ * Middleware to require Google OAuth authentication for blog operations
+ * Only users who signed in with Google can create/edit/delete blogs
+ */
+const requireGoogleAuth = (req, res, next) => {
+  if (req.user.auth_provider !== 'google') {
+    return res.status(403).json({
+      error: "Google authentication required",
+      details: "Only users authenticated via Google can publish or edit blogs. Please sign in with Google to access this feature."
+    });
+  }
+  next();
+};
+
 // GET /api/blogs - List blogs with pagination, filtering, and search (public)
 blogRoutes.get("/", async (req, res, next) => {
   try {
@@ -94,8 +108,8 @@ blogRoutes.get("/:slug", async (req, res, next) => {
   }
 });
 
-// POST /api/blogs - Create new blog (auth required)
-blogRoutes.post("/", authenticateToken, async (req, res, next) => {
+// POST /api/blogs - Create new blog (Google auth required)
+blogRoutes.post("/", authenticateToken, requireGoogleAuth, async (req, res, next) => {
   try {
     const data = createBlogSchema.parse(req.body);
     const publishedAt = data.publishedAt ? new Date(data.publishedAt) : new Date();
@@ -120,8 +134,8 @@ blogRoutes.post("/", authenticateToken, async (req, res, next) => {
   }
 });
 
-// PUT /api/blogs/:id - Update blog (auth + ownership required)
-blogRoutes.put("/:id", authenticateToken, async (req, res, next) => {
+// PUT /api/blogs/:id - Update blog (Google auth + ownership required)
+blogRoutes.put("/:id", authenticateToken, requireGoogleAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
     
@@ -160,8 +174,8 @@ blogRoutes.put("/:id", authenticateToken, async (req, res, next) => {
   }
 });
 
-// DELETE /api/blogs/:id - Delete blog (auth + ownership required)
-blogRoutes.delete("/:id", authenticateToken, async (req, res, next) => {
+// DELETE /api/blogs/:id - Delete blog (Google auth + ownership required)
+blogRoutes.delete("/:id", authenticateToken, requireGoogleAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
     

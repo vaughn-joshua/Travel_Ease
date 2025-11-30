@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { userApi } from "../services/api";
 
 interface FormData {
   first_name: string;
@@ -11,7 +10,7 @@ interface FormData {
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, userProfile, loading, refreshProfile } = useAuth();
+  const { user, loading, needsOnboarding, updateProfile } = useAuth();
   
   const [formData, setFormData] = useState<FormData>({
     first_name: "",
@@ -24,27 +23,27 @@ export default function Onboarding() {
 
   // Pre-fill form with existing user data
   useEffect(() => {
-    if (userProfile) {
+    if (user) {
       setFormData({
-        first_name: userProfile.first_name || "",
-        last_name: userProfile.last_name || "",
-        contact_no: userProfile.contact_no || "",
+        first_name: user.firstName || "",
+        last_name: user.lastName || "",
+        contact_no: user.contactNo || "",
       });
     }
-  }, [userProfile]);
+  }, [user]);
 
   // Redirect if not authenticated or already completed
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        navigate("/", { replace: true });
-      } else if (userProfile?.profile_completed) {
+        navigate("/login", { replace: true });
+      } else if (!needsOnboarding && user.profileCompleted !== false) {
         const redirectTo = localStorage.getItem("auth_redirect") || "/";
         localStorage.removeItem("auth_redirect");
         navigate(redirectTo, { replace: true });
       }
     }
-  }, [user, userProfile, loading, navigate]);
+  }, [user, loading, needsOnboarding, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -78,15 +77,11 @@ export default function Onboarding() {
     setSubmitting(true);
 
     try {
-      await userApi.updateProfile("me", {
+      await updateProfile({
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
         contact_no: formData.contact_no.trim() || undefined,
-        profile_completed: true,
       });
-
-      // Refresh the profile in context
-      await refreshProfile();
 
       // Redirect to the saved path or home
       const redirectTo = localStorage.getItem("auth_redirect") || "/";
@@ -98,6 +93,13 @@ export default function Onboarding() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSkip = () => {
+    // Allow skipping but still redirect
+    const redirectTo = localStorage.getItem("auth_redirect") || "/";
+    localStorage.removeItem("auth_redirect");
+    navigate(redirectTo, { replace: true });
   };
 
   if (loading) {
@@ -150,7 +152,7 @@ export default function Onboarding() {
               <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span className="text-gray-600">{userProfile?.email || user?.email || "Loading..."}</span>
+              <span className="text-gray-600">{user?.email || "Loading..."}</span>
             </div>
             <p className="mt-1 text-xs text-gray-500">Connected via Google</p>
           </div>
@@ -217,7 +219,7 @@ export default function Onboarding() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full btn-primary py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            className="w-full py-3 px-4 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {submitting ? (
               <>
@@ -231,6 +233,15 @@ export default function Onboarding() {
               "Complete Profile"
             )}
           </button>
+
+          {/* Skip Button */}
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="w-full mt-3 py-2 text-gray-500 hover:text-gray-700 text-sm transition-colors"
+          >
+            Skip for now
+          </button>
         </form>
 
         {/* Footer */}
@@ -241,4 +252,3 @@ export default function Onboarding() {
     </div>
   );
 }
-

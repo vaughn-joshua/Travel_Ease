@@ -14,6 +14,12 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required")
 });
 
+export const updateProfileSchema = z.object({
+  first_name: z.string().min(1).max(100).optional(),
+  last_name: z.string().min(1).max(100).optional(),
+  contact_no: z.string().optional()
+});
+
 // Travel Plan Schemas
 export const createPlanSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),

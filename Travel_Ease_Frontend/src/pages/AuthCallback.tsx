@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthContext";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const { syncOAuthUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>("Completing sign in...");
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -16,6 +19,8 @@ export default function AuthCallback() {
       }
 
       try {
+        setStatus("Exchanging authorization code...");
+        
         // Exchange the code for a session (handles PKCE flow)
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
           window.location.href
@@ -28,6 +33,7 @@ export default function AuthCallback() {
         }
 
         // Get the session to store the token
+        setStatus("Retrieving session...");
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
@@ -37,14 +43,35 @@ export default function AuthCallback() {
         }
 
         if (session?.access_token) {
-          // Store token for existing manual fetches in BusinessForm, etc.
+          // Store token for API calls
           localStorage.setItem("token", session.access_token);
+          
+          // Sync OAuth user with backend to create/retrieve internal profile
+          setStatus("Syncing your profile...");
+          try {
+            const { isNewUser } = await syncOAuthUser();
+            
+            // Determine redirect destination
+            const savedRedirect = localStorage.getItem("auth_redirect");
+            localStorage.removeItem("auth_redirect");
+            
+            if (isNewUser) {
+              // New user - redirect to onboarding
+              navigate("/onboarding", { replace: true });
+            } else {
+              // Existing user - redirect to saved path or home
+              navigate(savedRedirect || "/", { replace: true });
+            }
+          } catch (syncError) {
+            console.error("OAuth sync error:", syncError);
+            // Still allow access even if sync fails - user is authenticated
+            const savedRedirect = localStorage.getItem("auth_redirect") || "/";
+            localStorage.removeItem("auth_redirect");
+            navigate(savedRedirect, { replace: true });
+          }
+        } else {
+          setError("No session token received. Please try again.");
         }
-
-        // Redirect to home or a saved redirect path
-        const redirectTo = localStorage.getItem("auth_redirect") || "/";
-        localStorage.removeItem("auth_redirect");
-        navigate(redirectTo, { replace: true });
       } catch (err) {
         console.error("Auth callback error:", err);
         setError("Authentication failed. Please try again.");
@@ -52,7 +79,7 @@ export default function AuthCallback() {
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [navigate, syncOAuthUser]);
 
   if (error) {
     return (
@@ -64,10 +91,10 @@ export default function AuthCallback() {
           </h1>
           <p className="mb-8 text-gray-600">{error}</p>
           <button
-            onClick={() => navigate("/", { replace: true })}
+            onClick={() => navigate("/login", { replace: true })}
             className="btn-primary"
           >
-            Go to Home
+            Try Again
           </button>
         </div>
       </div>
@@ -78,9 +105,8 @@ export default function AuthCallback() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="text-center">
         <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary-red" />
-        <p className="text-base text-gray-600">Completing sign in...</p>
+        <p className="text-base text-gray-600">{status}</p>
       </div>
     </div>
   );
 }
-
