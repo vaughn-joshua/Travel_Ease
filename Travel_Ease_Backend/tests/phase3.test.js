@@ -61,7 +61,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
       planId2 = res2.body.travel_plan_id;
     });
 
-    it('should return paginated plans', async () => {
+    it('should return paginated plans with normalized DTO', async () => {
       const response = await request(app)
         .get('/api/travel_plan/plans?page=1&pageSize=10')
         .set('Authorization', `Bearer ${token1}`);
@@ -73,6 +73,17 @@ describe('Phase 3 - Travel Plan Domain', () => {
       expect(response.body.pagination).toHaveProperty('pageSize', 10);
       expect(response.body.pagination).toHaveProperty('total');
       expect(response.body.pagination).toHaveProperty('totalPages');
+      
+      // Verify normalized DTO fields
+      const plan = response.body.data[0];
+      expect(plan).toHaveProperty('id');
+      expect(plan).toHaveProperty('travel_plan_id');
+      expect(plan.id).toBe(plan.travel_plan_id);
+      expect(plan).toHaveProperty('title');
+      expect(plan).toHaveProperty('name');
+      expect(plan.title).toBe(plan.name);
+      expect(plan).toHaveProperty('is_public');
+      expect(plan).toHaveProperty('visibility');
     });
 
     it('should filter plans by location', async () => {
@@ -91,7 +102,8 @@ describe('Phase 3 - Travel Plan Domain', () => {
         .set('Authorization', `Bearer ${token1}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.data.some(p => p.name.includes('Beach'))).toBe(true);
+      // Can search by either name or title (both are present in normalized DTO)
+      expect(response.body.data.some(p => p.title.includes('Beach') || p.name.includes('Beach'))).toBe(true);
     });
   });
 
@@ -452,7 +464,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
       expect(response.body.data.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('should include slot availability in public plans', async () => {
+    it('should include slot availability in public plans with normalized DTO', async () => {
       const response = await request(app)
         .get('/api/travel_plan/public_plans');
 
@@ -460,6 +472,17 @@ describe('Phase 3 - Travel Plan Domain', () => {
       const plan = response.body.data[0];
       expect(plan).toHaveProperty('approvedParticipants');
       expect(plan).toHaveProperty('slotsAvailable');
+      
+      // Verify normalized DTO fields
+      expect(plan).toHaveProperty('id');
+      expect(plan).toHaveProperty('travel_plan_id');
+      expect(plan.id).toBe(plan.travel_plan_id);
+      expect(plan).toHaveProperty('title');
+      expect(plan).toHaveProperty('name');
+      expect(plan).toHaveProperty('slots');
+      expect(plan).toHaveProperty('max_slots');
+      expect(plan).toHaveProperty('is_public', true);
+      expect(plan).toHaveProperty('visibility', true);
     });
 
     it('should require auth to request joining', async () => {

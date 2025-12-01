@@ -3,11 +3,13 @@ import type { TravelPlan } from "../../types/travelPlan";
 
 interface PaginatedResponse {
   data: TravelPlan[];
-  pagination?: {
+  pagination: {
     page: number;
     pageSize: number;
     total: number;
     totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
   };
 }
 
@@ -25,8 +27,8 @@ export async function fetch_public_plans(): Promise<TravelPlan[]> {
     }
 
     const response: PaginatedResponse = await result.json();
-    // Backend returns paginated response with data array
-    return response.data || [];
+    // Backend returns normalized DTOs in data array
+    return response.data;
   } catch (e) {
     console.error("Error fetching public plans:", e);
     return [];

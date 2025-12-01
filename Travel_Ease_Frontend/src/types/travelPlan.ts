@@ -1,32 +1,46 @@
 // Travel Plan domain types
-// Note: Backend uses travel_plan_id/name, frontend historically used id/title
-// Both are supported for compatibility
+// Backend now returns normalized DTOs with both naming conventions for compatibility:
+//   - id/travel_plan_id (both present)
+//   - title/name (both present)
+//   - slots/max_slots (both present)
+//   - is_public/visibility (both present)
+//   - status uses PascalCase: Draft, Active, Completed, Cancelled
+
+export type PlanStatus = "Draft" | "Active" | "Completed" | "Cancelled";
 
 export interface TravelPlan {
-  // ID fields - backend returns travel_plan_id
+  // ID fields - backend returns both
   id: number;
-  travel_plan_id?: number;
-  // Title/name - backend returns name
+  travel_plan_id: number;
+  // Title/name - backend returns both
   title: string;
-  name?: string;
-  description: string;
-  location: string;
-  start_date: string;
-  end_date: string;
-  // Status - backend uses PascalCase: Draft, Active, Completed, Cancelled
-  status?: "Draft" | "Active" | "Completed" | "Cancelled" | "draft" | "ongoing" | "completed" | "cancelled";
-  // Visibility - backend uses visibility boolean
-  is_public?: boolean;
-  visibility?: boolean;
-  // Slots - backend uses max_slots
-  slots?: number;
-  max_slots?: number;
+  name: string;
+  description: string | null;
+  location: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  // Status - PascalCase
+  status: PlanStatus;
+  // Visibility - backend returns both
+  is_public: boolean;
+  visibility: boolean;
+  // Slots - backend returns both
+  slots: number | null;
+  max_slots: number | null;
   // Participant count from backend
   approvedParticipants?: number;
-  collaborators?: number;
+  slotsAvailable?: number | null;
+  isFull?: boolean;
+  participantCount?: number;
   user_id?: number;
-  created_at?: string;
-  updated_at?: string;
+  visibility_timestamp?: string | null;
+  visibility_end_date?: string | null;
+  // User relation if included
+  user?: {
+    user_id: number;
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export interface TravelPlanDates {
@@ -64,7 +78,7 @@ export interface CreatePlanPayload {
 }
 
 export interface UpdatePlanPayload extends Partial<CreatePlanPayload> {
-  status?: "Draft" | "Active" | "Completed" | "Cancelled";
+  status?: PlanStatus;
 }
 
 export interface CreateActivityPayload {

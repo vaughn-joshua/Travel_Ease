@@ -23,11 +23,6 @@ export default function Upcoming_Plans(): React.ReactElement {
     navigate(`/planner/start/${id}`);
   };
 
-  // Get the plan ID - backend returns travel_plan_id, frontend type has id
-  const getPlanId = (plan: TravelPlan): number => plan.travel_plan_id ?? plan.id;
-  // Get the plan title - backend returns name, frontend type has title
-  const getPlanTitle = (plan: TravelPlan): string => plan.name ?? plan.title;
-
   return (
     <div>
       <h3 className="text-2xl font-semibold text-gray-900 mb-4">Upcoming Plans</h3>
@@ -35,11 +30,11 @@ export default function Upcoming_Plans(): React.ReactElement {
         {plans.length === 0 && <p>No upcoming plans</p>}
         {plans.map((plan) => (
           <div
-            key={getPlanId(plan)}
+            key={plan.id}
             className="card cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handle_click(getPlanId(plan))}
+            onClick={() => handle_click(plan.id)}
           >
-            <h3 className="font-semibold">{getPlanTitle(plan)}</h3>
+            <h3 className="font-semibold">{plan.title}</h3>
             <p className="text-sm text-gray-600">{plan.location}</p>
             <p className="text-sm text-gray-500">
               {plan.start_date} - {plan.end_date}

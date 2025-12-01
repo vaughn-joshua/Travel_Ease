@@ -2,6 +2,7 @@ import { Op, fn, col } from "sequelize";
 import { TravelPlan, Participant, User } from "../../src/models/index.js";
 import { executeWithRetry } from "../../src/lib/sequelize.js";
 import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { formatPlan } from "../util/formatPlan.js";
 
 /**
  * Search for matching public plans (no auth required)
@@ -70,16 +71,15 @@ export async function quick_join(req, res) {
       countMap[c.travel_plan_id] = parseInt(c.count);
     });
 
-    // Add slot availability
+    // Add slot availability with normalized DTO
     const data = plans.map(p => {
-      const planData = p.toJSON();
+      const planData = p.toJSON ? p.toJSON() : p;
       const approvedCount = countMap[p.travel_plan_id] || 0;
-      return {
-        ...planData,
+      return formatPlan(p, {
         approvedParticipants: approvedCount,
         slotsAvailable: planData.max_slots ? planData.max_slots - approvedCount : null,
         isFull: planData.max_slots ? approvedCount >= planData.max_slots : false
-      };
+      });
     });
 
     res.json(data);

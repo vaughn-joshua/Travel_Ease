@@ -1,6 +1,7 @@
 import { TravelPlan, Participant } from "../../src/models/index.js";
 import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
 import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { formatPlan } from "../util/formatPlan.js";
 
 export async function create_plan(req, res) {
   const {
@@ -69,7 +70,7 @@ export async function create_plan(req, res) {
 
     res.status(201).json({ 
       message: "Travel plan created successfully",
-      travel_plan_id: result.travel_plan_id
+      ...formatPlan(result)
     });
   } catch (error) {
     console.error("Error creating travel plan:", error);

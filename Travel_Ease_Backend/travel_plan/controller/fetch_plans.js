@@ -3,6 +3,7 @@ import { TravelPlan, Participant } from "../../src/models/index.js";
 import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
 import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { formatPlan } from "../util/formatPlan.js";
 
 /**
  * Fetch upcoming plans for the authenticated user:
@@ -101,9 +102,8 @@ export async function fetch_plans(req, res) {
       countMap[c.travel_plan_id] = parseInt(c.count);
     });
 
-    // Add participant count to each plan
-    const data = plans.map(p => ({
-      ...p.toJSON(),
+    // Add participant count to each plan with normalized DTO
+    const data = plans.map(p => formatPlan(p, {
       approvedParticipants: countMap[p.travel_plan_id] || 0
     }));
 

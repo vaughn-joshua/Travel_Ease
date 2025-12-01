@@ -3,6 +3,7 @@ import { TravelPlan, Participant } from "../../src/models/index.js";
 import { executeWithRetry } from "../../src/lib/sequelize.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
 import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { formatPlan } from "../util/formatPlan.js";
 
 /**
  * Fetch previous (Completed or Cancelled) plans for the authenticated user
@@ -84,9 +85,9 @@ export async function previous_plans(req, res) {
       countMap[c.travel_plan_id] = parseInt(c.count);
     });
 
-    const data = plans.map(p => ({
-      ...p.toJSON(),
-      participantCount: countMap[p.travel_plan_id] || 0
+    const data = plans.map(p => formatPlan(p, {
+      participantCount: countMap[p.travel_plan_id] || 0,
+      approvedParticipants: countMap[p.travel_plan_id] || 0
     }));
 
     res.json(paginatedResponse(data, total, { page, pageSize }));

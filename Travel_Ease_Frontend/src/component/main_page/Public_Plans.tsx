@@ -23,28 +23,23 @@ export default function Public_Plans(): React.ReactElement {
     navigate(`/planner/join/${id}`);
   };
 
-  // Get ID from either id or travel_plan_id (backend returns travel_plan_id)
-  const getPlanId = (plan: TravelPlan): number => plan.travel_plan_id ?? plan.id;
-  // Get title from either title or name (backend returns name)
-  const getPlanTitle = (plan: TravelPlan): string => plan.name ?? plan.title ?? 'Untitled';
-
   return (
     <div className="grid grid-cols-1 gap-4">
       {plans.length === 0 && <p>No public plans available</p>}
       {plans.map((plan) => (
         <div
-          key={getPlanId(plan)}
+          key={plan.id}
           className="card cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => handle_click(getPlanId(plan))}
+          onClick={() => handle_click(plan.id)}
         >
-          <h3 className="font-semibold">{getPlanTitle(plan)}</h3>
+          <h3 className="font-semibold">{plan.title}</h3>
           <p className="text-sm text-gray-600">{plan.location}</p>
           <p className="text-sm text-gray-500">
             {plan.start_date} - {plan.end_date}
           </p>
-          {(plan.slots || plan.max_slots) && (
+          {plan.slots && (
             <p className="text-sm text-gray-500">
-              {plan.approvedParticipants || 0}/{plan.slots || plan.max_slots} slots
+              {plan.approvedParticipants || 0}/{plan.slots} slots
             </p>
           )}
         </div>

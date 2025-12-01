@@ -29,7 +29,7 @@ export default function Planner(): React.ReactElement {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [plan, setPlan] = useState<TravelPlan[] | undefined>();
+  const [plan, setPlan] = useState<TravelPlan | undefined>();
   const [days, setDays] = useState<number>(0);
   const [businesses, setBusinesses] = useState<Business[] | undefined>();
   const [loadActivity, setLoadActivity] = useState<boolean>(false);
@@ -65,9 +65,7 @@ export default function Planner(): React.ReactElement {
         const plan_data = await fetch_plan_id(id);
 
         if (plan_data) {
-          // Handle both array and single object responses
-          const planArray = Array.isArray(plan_data) ? plan_data : [plan_data];
-          setPlan(planArray);
+          setPlan(plan_data);
         }
         setBusinesses(business_data);
       } catch (e) {
@@ -79,23 +77,21 @@ export default function Planner(): React.ReactElement {
   }, [id, activeModal]);
 
   useEffect(() => {
-    if (plan && plan.length > 0) {
-      const planData = plan[0];
-      
+    if (plan) {
       // Handle null/undefined dates
-      if (!planData.start_date || !planData.end_date) {
+      if (!plan.start_date || !plan.end_date) {
         console.warn("Plan dates are missing");
         setDays(1);
         setDates({ start: "", end: "" });
         return;
       }
 
-      const start = new Date(planData.start_date);
-      const end = new Date(planData.end_date);
+      const start = new Date(plan.start_date);
+      const end = new Date(plan.end_date);
 
       // Validate dates
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        console.warn("Invalid date values:", planData.start_date, planData.end_date);
+        console.warn("Invalid date values:", plan.start_date, plan.end_date);
         setDays(1);
         setDates({ start: "", end: "" });
         return;
@@ -189,7 +185,7 @@ export default function Planner(): React.ReactElement {
 
       <div id="travel_plan_details_header" className="card mt-6">
         <div className="flex justify-between">
-          <h1>{plan[0].title}</h1>
+          <h1>{plan.title}</h1>
 
           <div id="buttons_container" className="space-x-2">
             {status === "join" && (
@@ -230,11 +226,11 @@ export default function Planner(): React.ReactElement {
           </div>
         </div>
 
-        <p>{plan[0].description}</p>
-        <p>{plan[0].location}</p>
-        <p>{plan[0].start_date}</p>
-        <p>{plan[0].end_date}</p>
-        <p>{plan[0].slots}</p>
+        <p>{plan.description}</p>
+        <p>{plan.location}</p>
+        <p>{plan.start_date}</p>
+        <p>{plan.end_date}</p>
+        <p>{plan.slots}</p>
       </div>
 
       {activeModal === "activity" && id && (
@@ -248,13 +244,13 @@ export default function Planner(): React.ReactElement {
           }}
         />
       )}
-      {activeModal === "plan" && id && (
-        <Edit_Plan data={plan} travel_plan={id} on_close={handle_close} />
+      {activeModal === "plan" && id && plan && (
+        <Edit_Plan data={[plan]} travel_plan={id} on_close={handle_close} />
       )}
       {activeModal === "collaborators" && id && (
         <Collaborators
           planId={id}
-          isOwner={plan[0]?.user_id === user?.id}
+          isOwner={plan?.user_id === user?.id}
           on_close={() => setActiveModal("")}
         />
       )}

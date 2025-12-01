@@ -27,14 +27,9 @@ export async function fetch_plan_id(id: number | string): Promise<TravelPlan | u
       throw new Error(`Failed to fetch plan: ${result.status}`);
     }
 
-    const data = await result.json();
-    
-    // Handle both array and single object responses
-    if (Array.isArray(data)) {
-      return data[0];
-    }
-    
-    return data as TravelPlan;
+    // Backend returns normalized DTO as single object
+    const data: TravelPlan = await result.json();
+    return data;
   } catch (e) {
     console.error("Error fetching plan:", e);
     throw e;

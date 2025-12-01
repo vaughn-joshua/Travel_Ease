@@ -1,6 +1,10 @@
 import { endpoints } from "../../config/api";
 import type { CreatePlanPayload, TravelPlan } from "../../types/travelPlan";
 
+interface CreatePlanResponse extends TravelPlan {
+  message: string;
+}
+
 export async function create_plan(data: CreatePlanPayload): Promise<TravelPlan | undefined> {
   try {
     // Get the auth token from localStorage
@@ -39,7 +43,8 @@ export async function create_plan(data: CreatePlanPayload): Promise<TravelPlan |
       throw new Error(`Failed to create plan: ${result.status}`);
     }
 
-    const responseData: TravelPlan = await result.json();
+    // Backend returns normalized DTO with message
+    const responseData: CreatePlanResponse = await result.json();
     return responseData;
   } catch (e) {
     console.error("Error creating plan:", e);

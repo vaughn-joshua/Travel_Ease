@@ -3,6 +3,7 @@ import { TravelPlan, Participant } from "../../src/models/index.js";
 import { executeWithRetry } from "../../src/lib/sequelize.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
 import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { formatPlan } from "../util/formatPlan.js";
 
 /**
  * Fetch ongoing (Active status) plans for the authenticated user
@@ -81,8 +82,7 @@ export async function ongoing_plan(req, res) {
       countMap[c.travel_plan_id] = parseInt(c.count);
     });
 
-    const data = plans.map(p => ({
-      ...p.toJSON(),
+    const data = plans.map(p => formatPlan(p, {
       approvedParticipants: countMap[p.travel_plan_id] || 0
     }));
 

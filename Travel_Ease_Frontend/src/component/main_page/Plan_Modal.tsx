@@ -39,7 +39,7 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
                 </p>
                 {plan.slots && (
                   <p className="text-sm text-green-600">
-                    {plan.collaborators || 0}/{plan.slots} participants
+                    {plan.approvedParticipants || 0}/{plan.slots} participants
                   </p>
                 )}
               </div>

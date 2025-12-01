@@ -28,8 +28,8 @@ export default function Edit_Plan({
   } = useForm<FormData>({
     defaultValues: {
       title: plan.title,
-      description: plan.description,
-      location: plan.location,
+      description: plan.description || "",
+      location: plan.location || "",
     },
   });
 

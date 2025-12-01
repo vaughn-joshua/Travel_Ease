@@ -44,8 +44,18 @@ describe('Travel Plans', () => {
         });
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('travel_plan_id');
       expect(response.body.message).toContain('successfully');
+      
+      // Verify normalized DTO fields
+      expect(response.body).toHaveProperty('id');
+      expect(response.body).toHaveProperty('travel_plan_id');
+      expect(response.body.id).toBe(response.body.travel_plan_id);
+      expect(response.body).toHaveProperty('title', 'Beach Trip');
+      expect(response.body).toHaveProperty('name', 'Beach Trip');
+      expect(response.body).toHaveProperty('slots', 5);
+      expect(response.body).toHaveProperty('max_slots', 5);
+      expect(response.body).toHaveProperty('is_public', false);
+      expect(response.body).toHaveProperty('visibility', false);
 
       // Verify participant was auto-created as Admin
       const participants = await prisma.participant.findMany({

@@ -3,6 +3,7 @@ import { TravelPlan, Participant, User } from "../../src/models/index.js";
 import { executeWithRetry } from "../../src/lib/sequelize.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
 import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { formatPlan } from "../util/formatPlan.js";
 
 /**
  * Fetch public plans (visibility=true, not expired)
@@ -79,15 +80,14 @@ export async function public_plans(req, res) {
       countMap[c.travel_plan_id] = parseInt(c.count);
     });
 
-    // Add slot availability info
+    // Add slot availability info with normalized DTO
     const data = plans.map(p => {
-      const planData = p.toJSON();
       const approvedCount = countMap[p.travel_plan_id] || 0;
-      return {
-        ...planData,
+      const planData = p.toJSON ? p.toJSON() : p;
+      return formatPlan(p, {
         approvedParticipants: approvedCount,
         slotsAvailable: planData.max_slots ? planData.max_slots - approvedCount : null
-      };
+      });
     });
 
     res.json(paginatedResponse(data, total, { page, pageSize }));
