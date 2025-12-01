@@ -198,8 +198,8 @@ export default function Business_Page(): React.ReactElement {
         </div>
       )}
       {product && id && <Add_Product on_close={handle_close} id={id} />}
-      {edit && (
-        <Edit_Business on_close={handle_close} business={businessData} />
+      {edit && businessData && (
+        <Edit_Business on_close={handle_close} business={businessData as any} />
       )}
     </>
   );

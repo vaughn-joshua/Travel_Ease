@@ -1,102 +1,73 @@
-import { useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import { Icon, LatLngExpression } from "leaflet";
-import Pin_Icon from "../../assets/pin.png";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import L, { LatLngExpression, LeafletEvent } from "leaflet";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import { useEffect, useState } from "react";
+import MapFlyTo from "./Fly_To";
+
+const defaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+L.Marker.prototype.options.icon = defaultIcon;
+
+const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
+const zoom = 13;
+
+interface Pin {
+  lat: number;
+  lon: number;
+}
 
 interface RegisterMapProps {
-  onSubmit: (location: { lat: number; lng: number }) => void;
-  onBack: () => void;
-  onClose: () => void;
+  pins: Pin[];
+  onPinMove: (lat: number, lng: number) => void;
 }
 
-interface MapClickHandlerProps {
-  onLocationSelect: (lat: number, lng: number) => void;
-}
+function Register_Map({ pins, onPinMove }: RegisterMapProps) {
+  const [center, setCenter] = useState<LatLngExpression>(Tagaytay_Center);
+  const firstPin = pins?.[0];
 
-function MapClickHandler({ onLocationSelect }: MapClickHandlerProps): null {
-  useMapEvents({
-    click: (e) => {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
-const custom_icon = new Icon({
-  iconUrl: Pin_Icon,
-  iconSize: [30, 30],
-});
-
-export default function Register_Map({
-  onSubmit,
-  onBack,
-  onClose,
-}: RegisterMapProps): React.ReactElement {
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-
-  const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
-
-  const handleLocationSelect = (lat: number, lng: number): void => {
-    setLocation({ lat, lng });
-  };
-
-  const handleSubmit = (): void => {
-    if (location) {
-      onSubmit(location);
-    } else {
-      alert("Please select a location on the map");
-    }
-  };
+  useEffect(() => {
+    if (!firstPin) return;
+    setCenter([Number(firstPin.lat), Number(firstPin.lon)]);
+  }, [pins, firstPin]);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-red-600 text-center">
-        Select Location
-      </h1>
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      style={{ height: "100%", width: "100%" }}
+    >
+      <TileLayer
+        attribution="&copy; OpenStreetMap contributors"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
 
-      <p className="text-sm text-gray-600 text-center">
-        Click on the map to set your business location
-      </p>
+      <MapFlyTo center={center} />
 
-      <div className="h-64 rounded-lg overflow-hidden border border-gray-300">
-        <MapContainer
-          center={Tagaytay_Center}
-          zoom={14}
-          className="w-full h-full"
+      {firstPin && (
+        <Marker
+          position={[Number(firstPin.lat), Number(firstPin.lon)]}
+          draggable={true}
+          eventHandlers={{
+            dragend: (e: LeafletEvent) => {
+              const marker = e.target as L.Marker;
+              const { lat, lng } = marker.getLatLng();
+              onPinMove(lat, lng);
+            },
+          }}
         >
-          <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-          />
-          <MapClickHandler onLocationSelect={handleLocationSelect} />
-          {location && (
-            <Marker
-              position={[location.lat, location.lng]}
-              icon={custom_icon}
-            />
-          )}
-        </MapContainer>
-      </div>
-
-      {location && (
-        <p className="text-sm text-green-600 text-center">
-          Selected: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-        </p>
+          <Popup>
+            📍 <b>Adjustable Pin</b>
+            <br />
+            Drag to adjust the location.
+          </Popup>
+        </Marker>
       )}
-
-      <div className="flex justify-end gap-2 pt-4">
-        <button type="button" onClick={onClose} className="soft_btn">
-          Cancel
-        </button>
-        <button type="button" onClick={onBack} className="soft_btn">
-          Back
-        </button>
-        <button type="button" onClick={handleSubmit} className="hard_btn">
-          Submit
-        </button>
-      </div>
-    </div>
+    </MapContainer>
   );
 }
 
+export default Register_Map;

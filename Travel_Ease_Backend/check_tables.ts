@@ -1,8 +1,12 @@
 import { con } from "./config/travelease_db.js";
 
-async function checkTables() {
+interface TableRow {
+  table_name: string;
+}
+
+async function checkTables(): Promise<void> {
   try {
-    const res = await con.query(`
+    const res = await con.query<TableRow>(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
@@ -19,3 +23,4 @@ async function checkTables() {
 }
 
 checkTables();
+

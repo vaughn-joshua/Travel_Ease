@@ -1,14 +1,14 @@
 import { faker } from "@faker-js/faker";
 import { prisma } from "../../src/lib/prisma.js";
 
-async function seedDatabase() {
-  console.log("Starting Database Seeding...");
-
+async function seedDatabase(): Promise<void> {
+  console.log("🌱 Starting Database Seeding...");
+    
   try {
-    // Use a Prisma transaction for atomicity
+    // Use Prisma transaction for atomicity
     await prisma.$transaction(async (tx) => {
       // 0. Reset Database (delete in order to respect FK constraints)
-      console.log("Resetting Database...");
+      console.log("🔥 Resetting Database...");
       
       await tx.businessReview.deleteMany();
       await tx.travelPlanReview.deleteMany();
@@ -25,11 +25,11 @@ async function seedDatabase() {
       await tx.blog.deleteMany();
       await tx.user.deleteMany();
       
-      console.log("Database reset.");
+      console.log("✅ Database reset.");
 
       // 1. Seed Users (10 Users)
-      console.log("Seeding Users...");
-      const userIds = [];
+      console.log("👤 Seeding Users...");
+      const userIds: number[] = [];
       for (let i = 0; i < 10; i++) {
         const firstName = faker.person.firstName();
         const lastName = faker.person.lastName();
@@ -49,12 +49,12 @@ async function seedDatabase() {
         
         userIds.push(user.user_id);
       }
-      console.log(`Created ${userIds.length} users.`);
+      console.log(`✅ Created ${userIds.length} users.`);
 
       // 2. Seed Businesses (20 Businesses)
-      console.log("Seeding Businesses...");
-      const businessIds = [];
-      const categories = ['food', 'drinks', 'accomodation', 'souvenir_shop', 'nature', 'night_life', 'leisure', 'activities', 'local_offers'];
+      console.log("🏢 Seeding Businesses...");
+      const businessIds: number[] = [];
+      const categories = ['food', 'drinks', 'accomodation', 'souvenir_shop', 'nature', 'night_life', 'leisure', 'activities', 'local_offers'] as const;
       
       for (let i = 0; i < 20; i++) {
         const ownerId = faker.helpers.arrayElement(userIds);
@@ -83,15 +83,15 @@ async function seedDatabase() {
         await tx.businessCategory.create({
           data: {
             business_id: business.business_id,
-            category_name: category
+            category_name: category as any
           }
         });
       }
-      console.log(`Created ${businessIds.length} businesses.`);
+      console.log(`✅ Created ${businessIds.length} businesses.`);
 
       // 3. Seed Travel Plans
-      console.log("Seeding Travel Plans...");
-      const planIds = [];
+      console.log("✈️ Seeding Travel Plans...");
+      const planIds: number[] = [];
       for (let i = 0; i < 15; i++) {
         const ownerId = faker.helpers.arrayElement(userIds);
         const name = faker.lorem.words(3) + " Trip";
@@ -112,10 +112,10 @@ async function seedDatabase() {
         
         planIds.push(plan.travel_plan_id);
       }
-      console.log(`Created ${planIds.length} travel plans.`);
+      console.log(`✅ Created ${planIds.length} travel plans.`);
 
       // 4. Seed Reviews
-      console.log("Seeding Reviews...");
+      console.log("⭐ Seeding Reviews...");
       for (let i = 0; i < 30; i++) {
         const reviewerId = faker.helpers.arrayElement(userIds);
         const businessId = faker.helpers.arrayElement(businessIds);
@@ -129,13 +129,13 @@ async function seedDatabase() {
           }
         });
       }
-      console.log("Reviews created.");
+      console.log("✅ Reviews created.");
     });
 
-    console.log("Database seeded successfully!");
+    console.log("🎉 Database seeded successfully!");
     process.exit(0);
   } catch (error) {
-    console.error("Error seeding database:", error);
+    console.error("❌ Error seeding database:", error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();
@@ -143,3 +143,4 @@ async function seedDatabase() {
 }
 
 seedDatabase();
+

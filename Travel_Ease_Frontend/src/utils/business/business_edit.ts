@@ -4,7 +4,7 @@ interface EditBusinessData {
   [key: string]: unknown;
 }
 
-export async function business_edit(id: number | string, submitted: EditBusinessData): Promise<unknown> {
+export async function business_edit(submitted: EditBusinessData, id: number | string): Promise<unknown> {
   try {
     const token = localStorage.getItem('token');
     const result = await fetch(endpoints.business.edit(id), {

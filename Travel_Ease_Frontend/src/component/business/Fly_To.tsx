@@ -1,21 +1,18 @@
-import { useEffect } from "react";
 import { useMap } from "react-leaflet";
+import { useEffect } from "react";
 import { LatLngExpression } from "leaflet";
 
-interface FlyToProps {
-  position: LatLngExpression;
-  zoom?: number;
+interface MapFlyToProps {
+  center: LatLngExpression | null;
 }
 
-export default function Fly_To({ position, zoom = 16 }: FlyToProps): null {
+export default function MapFlyTo({ center }: MapFlyToProps) {
   const map = useMap();
 
   useEffect(() => {
-    if (position) {
-      map.flyTo(position, zoom);
-    }
-  }, [map, position, zoom]);
+    if (!center) return;
+    map.flyTo(center, map.getZoom());
+  }, [center, map]);
 
   return null;
 }
-

@@ -1,5 +1,19 @@
 import { prisma } from "./lib/prisma.js";
-const blogData = [{
+
+interface BlogData {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl: string;
+  category: string;
+  isFeatured: boolean;
+  readingMinutes: number;
+  author: string;
+  publishedAt: Date;
+}
+
+const blogData: BlogData[] = [{
   title: "10 Hidden Gems in Southeast Asia You Must Visit",
   slug: "hidden-gems-southeast-asia",
   excerpt: "Discover breathtaking destinations off the beaten path in Southeast Asia that will leave you speechless.",
@@ -132,7 +146,8 @@ const blogData = [{
   author: "Rachel Johnson",
   publishedAt: new Date("2023-12-18")
 }];
-async function main() {
+
+async function main(): Promise<void> {
   console.log("Starting seed...");
 
   // Clear existing data
@@ -148,9 +163,11 @@ async function main() {
   console.log(`Created ${blogData.length} blog posts`);
   console.log("Seed completed successfully!");
 }
-main().catch(e => {
+
+main().catch((e: Error) => {
   console.error("Seed failed:", e);
   process.exit(1);
 }).finally(async () => {
   await prisma.$disconnect();
 });
+

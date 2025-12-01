@@ -2,7 +2,8 @@ import { endpoints } from '../../config/api';
 
 interface Category {
   category_id: number;
-  name: string;
+  category_name: string;
+  name?: string;
   [key: string]: unknown;
 }
 
