@@ -209,9 +209,10 @@ export function asyncHandler<T>(fn: (req: T, res: Response, next: () => void) =>
 
 /**
  * Execute with retry for transient failures
+ * Optimized for faster failure detection with shorter delays
  */
-export async function executeWithRetry<T>(queryFn: () => Promise<T>, retries = 3): Promise<T> {
-  const RETRY_DELAY_MS = 2000;
+export async function executeWithRetry<T>(queryFn: () => Promise<T>, retries = 2): Promise<T> {
+  const RETRY_DELAY_MS = 500; // Reduced from 2000ms for faster response
   let lastError: unknown;
   
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -239,6 +240,22 @@ export async function executeWithRetry<T>(queryFn: () => Promise<T>, retries = 3
   throw lastError;
 }
 
+/**
+ * Execute query with a timeout wrapper
+ * Returns the result or throws if timeout is exceeded
+ */
+export async function executeWithTimeout<T>(
+  queryFn: () => Promise<T>,
+  timeoutMs = 8000
+): Promise<T> {
+  return Promise.race([
+    queryFn(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('QUERY_TIMEOUT')), timeoutMs)
+    )
+  ]);
+}
+
 export { prisma };
 
 export default {
@@ -254,6 +271,7 @@ export default {
   handlePrismaError,
   asyncHandler,
   executeWithRetry,
+  executeWithTimeout,
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE

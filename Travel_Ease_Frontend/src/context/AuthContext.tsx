@@ -117,13 +117,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      // Don't auto-store Supabase token - wait for explicit OAuth sync or login
-      // This prevents 401 errors when there's a stale Supabase session
-      // Tokens are stored by loginWithEmail or syncOAuthUser after backend verification
+      
+      // If we have a stored user profile AND a valid Supabase session, sync the token
+      // This handles the case where the user was logged in previously but the token wasn't stored
+      const storedUser = localStorage.getItem(PROFILE_STORAGE_KEY);
+      const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+      
+      if (session?.access_token && storedUser && !storedToken) {
+        // User has a valid session and stored profile but no token - sync it
+        localStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
+      }
+      
       const profile = mapSupabaseUser(session?.user ?? null);
       if (profile && !user) {
         // Only set basic profile if we don't already have a user from localStorage
-        // Don't persist with token - require explicit sync
         setUser(profile);
       }
       setLoading(false);

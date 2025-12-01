@@ -1,58 +1,89 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { fetch_previous_plans } from "../../utils/travel_plan/fetch_previous_plans";
 import type { TravelPlan } from "../../types/travelPlan";
 
 export default function Previous_Plans(): React.ReactElement {
+  const { loading: authLoading } = useAuth();
   const [plans, setPlans] = useState<TravelPlan[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem("token"));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadPlans = useCallback(async () => {
+    // Check for token in localStorage (the fetch utility also checks this)
     const token = localStorage.getItem("token");
-    setIsAuthenticated(!!token);
-    
     if (!token) {
+      setLoading(false);
       return;
     }
 
-    const load_plans = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      setError(null);
       const data = await fetch_previous_plans();
       setPlans(data);
-      // Check if token was cleared due to auth error
-      if (!localStorage.getItem("token")) {
-        setIsAuthenticated(false);
-      }
-    };
-    load_plans();
+    } catch (err) {
+      console.error("Error fetching previous plans:", err);
+      setError("Failed to load previous plans");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (!isAuthenticated) {
-    return (
-      <div>
-        <h3 className="text-2xl font-semibold text-gray-900 mb-4">Previous Plans</h3>
-        <div className="text-center py-4 text-gray-500">
-          <p><Link to="/login" className="text-blue-600 hover:underline">Sign in</Link> to view your previous plans</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!authLoading) {
+      loadPlans();
+    }
+  }, [authLoading, loadPlans]);
 
   return (
     <div>
       <h3 className="text-2xl font-semibold text-gray-900 mb-4">Previous Plans</h3>
-      <div className="grid grid-cols-1 gap-4">
-        {plans.length === 0 && <p className="text-gray-500">No previous plans</p>}
-        {plans.map((plan) => (
-          <div key={plan.id} className="card">
-            <h3 className="font-semibold">{plan.title}</h3>
-            <p className="text-sm text-gray-600">{plan.location}</p>
-            <p className="text-sm text-gray-500">
-              {plan.start_date} - {plan.end_date}
-            </p>
-          </div>
-        ))}
-      </div>
+      
+      {/* Loading state */}
+      {(authLoading || loading) && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-red"></div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {!authLoading && !loading && error && (
+        <div className="text-center py-4">
+          <p className="text-red-500 mb-2 text-sm">{error}</p>
+          <button 
+            onClick={loadPlans}
+            className="text-primary-red hover:underline text-sm"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!authLoading && !loading && !error && plans.length === 0 && (
+        <div className="text-center py-6 text-gray-500">
+          <p className="text-sm">No previous plans</p>
+        </div>
+      )}
+
+      {/* Plans list */}
+      {!authLoading && !loading && !error && plans.length > 0 && (
+        <div className="grid grid-cols-1 gap-3">
+          {plans.map((plan) => (
+            <div 
+              key={plan.id} 
+              className="bg-white rounded-lg shadow-sm border border-gray-100 p-3"
+            >
+              <h4 className="font-medium text-gray-900 text-sm">{plan.title}</h4>
+              <p className="text-xs text-gray-600 mt-1">{plan.location}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {plan.start_date} - {plan.end_date}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-

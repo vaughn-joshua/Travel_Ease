@@ -21,10 +21,18 @@ async function testConnection(): Promise<boolean> {
   }
 
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    // Add timeout to prevent hanging on unreachable database
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Connection test timeout')), 5000)
+    );
+    
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      timeoutPromise
+    ]);
     return true;
   } catch (error) {
-    console.error("Database connection test failed:", error);
+    console.error("Database connection test failed:", error instanceof Error ? error.message : error);
     return false;
   }
 }

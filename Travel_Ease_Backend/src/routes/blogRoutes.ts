@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { prisma, executeWithRetry, handlePrismaError, parsePagination, buildPaginationMeta } from '../lib/prismaHelpers.js';
+import { prisma, executeWithRetry, executeWithTimeout, handlePrismaError, parsePagination, buildPaginationMeta } from '../lib/prismaHelpers.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createBlogSchema, updateBlogSchema, blogQuerySchema } from '../schemas/blogSchemas.js';
 import { getCache, createCacheKey } from '../../services/cache.js';
@@ -85,11 +85,32 @@ blogRoutes.get('/featured', async (req: Request, res: Response) => {
 });
 
 // GET /api/blogs/overview - Aggregated endpoint for Blogs page (public, cached)
+// Optimized with timeout wrapper and better error handling
 blogRoutes.get('/overview', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const REQUEST_TIMEOUT = 8000; // 8 second timeout
+  
+  // Set up a response timeout to ensure we always respond
+  let responded = false;
+  const timeoutId = setTimeout(() => {
+    if (!responded) {
+      responded = true;
+      console.error(`[TIMEOUT] /blogs/overview forced timeout after ${REQUEST_TIMEOUT}ms`);
+      res.status(504).json({
+        error: 'Gateway Timeout',
+        message: 'Blog overview request timed out. Please try again.',
+        code: 'TIMEOUT'
+      });
+    }
+  }, REQUEST_TIMEOUT);
+  
   try {
+    // Check cache first (fast path)
     const cacheKey = createCacheKey('blogs_overview', {});
     const cached = overviewCache.get(cacheKey);
     if (cached && typeof cached === 'object') {
+      clearTimeout(timeoutId);
+      responded = true;
       return res.json({ ...(cached as object), fromCache: true });
     }
 
@@ -108,7 +129,7 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
       updatedAt: true
     };
 
-    // Fetch all data concurrently
+    // Fetch all data concurrently with retry
     const [featured, destinations, tips, clientEducation] = await executeWithRetry(() =>
       Promise.all([
         prisma.blog.findMany({
@@ -138,6 +159,12 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
       ])
     );
 
+    // Check if we already timed out
+    if (responded) return;
+    
+    clearTimeout(timeoutId);
+    responded = true;
+
     const payload = {
       featured,
       destinations,
@@ -148,8 +175,23 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
     // Cache for 60 seconds
     overviewCache.set(cacheKey, payload, 60);
 
+    // Log slow queries in development
+    const duration = Date.now() - startTime;
+    if (duration > 1000) {
+      console.warn(`[SLOW] /blogs/overview took ${duration}ms`);
+    }
+
     res.json({ ...payload, fromCache: false });
   } catch (error) {
+    // Check if we already timed out
+    if (responded) return;
+    
+    clearTimeout(timeoutId);
+    responded = true;
+    
+    const duration = Date.now() - startTime;
+    console.error(`[ERROR] /blogs/overview failed after ${duration}ms:`, error instanceof Error ? error.message : error);
+    
     return handlePrismaError(error, res, 'Fetching blog overview');
   }
 });

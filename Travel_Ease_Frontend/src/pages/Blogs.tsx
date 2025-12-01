@@ -9,7 +9,9 @@ export default function Blogs() {
   const [overview, setOverview] = useState<BlogOverviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const MAX_RETRIES = 2;
 
   useEffect(() => {
     const pageTitle =
@@ -39,13 +41,14 @@ export default function Blogs() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const fetchOverview = async () => {
+    const fetchOverview = async (attempt = 0) => {
       try {
         setLoading(true);
         setError(null);
 
         const data = await blogApi.getOverview(controller.signal);
         setOverview(data);
+        setRetryCount(0); // Reset retry count on success
       } catch (err: any) {
         // Ignore aborted requests
         if (err.name === "CanceledError" || err.code === "ERR_CANCELED") {
@@ -61,8 +64,35 @@ export default function Blogs() {
         const status = err.response?.status;
         const errorCode = err.response?.data?.code;
         
+        // Check if this is a retryable error
+        const isRetryable = 
+          status === 503 || 
+          status === 504 ||
+          errorCode === 'CONNECTION_ERROR' ||
+          errorCode === 'TIMEOUT' ||
+          err.code === 'ECONNABORTED' ||
+          err.message?.includes('timeout');
+        
+        // Auto-retry for transient errors (up to MAX_RETRIES)
+        if (isRetryable && attempt < MAX_RETRIES) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 4000); // Exponential backoff: 1s, 2s, 4s
+          if (import.meta.env.DEV) {
+            console.log(`Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+          }
+          setTimeout(() => {
+            if (!controller.signal.aborted) {
+              setRetryCount(attempt + 1);
+              fetchOverview(attempt + 1);
+            }
+          }, delay);
+          return;
+        }
+        
+        // Set user-friendly error message
         if (status === 503 || errorCode === 'P1001' || errorCode === 'P1002' || errorCode === 'CONNECTION_ERROR') {
           setError("Database temporarily unavailable. The service will resume shortly - please try again in a few moments.");
+        } else if (status === 504 || errorCode === 'TIMEOUT') {
+          setError("The server took too long to respond. Please try again.");
         } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
           setError("Request timed out. The server may be experiencing high load - please try again.");
         } else if (status === 500) {
@@ -152,7 +182,9 @@ export default function Blogs() {
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary-red" />
           <p className="text-base text-gray-600">
-            Loading travel inspiration for you...
+            {retryCount > 0 
+              ? `Retrying... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`
+              : "Loading travel inspiration for you..."}
           </p>
         </div>
       </div>
@@ -213,12 +245,12 @@ export default function Blogs() {
               smarter, travel further, and savour the moments in between.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
-              <a
-                href="#featured-blogs"
+              <Link
+                to="/plans"
                 className="w-full max-w-xs rounded-full border border-white bg-white px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary-red transition hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-red sm:w-auto"
               >
-                Start Exploring Blogs
-              </a>
+                Start Creating Plans
+              </Link>
               <Link
                 to="/blogs/new"
                 className="w-full max-w-xs rounded-full border border-white/60 px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:border-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-red sm:w-auto"

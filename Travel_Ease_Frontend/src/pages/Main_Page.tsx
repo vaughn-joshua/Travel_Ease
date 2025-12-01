@@ -25,10 +25,10 @@ export default function Main_Page(): React.ReactElement {
   };
 
   return (
-    <div className="bg-gray-50 w-full h-full p-5">
-      <div className="flex gap-6">
+    <div className="bg-gray-50 w-full min-h-screen p-5">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* LEFT COLUMN (Ongoing + Upcoming) */}
-        <div className="flex-3">
+        <div className="flex-[3] min-w-0">
           <div id="ongoing_plans">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-semibold text-gray-900">
@@ -50,8 +50,8 @@ export default function Main_Page(): React.ReactElement {
         </div>
 
         {/* RIGHT COLUMN (Suggested + Previous) */}
-        <div className="flex-1">
-          <div className="">
+        <div className="flex-1 min-w-0">
+          <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-semibold text-gray-900">
                 Suggested Plans
