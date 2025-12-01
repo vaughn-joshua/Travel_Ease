@@ -1,25 +1,10 @@
 /**
  * Database Seed Script
  * Populates the database with sample data for testing
+ * Uses Prisma Client for all database operations
  */
 
-import { sequelize } from '../src/lib/sequelize.js';
-import {
-  User,
-  Blog,
-  Business,
-  BusinessCategory,
-  BusinessHours,
-  PriceRange,
-  MenuItem,
-  TravelPlan,
-  Activity,
-  Participant,
-  BusinessFavorite,
-  TravelPlanFavorite,
-  BusinessReview,
-  TravelPlanReview
-} from '../src/models/index.js';
+import { prisma } from '../src/lib/prisma.js';
 
 // Sample data
 const users = [
@@ -211,8 +196,8 @@ const businessCategories = [
   { business_index: 6, category_name: 'food' },
   { business_index: 7, category_name: 'accomodation' },
   { business_index: 7, category_name: 'leisure' },
-  { business_index: 8, category_name: 'souvenir shop' },
-  { business_index: 8, category_name: 'local offers' },
+  { business_index: 8, category_name: 'souvenir_shop' },
+  { business_index: 8, category_name: 'local_offers' },
   { business_index: 9, category_name: 'activities' },
   { business_index: 9, category_name: 'leisure' }
 ];
@@ -252,7 +237,7 @@ const blogs = [
     slug: 'ultimate-tagaytay-food-trip-guide',
     excerpt: 'From bulalo to buko pie, here\'s your complete guide to eating your way through Tagaytay.',
     content: `<h2>A Foodie's Paradise</h2>
-<p>Tagaytay isn't just about the views—it's a food lover's dream destination. Here's what you need to try:</p>
+<p>Tagaytay isn't just about the views-it's a food lover's dream destination. Here's what you need to try:</p>
 
 <h3>Bulalo</h3>
 <p>No trip to Tagaytay is complete without trying bulalo, a hearty beef bone marrow soup. The cold weather makes it even more satisfying!</p>
@@ -292,7 +277,7 @@ const blogs = [
 <p>Start with coffee at Starbucks Reserve, then head to Sky Ranch for some fun rides.</p>
 
 <h3>Afternoon</h3>
-<p>Lunch at Bulalo Point—the best bulalo in town! Shop for pasalubong at Rowena's.</p>
+<p>Lunch at Bulalo Point-the best bulalo in town! Shop for pasalubong at Rowena's.</p>
 
 <h3>Evening</h3>
 <p>Head back to Manila with happy memories and delicious treats!</p>`,
@@ -349,7 +334,7 @@ const blogs = [
 <h3>Paradizoo</h3>
 <p>A farm-themed park where kids can interact with animals and enjoy nature.</p>
 
-<p>Pro tip: Bring jackets—Tagaytay can get chilly, especially in the morning and evening!</p>`,
+<p>Pro tip: Bring jackets-Tagaytay can get chilly, especially in the morning and evening!</p>`,
     coverImageUrl: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=1200',
     category: 'Destinations',
     isFeatured: true,
@@ -361,8 +346,8 @@ const blogs = [
 const travelPlans = [
   {
     name: 'Tagaytay Food Adventure',
-    start_date: '2025-01-15',
-    end_date: '2025-01-17',
+    start_date: new Date('2025-01-15'),
+    end_date: new Date('2025-01-17'),
     description: 'A 3-day food trip exploring the best restaurants and cafes in Tagaytay.',
     visibility: true,
     status: 'Active',
@@ -371,8 +356,8 @@ const travelPlans = [
   },
   {
     name: 'Weekend Relaxation',
-    start_date: '2025-02-01',
-    end_date: '2025-02-02',
+    start_date: new Date('2025-02-01'),
+    end_date: new Date('2025-02-02'),
     description: 'A peaceful weekend getaway focused on relaxation and scenic views.',
     visibility: true,
     status: 'Active',
@@ -381,8 +366,8 @@ const travelPlans = [
   },
   {
     name: 'Family Fun Day',
-    start_date: '2025-02-14',
-    end_date: '2025-02-14',
+    start_date: new Date('2025-02-14'),
+    end_date: new Date('2025-02-14'),
     description: 'One-day trip with activities for the whole family.',
     visibility: true,
     status: 'Draft',
@@ -391,8 +376,8 @@ const travelPlans = [
   },
   {
     name: 'Photography Tour',
-    start_date: '2025-03-01',
-    end_date: '2025-03-02',
+    start_date: new Date('2025-03-01'),
+    end_date: new Date('2025-03-02'),
     description: 'Capture the beauty of Tagaytay with fellow photography enthusiasts.',
     visibility: false,
     status: 'Draft',
@@ -422,237 +407,289 @@ const menuItems = [
 
 async function seed() {
   try {
-    console.log('🌱 Starting database seed...\n');
+    console.log('Starting database seed...\n');
     
     // Test connection
-    await sequelize.authenticate();
-    console.log('✅ Database connection established.\n');
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('Database connection established.\n');
 
-    // Create Users
-    console.log('👤 Creating users...');
-    const createdUsers = await User.bulkCreate(users, { returning: true });
-    console.log(`   Created ${createdUsers.length} users.\n`);
-
-    // Create Businesses (assign to users)
-    console.log('🏢 Creating businesses...');
-    const businessesWithUsers = businesses.map((b, index) => ({
-      ...b,
-      user_id: createdUsers[index % createdUsers.length].user_id
-    }));
-    const createdBusinesses = await Business.bulkCreate(businessesWithUsers, { returning: true });
-    console.log(`   Created ${createdBusinesses.length} businesses.\n`);
-
-    // Create Business Categories
-    console.log('📁 Creating business categories...');
-    const categoriesWithIds = businessCategories.map(c => ({
-      business_id: createdBusinesses[c.business_index].business_id,
-      category_name: c.category_name
-    }));
-    const createdCategories = await BusinessCategory.bulkCreate(categoriesWithIds, { returning: true });
-    console.log(`   Created ${createdCategories.length} categories.\n`);
-
-    // Create Business Hours
-    console.log('🕐 Creating business hours...');
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const hoursData = [];
-    for (const business of createdBusinesses) {
-      for (const day of days) {
-        hoursData.push({
-          business_id: business.business_id,
-          day_of_week: day,
-          open_time: day === 'sunday' ? null : '09:00:00',
-          close_time: day === 'sunday' ? null : '21:00:00'
-        });
+    // Wrap all operations in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Create Users
+      console.log('Creating users...');
+      const createdUsers = [];
+      for (const user of users) {
+        const created = await tx.user.create({ data: user });
+        createdUsers.push(created);
       }
-    }
-    const createdHours = await BusinessHours.bulkCreate(hoursData);
-    console.log(`   Created ${createdHours.length} business hours entries.\n`);
+      console.log(`   Created ${createdUsers.length} users.\n`);
 
-    // Create Price Ranges
-    console.log('💰 Creating price ranges...');
-    const priceRanges = createdCategories.map(cat => ({
-      category_id: cat.category_id,
-      min_price: Math.floor(Math.random() * 100) + 50,
-      max_price: Math.floor(Math.random() * 500) + 200
-    }));
-    const createdPriceRanges = await PriceRange.bulkCreate(priceRanges);
-    console.log(`   Created ${createdPriceRanges.length} price ranges.\n`);
-
-    // Create Menu Items
-    console.log('🍽️  Creating menu items...');
-    const menuItemsWithIds = menuItems.map(m => ({
-      business_id: createdBusinesses[m.business_index].business_id,
-      name: m.name,
-      description: m.description,
-      price: m.price,
-      category: m.category
-    }));
-    const createdMenuItems = await MenuItem.bulkCreate(menuItemsWithIds);
-    console.log(`   Created ${createdMenuItems.length} menu items.\n`);
-
-    // Create Blogs
-    console.log('📝 Creating blogs...');
-    const blogsWithUsers = blogs.map((b, index) => ({
-      ...b,
-      user_id: createdUsers[index % createdUsers.length].user_id
-    }));
-    const createdBlogs = await Blog.bulkCreate(blogsWithUsers, { returning: true });
-    console.log(`   Created ${createdBlogs.length} blogs.\n`);
-
-    // Create Travel Plans
-    console.log('✈️  Creating travel plans...');
-    const plansWithUsers = travelPlans.map((p, index) => ({
-      ...p,
-      user_id: createdUsers[index % createdUsers.length].user_id
-    }));
-    const createdPlans = await TravelPlan.bulkCreate(plansWithUsers, { returning: true });
-    console.log(`   Created ${createdPlans.length} travel plans.\n`);
-
-    // Create Participants
-    console.log('👥 Creating participants...');
-    const participants = [];
-    for (let i = 0; i < createdPlans.length; i++) {
-      // Add owner as Admin
-      participants.push({
-        travel_plan_id: createdPlans[i].travel_plan_id,
-        user_id: createdPlans[i].user_id,
-        role: 'Admin',
-        status: true
-      });
-      // Add 1-2 other participants
-      const otherUsers = createdUsers.filter(u => u.user_id !== createdPlans[i].user_id);
-      for (let j = 0; j < Math.min(2, otherUsers.length); j++) {
-        participants.push({
-          travel_plan_id: createdPlans[i].travel_plan_id,
-          user_id: otherUsers[j].user_id,
-          role: j === 0 ? 'Editor' : 'Viewer',
-          status: true
+      // Create Businesses (assign to users)
+      console.log('Creating businesses...');
+      const createdBusinesses = [];
+      for (let i = 0; i < businesses.length; i++) {
+        const b = businesses[i];
+        const created = await tx.business.create({
+          data: {
+            ...b,
+            user_id: createdUsers[i % createdUsers.length].user_id
+          }
         });
+        createdBusinesses.push(created);
       }
-    }
-    const createdParticipants = await Participant.bulkCreate(participants);
-    console.log(`   Created ${createdParticipants.length} participants.\n`);
+      console.log(`   Created ${createdBusinesses.length} businesses.\n`);
 
-    // Create Activities
-    console.log('📍 Creating activities...');
-    const activities = [];
-    for (const plan of createdPlans) {
-      // Add 2-3 activities per plan
-      const numActivities = Math.floor(Math.random() * 2) + 2;
-      for (let i = 0; i < numActivities; i++) {
-        const randomBusiness = createdBusinesses[Math.floor(Math.random() * createdBusinesses.length)];
-        activities.push({
-          travel_plan_id: plan.travel_plan_id,
-          business_id: randomBusiness.business_id,
-          user_id: plan.user_id,
-          notes: `Visit ${randomBusiness.name}`,
-          target_date: plan.start_date,
-          location: randomBusiness.city,
-          city: randomBusiness.city
+      // Create Business Categories
+      console.log('Creating business categories...');
+      const createdCategories = [];
+      for (const c of businessCategories) {
+        const created = await tx.businessCategory.create({
+          data: {
+            business_id: createdBusinesses[c.business_index].business_id,
+            category_name: c.category_name
+          }
         });
+        createdCategories.push(created);
       }
-    }
-    const createdActivities = await Activity.bulkCreate(activities);
-    console.log(`   Created ${createdActivities.length} activities.\n`);
+      console.log(`   Created ${createdCategories.length} categories.\n`);
 
-    // Create Business Favorites
-    console.log('❤️  Creating business favorites...');
-    const businessFavorites = [];
-    for (const user of createdUsers) {
-      // Each user favorites 2-3 random businesses
-      const numFavorites = Math.floor(Math.random() * 2) + 2;
-      const shuffled = [...createdBusinesses].sort(() => 0.5 - Math.random());
-      for (let i = 0; i < numFavorites; i++) {
-        businessFavorites.push({
-          user_id: user.user_id,
-          business_id: shuffled[i].business_id
+      // Create Business Hours
+      console.log('Creating business hours...');
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      let hoursCount = 0;
+      for (const business of createdBusinesses) {
+        for (const day of days) {
+          await tx.businessHours.create({
+            data: {
+              business_id: business.business_id,
+              day_of_week: day,
+              open_time: day === 'sunday' ? null : new Date('1970-01-01T09:00:00Z'),
+              close_time: day === 'sunday' ? null : new Date('1970-01-01T21:00:00Z')
+            }
+          });
+          hoursCount++;
+        }
+      }
+      console.log(`   Created ${hoursCount} business hours entries.\n`);
+
+      // Create Price Ranges
+      console.log('Creating price ranges...');
+      const createdPriceRanges = [];
+      for (const cat of createdCategories) {
+        const created = await tx.priceRange.create({
+          data: {
+            category_id: cat.category_id,
+            min_price: Math.floor(Math.random() * 100) + 50,
+            max_price: Math.floor(Math.random() * 500) + 200
+          }
         });
+        createdPriceRanges.push(created);
       }
-    }
-    const createdBizFavorites = await BusinessFavorite.bulkCreate(businessFavorites);
-    console.log(`   Created ${createdBizFavorites.length} business favorites.\n`);
+      console.log(`   Created ${createdPriceRanges.length} price ranges.\n`);
 
-    // Create Travel Plan Favorites
-    console.log('⭐ Creating travel plan favorites...');
-    const planFavorites = [];
-    for (const user of createdUsers) {
-      const randomPlan = createdPlans[Math.floor(Math.random() * createdPlans.length)];
-      if (randomPlan.user_id !== user.user_id) {
-        planFavorites.push({
-          user_id: user.user_id,
-          travel_plan_id: randomPlan.travel_plan_id
+      // Create Menu Items
+      console.log('Creating menu items...');
+      const createdMenuItems = [];
+      for (const m of menuItems) {
+        const created = await tx.menuItem.create({
+          data: {
+            business_id: createdBusinesses[m.business_index].business_id,
+            name: m.name,
+            description: m.description,
+            price: m.price,
+            category: m.category
+          }
         });
+        createdMenuItems.push(created);
       }
-    }
-    const createdPlanFavorites = await TravelPlanFavorite.bulkCreate(planFavorites);
-    console.log(`   Created ${createdPlanFavorites.length} travel plan favorites.\n`);
+      console.log(`   Created ${createdMenuItems.length} menu items.\n`);
 
-    // Create Business Reviews
-    console.log('📊 Creating business reviews...');
-    const businessReviews = [];
-    const reviewContents = [
-      'Amazing experience! Highly recommended.',
-      'Great food and service. Will definitely come back.',
-      'Beautiful views and friendly staff.',
-      'Good value for money. Nice ambiance.',
-      'A must-visit when in Tagaytay!'
-    ];
-    for (let i = 0; i < createdUsers.length; i++) {
-      const randomBusiness = createdBusinesses[i % createdBusinesses.length];
-      businessReviews.push({
-        user_id: createdUsers[i].user_id,
-        business_id: randomBusiness.business_id,
-        rating: Math.floor(Math.random() * 2) + 4, // 4 or 5 stars
-        content: reviewContents[i % reviewContents.length]
-      });
-    }
-    const createdBizReviews = await BusinessReview.bulkCreate(businessReviews);
-    console.log(`   Created ${createdBizReviews.length} business reviews.\n`);
-
-    // Create Travel Plan Reviews
-    console.log('📝 Creating travel plan reviews...');
-    const planReviews = [];
-    for (let i = 0; i < Math.min(3, createdUsers.length); i++) {
-      const randomPlan = createdPlans[i % createdPlans.length];
-      if (randomPlan.user_id !== createdUsers[i].user_id) {
-        planReviews.push({
-          user_id: createdUsers[i].user_id,
-          travel_plan_id: randomPlan.travel_plan_id,
-          rating: Math.floor(Math.random() * 2) + 4,
-          content: 'Great itinerary! Very well planned.'
+      // Create Blogs
+      console.log('Creating blogs...');
+      const createdBlogs = [];
+      for (let i = 0; i < blogs.length; i++) {
+        const b = blogs[i];
+        const created = await tx.blog.create({
+          data: {
+            ...b,
+            user_id: createdUsers[i % createdUsers.length].user_id
+          }
         });
+        createdBlogs.push(created);
       }
-    }
-    if (planReviews.length > 0) {
-      const createdPlanReviews = await TravelPlanReview.bulkCreate(planReviews);
-      console.log(`   Created ${createdPlanReviews.length} travel plan reviews.\n`);
-    }
+      console.log(`   Created ${createdBlogs.length} blogs.\n`);
 
-    console.log('✅ Database seeding completed successfully!\n');
-    console.log('Summary:');
-    console.log('─'.repeat(40));
-    console.log(`  Users:              ${createdUsers.length}`);
-    console.log(`  Businesses:         ${createdBusinesses.length}`);
-    console.log(`  Categories:         ${createdCategories.length}`);
-    console.log(`  Business Hours:     ${createdHours.length}`);
-    console.log(`  Price Ranges:       ${createdPriceRanges.length}`);
-    console.log(`  Menu Items:         ${createdMenuItems.length}`);
-    console.log(`  Blogs:              ${createdBlogs.length}`);
-    console.log(`  Travel Plans:       ${createdPlans.length}`);
-    console.log(`  Participants:       ${createdParticipants.length}`);
-    console.log(`  Activities:         ${createdActivities.length}`);
-    console.log(`  Business Favorites: ${createdBizFavorites.length}`);
-    console.log(`  Plan Favorites:     ${createdPlanFavorites.length}`);
-    console.log(`  Business Reviews:   ${createdBizReviews.length}`);
-    console.log('─'.repeat(40));
+      // Create Travel Plans
+      console.log('Creating travel plans...');
+      const createdPlans = [];
+      for (let i = 0; i < travelPlans.length; i++) {
+        const p = travelPlans[i];
+        const created = await tx.travelPlan.create({
+          data: {
+            ...p,
+            user_id: createdUsers[i % createdUsers.length].user_id
+          }
+        });
+        createdPlans.push(created);
+      }
+      console.log(`   Created ${createdPlans.length} travel plans.\n`);
+
+      // Create Participants
+      console.log('Creating participants...');
+      let participantCount = 0;
+      for (let i = 0; i < createdPlans.length; i++) {
+        // Add owner as Admin
+        await tx.participant.create({
+          data: {
+            travel_plan_id: createdPlans[i].travel_plan_id,
+            user_id: createdPlans[i].user_id,
+            role: 'Admin',
+            status: true
+          }
+        });
+        participantCount++;
+        // Add 1-2 other participants
+        const otherUsers = createdUsers.filter(u => u.user_id !== createdPlans[i].user_id);
+        for (let j = 0; j < Math.min(2, otherUsers.length); j++) {
+          await tx.participant.create({
+            data: {
+              travel_plan_id: createdPlans[i].travel_plan_id,
+              user_id: otherUsers[j].user_id,
+              role: j === 0 ? 'Editor' : 'Viewer',
+              status: true
+            }
+          });
+          participantCount++;
+        }
+      }
+      console.log(`   Created ${participantCount} participants.\n`);
+
+      // Create Activities
+      console.log('Creating activities...');
+      let activityCount = 0;
+      for (const plan of createdPlans) {
+        const numActivities = Math.floor(Math.random() * 2) + 2;
+        for (let i = 0; i < numActivities; i++) {
+          const randomBusiness = createdBusinesses[Math.floor(Math.random() * createdBusinesses.length)];
+          await tx.activity.create({
+            data: {
+              travel_plan_id: plan.travel_plan_id,
+              business_id: randomBusiness.business_id,
+              user_id: plan.user_id,
+              notes: `Visit ${randomBusiness.name}`,
+              target_date: plan.start_date,
+              location: randomBusiness.city,
+              city: randomBusiness.city
+            }
+          });
+          activityCount++;
+        }
+      }
+      console.log(`   Created ${activityCount} activities.\n`);
+
+      // Create Business Favorites
+      console.log('Creating business favorites...');
+      let bizFavCount = 0;
+      for (const user of createdUsers) {
+        const numFavorites = Math.floor(Math.random() * 2) + 2;
+        const shuffled = [...createdBusinesses].sort(() => 0.5 - Math.random());
+        for (let i = 0; i < numFavorites; i++) {
+          await tx.businessFavorite.create({
+            data: {
+              user_id: user.user_id,
+              business_id: shuffled[i].business_id
+            }
+          });
+          bizFavCount++;
+        }
+      }
+      console.log(`   Created ${bizFavCount} business favorites.\n`);
+
+      // Create Travel Plan Favorites
+      console.log('Creating travel plan favorites...');
+      let planFavCount = 0;
+      for (const user of createdUsers) {
+        const randomPlan = createdPlans[Math.floor(Math.random() * createdPlans.length)];
+        if (randomPlan.user_id !== user.user_id) {
+          await tx.travelPlanFavorite.create({
+            data: {
+              user_id: user.user_id,
+              travel_plan_id: randomPlan.travel_plan_id
+            }
+          });
+          planFavCount++;
+        }
+      }
+      console.log(`   Created ${planFavCount} travel plan favorites.\n`);
+
+      // Create Business Reviews
+      console.log('Creating business reviews...');
+      const reviewContents = [
+        'Amazing experience! Highly recommended.',
+        'Great food and service. Will definitely come back.',
+        'Beautiful views and friendly staff.',
+        'Good value for money. Nice ambiance.',
+        'A must-visit when in Tagaytay!'
+      ];
+      let bizReviewCount = 0;
+      for (let i = 0; i < createdUsers.length; i++) {
+        const randomBusiness = createdBusinesses[i % createdBusinesses.length];
+        await tx.businessReview.create({
+          data: {
+            user_id: createdUsers[i].user_id,
+            business_id: randomBusiness.business_id,
+            rating: Math.floor(Math.random() * 2) + 4,
+            content: reviewContents[i % reviewContents.length]
+          }
+        });
+        bizReviewCount++;
+      }
+      console.log(`   Created ${bizReviewCount} business reviews.\n`);
+
+      // Create Travel Plan Reviews
+      console.log('Creating travel plan reviews...');
+      let planReviewCount = 0;
+      for (let i = 0; i < Math.min(3, createdUsers.length); i++) {
+        const randomPlan = createdPlans[i % createdPlans.length];
+        if (randomPlan.user_id !== createdUsers[i].user_id) {
+          await tx.travelPlanReview.create({
+            data: {
+              user_id: createdUsers[i].user_id,
+              travel_plan_id: randomPlan.travel_plan_id,
+              rating: Math.floor(Math.random() * 2) + 4,
+              content: 'Great itinerary! Very well planned.'
+            }
+          });
+          planReviewCount++;
+        }
+      }
+      console.log(`   Created ${planReviewCount} travel plan reviews.\n`);
+
+      console.log('Database seeding completed successfully!\n');
+      console.log('Summary:');
+      console.log('-'.repeat(40));
+      console.log(`  Users:              ${createdUsers.length}`);
+      console.log(`  Businesses:         ${createdBusinesses.length}`);
+      console.log(`  Categories:         ${createdCategories.length}`);
+      console.log(`  Business Hours:     ${hoursCount}`);
+      console.log(`  Price Ranges:       ${createdPriceRanges.length}`);
+      console.log(`  Menu Items:         ${createdMenuItems.length}`);
+      console.log(`  Blogs:              ${createdBlogs.length}`);
+      console.log(`  Travel Plans:       ${createdPlans.length}`);
+      console.log(`  Participants:       ${participantCount}`);
+      console.log(`  Activities:         ${activityCount}`);
+      console.log(`  Business Favorites: ${bizFavCount}`);
+      console.log(`  Plan Favorites:     ${planFavCount}`);
+      console.log(`  Business Reviews:   ${bizReviewCount}`);
+      console.log('-'.repeat(40));
+    });
 
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('Error seeding database:', error);
     throw error;
   } finally {
-    await sequelize.close();
+    await prisma.$disconnect();
   }
 }
 
 seed();
-

@@ -12,7 +12,22 @@ import map_routes from "./routes/map_routes.js";
 import review_routes from "./routes/review_routes.js";
 import { blogRoutes } from "./src/routes/blogRoutes.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
-import { testConnection } from "./src/lib/sequelize.js";
+import { prisma } from "./src/lib/prisma.js";
+
+async function testConnection() {
+  if (!process.env.DATABASE_URL) {
+    console.warn("DATABASE_URL not set; skipping database connectivity check.");
+    return false;
+  }
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.error("Database connection test failed:", error);
+    return false;
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;

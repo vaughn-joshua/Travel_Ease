@@ -12,12 +12,12 @@
 
 /**
  * Format a single plan to the normalized DTO shape
- * @param {object} plan - Sequelize model instance or plain object
+ * @param {object} plan - Prisma result object or plain object
  * @param {object} extras - Additional fields to merge (e.g., approvedParticipants)
  * @returns {object} - Normalized plan DTO
  */
 export function formatPlan(plan, extras = {}) {
-  // Handle Sequelize model or plain object
+  // Handle plain object (Prisma returns plain objects by default)
   const data = plan.toJSON ? plan.toJSON() : plan;
 
   return {
@@ -53,7 +53,7 @@ export function formatPlan(plan, extras = {}) {
 
 /**
  * Format an array of plans
- * @param {Array} plans - Array of Sequelize model instances or plain objects
+ * @param {Array} plans - Array of Prisma result objects or plain objects
  * @param {Function} extrasMapper - Optional function (plan) => extras object
  * @returns {Array} - Array of normalized plan DTOs
  */

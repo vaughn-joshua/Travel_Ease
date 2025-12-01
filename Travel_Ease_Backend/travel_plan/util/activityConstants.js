@@ -122,7 +122,7 @@ export function formatActivity(activity, extras = {}) {
 
 /**
  * Format an array of activities
- * @param {Array} activities - Array of Sequelize model instances or plain objects
+ * @param {Array} activities - Array of Prisma result objects or plain objects
  * @returns {Array} - Array of normalized activity DTOs
  */
 export function formatActivities(activities) {
