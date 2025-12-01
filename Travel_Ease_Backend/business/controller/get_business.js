@@ -72,7 +72,7 @@ export async function get_businesses(req, res) {
           },
           skip,
           take,
-          orderBy: [{ rating: { sort: 'desc', nulls: 'last' } }, { name: 'asc' }]
+          orderBy: [{ rating: 'desc' }, { name: 'asc' }]
         }),
         prisma.business.count({ where })
       ])
