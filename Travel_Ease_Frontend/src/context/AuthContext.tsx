@@ -41,7 +41,20 @@ interface AuthContextType {
 const PROFILE_STORAGE_KEY = "travelEaseUser";
 const TOKEN_STORAGE_KEY = "token";
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Cache context on globalThis to survive Vite HMR and prevent "useAuth must be used within an AuthProvider" errors
+const AUTH_CONTEXT_KEY = "__TRAVEL_EASE_AUTH_CONTEXT__";
+
+declare global {
+  // eslint-disable-next-line no-var
+  var [AUTH_CONTEXT_KEY]: React.Context<AuthContextType | undefined> | undefined;
+}
+
+const AuthContext: React.Context<AuthContextType | undefined> =
+  (globalThis as Record<string, unknown>)[AUTH_CONTEXT_KEY] as React.Context<AuthContextType | undefined> ??
+  createContext<AuthContextType | undefined>(undefined);
+
+// Store on globalThis so subsequent HMR reloads reuse the same context
+(globalThis as Record<string, unknown>)[AUTH_CONTEXT_KEY] = AuthContext;
 
 const mapSupabaseUser = (supabaseUser: User | null): AppUser | null => {
   if (!supabaseUser) return null;

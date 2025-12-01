@@ -22,11 +22,12 @@ export async function fetch_plans(req: Request, res: Response) {
     today.setUTCHours(0, 0, 0, 0);
 
     // Single query to get plan IDs where user is owner OR participant
+    // Note: Table names use lowercase with @@map in Prisma schema
     const userPlanAccess = await executeWithRetry(() =>
       prisma.$queryRaw<{ travel_plan_id: number }[]>`
         SELECT DISTINCT tp.travel_plan_id 
-        FROM "TravelPlan" tp
-        LEFT JOIN "Participant" p ON tp.travel_plan_id = p.travel_plan_id AND p.user_id = ${userId} AND p.status = true
+        FROM "travel_plan" tp
+        LEFT JOIN "participant" p ON tp.travel_plan_id = p.travel_plan_id AND p.user_id = ${userId} AND p.status = true
         WHERE tp.user_id = ${userId} OR p.participant_id IS NOT NULL
       `
     );
