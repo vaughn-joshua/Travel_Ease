@@ -1,25 +1,27 @@
-import { endpoints } from "../../config/api";
-import type { UploadResponse } from "../../types/api";
+import { endpoints } from '../../config/api';
 
-export async function upload_image(file: File): Promise<UploadResponse | undefined> {
+interface UploadResponse {
+  secure_url?: string;
+  url?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+export async function upload_image(formData: FormData): Promise<UploadResponse | null> {
   try {
-    const formData = new FormData();
-    formData.append("image", file);
-
+    const token = localStorage.getItem('token');
     const result = await fetch(endpoints.utils.upload, {
-      method: "POST",
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
       body: formData,
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to upload image: ${result.status}`);
-    }
-
-    const data: UploadResponse = await result.json();
+    const data = await result.json();
     return data;
   } catch (e) {
-    console.error("Error uploading image:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }
-

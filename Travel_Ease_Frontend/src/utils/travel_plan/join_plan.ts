@@ -1,49 +1,32 @@
-import { endpoints } from "../../config/api";
+import { endpoints } from '../../config/api';
 
-interface JoinPlanPayload {
-  travel_plan_id: number | string;
-  user_id: number;
+interface JoinPlanData {
+  travel_plan_id: number;
+  role?: string;
 }
 
 interface JoinPlanResponse {
   message: string;
-  participant: {
-    id: number;
-    travel_plan_id: number;
-    user_id: number;
-    role: string;
-  };
+  participant?: unknown;
+  error?: string;
 }
 
-export async function join_plan(data: JoinPlanPayload): Promise<JoinPlanResponse | undefined> {
+export async function join_plan(data: JoinPlanData): Promise<JoinPlanResponse | null> {
   try {
-    // Get the auth token from localStorage
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
-    }
-
-    const result = await fetch(endpoints.travelPlan.quickJoin, {
-      method: "POST",
+    const token = localStorage.getItem('token');
+    const result = await fetch(`${endpoints.travelPlan.base}/join_plan`, {
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
-    if (!result.ok) {
-      if (result.status === 401) {
-        throw new Error("Session expired. Please log in again.");
-      }
-      throw new Error(`Failed to join plan: ${result.status}`);
-    }
-
-    const responseData: JoinPlanResponse = await result.json();
-    return responseData;
+    const response = await result.json();
+    return response;
   } catch (e) {
-    console.error("Error joining plan:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }

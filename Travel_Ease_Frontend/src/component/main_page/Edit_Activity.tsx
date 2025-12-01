@@ -32,7 +32,7 @@ export default function Edit_Activity({
     });
   };
 
-  const [value, setValue] = useState<Date>(new Date(data.target_date));
+  const [value, setValue] = useState<Date>(new Date(data.target_date || new Date()));
 
   const {
     register,

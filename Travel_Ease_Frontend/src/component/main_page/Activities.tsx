@@ -51,6 +51,7 @@ export default function Activities({
       }
 
       const filtered_data = activityData.filter((item) => {
+        if (!item.target_date) return false;
         const activity_date = new Date(item.target_date);
         return activity_date.toDateString() === current_day.toDateString();
       });

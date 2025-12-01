@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 nodemon server.js",
-    "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 node server.js",
-    "db:seed": "node src/seed.js",
+    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx watch server.ts",
+    "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 node dist/server.js",
+    "build": "tsc",
+    "db:seed": "tsx src/seed.ts",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
@@ -29,9 +30,19 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^9.9.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.1",
+    "@types/supertest": "^6.0.3",
     "nodemon": "^3.0.2",
     "prisma": "^6.19.0",
     "supertest": "^6.3.4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.13"
   }
 }

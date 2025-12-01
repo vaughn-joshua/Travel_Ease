@@ -60,8 +60,8 @@ export default function Favorites(): React.ReactElement {
         setLoading(true);
         setError(null);
         const data = await userApi.getFavorites("me");
-        setBusinessFavorites(data.business_favorites || []);
-        setPlanFavorites(data.travel_plan_favorites || []);
+        setBusinessFavorites((data.business_favorites || []) as BusinessFavorite[]);
+        setPlanFavorites((data.travel_plan_favorites || []) as TravelPlanFavorite[]);
       } catch (err: any) {
         console.error("Error fetching favorites:", err);
         setError(err.response?.data?.error || "Failed to load favorites");

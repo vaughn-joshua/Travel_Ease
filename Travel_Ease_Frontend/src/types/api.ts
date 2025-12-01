@@ -67,9 +67,11 @@ export interface BusinessEndpoints {
   base: string;
   businesses: string;
   create: string;
+  myBusinesses: string;
   byId: (id: number | string) => string;
   categoriesById: (id: number | string) => string;
   edit: (id: number | string) => string;
+  delete: (id: number | string) => string;
   priceRange: string;
   travelSpots: string;
   reviews: (id: number | string) => string;

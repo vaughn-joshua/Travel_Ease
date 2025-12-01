@@ -1,38 +1,40 @@
-import { endpoints } from "../../config/api";
-import type { UpdateActivityPayload, Activity } from "../../types/travelPlan";
+import { endpoints } from '../../config/api';
 
-export async function edit_activity(
-  id: number | string,
-  data: UpdateActivityPayload
-): Promise<Activity | undefined> {
+interface EditActivityData {
+  activity_id?: number;
+  target_date?: string;
+  budget_range?: string;
+  notes?: string;
+  is_priority?: boolean;
+}
+
+export async function edit_activity(activityIdOrData: number | EditActivityData, payload?: EditActivityData): Promise<unknown> {
   try {
-    // Get the auth token from localStorage
-    const token = localStorage.getItem("token");
+    let activityId: number;
+    let data: EditActivityData;
     
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
+    if (typeof activityIdOrData === 'number') {
+      activityId = activityIdOrData;
+      data = payload || {};
+    } else {
+      activityId = activityIdOrData.activity_id!;
+      data = activityIdOrData;
     }
-
-    const result = await fetch(endpoints.travelPlan.editActivity(id), {
-      method: "PUT",
+    
+    const token = localStorage.getItem('token');
+    const result = await fetch(endpoints.travelPlan.editActivity(activityId), {
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
-    if (!result.ok) {
-      if (result.status === 401) {
-        throw new Error("Session expired. Please log in again.");
-      }
-      throw new Error(`Failed to update activity: ${result.status}`);
-    }
-
-    const responseData: Activity = await result.json();
-    return responseData;
+    const response = await result.json();
+    return response;
   } catch (e) {
-    console.error("Error updating activity:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }

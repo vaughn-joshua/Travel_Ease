@@ -38,7 +38,7 @@ export default function Business_Page(): React.ReactElement {
         if (!id) return;
         const data = await fetch_business(id);
         if (data) {
-          const extendedData = data as ExtendedBusiness;
+          const extendedData = data as unknown as ExtendedBusiness;
           if (extendedData.picture) {
             const image_urls = JSON.parse(extendedData.picture) as PictureData;
             setPictures(image_urls);

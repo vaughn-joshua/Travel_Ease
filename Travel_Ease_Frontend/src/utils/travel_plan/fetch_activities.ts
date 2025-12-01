@@ -1,38 +1,25 @@
-import { endpoints } from "../../config/api";
-import type { Activity } from "../../types/travelPlan";
+import { endpoints } from '../../config/api';
+import type { Activity } from '../../types/travelPlan';
 
-export async function fetch_activities(id: number | string): Promise<Activity[]> {
+export async function fetch_activities(planId: number | string): Promise<Activity[]> {
   try {
-    // Get the auth token from localStorage
-    const token = localStorage.getItem("token");
-    
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-    
-    // Add authorization header if token exists
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const result = await fetch(endpoints.travelPlan.activities(id), {
-      method: "GET",
-      headers,
+    const token = localStorage.getItem('token');
+    const result = await fetch(endpoints.travelPlan.activities(planId), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
     });
 
     if (!result.ok) {
-      if (result.status === 401) {
-        console.warn("Unauthorized - please log in");
-        return [];
-      }
       throw new Error(`Failed to fetch activities: ${result.status}`);
     }
 
-    // Backend returns normalized Activity DTOs
-    const data: Activity[] = await result.json();
-    return data;
+    const response = await result.json();
+    return response.data || response || [];
   } catch (e) {
-    console.error("Error fetching activities:", e);
+    console.error(e);
     return [];
   }
 }

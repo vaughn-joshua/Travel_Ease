@@ -1,42 +1,35 @@
-import { endpoints } from "../../config/api";
-import type { CreateActivityPayload, Activity } from "../../types/travelPlan";
+import { endpoints } from '../../config/api';
 
-interface CreateActivityResponse extends Activity {
-  message: string;
+interface CreateActivityData {
+  travel_plan_id: number | string;
+  notes?: string;
+  target_date?: string;
+  budget_range?: string;
+  lat?: number;
+  lng?: number;
+  location?: string;
+  name?: string;
+  brgy?: string;
+  province?: string;
+  city?: string;
 }
 
-export async function create_activity(data: CreateActivityPayload): Promise<Activity | undefined> {
+export async function create_activity(data: CreateActivityData): Promise<unknown> {
   try {
-    // Get the auth token from localStorage
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
-    }
-
+    const token = localStorage.getItem('token');
     const result = await fetch(endpoints.travelPlan.createActivity, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
-    if (!result.ok) {
-      if (result.status === 401) {
-        throw new Error("Session expired. Please log in again.");
-      }
-      const errorBody = await result.text();
-      console.error("Create activity error:", errorBody);
-      throw new Error(`Failed to create activity: ${result.status}`);
-    }
-
-    // Backend returns normalized Activity DTO with message
-    const responseData: CreateActivityResponse = await result.json();
-    return responseData;
+    const response = await result.json();
+    return response;
   } catch (e) {
-    console.error("Error creating activity:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }

@@ -1,37 +1,33 @@
-import { endpoints } from "../../config/api";
-import type { TravelPlan } from "../../types/travelPlan";
-
-interface PaginatedResponse {
-  data: TravelPlan[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
+import { endpoints } from '../../config/api';
+import type { TravelPlan } from '../../types/travelPlan';
 
 export async function fetch_public_plans(): Promise<TravelPlan[]> {
   try {
-    const result = await fetch(endpoints.travelPlan.public, {
-      method: "GET",
+    const res = await fetch(endpoints.travelPlan.public, {
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to fetch public plans: ${result.status}`);
+    if (!res.ok) {
+      throw new Error(`Public plans failed: ${res.status}`);
     }
 
-    const response: PaginatedResponse = await result.json();
-    // Backend returns normalized DTOs in data array
-    return response.data;
+    const json = await res.json();
+
+    // Backend returns { data: [...], pagination: {...} }
+    if (json && Array.isArray(json.data)) {
+      return json.data;
+    }
+    // Fallback: if json is already an array, return it directly
+    if (Array.isArray(json)) {
+      return json;
+    }
+    // Default to empty array if unexpected shape
+    return [];
   } catch (e) {
-    console.error("Error fetching public plans:", e);
+    console.error('Error fetching public plans:', e);
     return [];
   }
 }
-

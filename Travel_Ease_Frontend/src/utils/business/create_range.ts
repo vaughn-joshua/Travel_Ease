@@ -1,38 +1,34 @@
-import { endpoints } from "../../config/api";
-import type { PriceRange } from "../../types/business";
+import { endpoints } from '../../config/api';
 
-interface CreateRangePayload {
-  business_id: number | string;
-  min: number;
-  max: number;
+interface PriceRangeData {
+  id?: number;
+  business_id?: string | number;
+  categories?: Array<{
+    category_id: number;
+    min_price: number;
+    max_price: number;
+  }>;
+  min?: number;
+  max?: number;
+  [key: string]: unknown;
 }
 
-interface CreateRangeResponse {
-  message: string;
-  priceRange: PriceRange;
-}
-
-export async function create_range(
-  data: CreateRangePayload
-): Promise<CreateRangeResponse | undefined> {
+export async function create_range(submitted: PriceRangeData): Promise<unknown> {
   try {
+    const token = localStorage.getItem('token');
     const result = await fetch(endpoints.business.priceRange, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(submitted),
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to create price range: ${result.status}`);
-    }
-
-    const responseData: CreateRangeResponse = await result.json();
-    return responseData;
+    const data = await result.json();
+    return data;
   } catch (e) {
-    console.error("Error creating price range:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }
-

@@ -1,38 +1,33 @@
-import { endpoints } from "../../config/api";
-import type { UpdatePlanPayload, TravelPlan } from "../../types/travelPlan";
+import { endpoints } from '../../config/api';
 
-export async function edit_plan(
-  id: number | string,
-  data: UpdatePlanPayload
-): Promise<TravelPlan | undefined> {
+interface EditPlanData {
+  name?: string;
+  title?: string;
+  description?: string;
+  location?: string;
+  start_date?: string;
+  end_date?: string;
+  max_slots?: number;
+  visibility?: boolean;
+  status?: string;
+}
+
+export async function edit_plan(id: number | string, data: EditPlanData): Promise<unknown> {
   try {
-    // Get the auth token from localStorage
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
-    }
-
+    const token = localStorage.getItem('token');
     const result = await fetch(endpoints.travelPlan.editPlan(id), {
-      method: "PUT",
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
 
-    if (!result.ok) {
-      if (result.status === 401) {
-        throw new Error("Session expired. Please log in again.");
-      }
-      throw new Error(`Failed to update plan: ${result.status}`);
-    }
-
-    const responseData: TravelPlan = await result.json();
-    return responseData;
+    const response = await result.json();
+    return response;
   } catch (e) {
-    console.error("Error updating plan:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }

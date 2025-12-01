@@ -1,38 +1,25 @@
-import { endpoints } from "../../config/api";
-import type { EditActivityDatePayload, Activity } from "../../types/travelPlan";
+import { endpoints } from '../../config/api';
 
-export async function edit_activity_date(
-  id: number | string,
-  data: EditActivityDatePayload
-): Promise<Activity | undefined> {
+interface EditActivityDateData {
+  activity_id: number;
+  target_date?: string;
+  [key: string]: unknown;
+}
+
+export async function edit_activity_date(edited_data: EditActivityDateData): Promise<unknown> {
   try {
-    // Get the auth token from localStorage
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
-    }
-
-    const result = await fetch(endpoints.travelPlan.updateActivity(id), {
-      method: "PUT",
+    const result = await fetch(endpoints.travelPlan.editActivity(edited_data.activity_id), {
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(edited_data),
     });
 
-    if (!result.ok) {
-      if (result.status === 401) {
-        throw new Error("Session expired. Please log in again.");
-      }
-      throw new Error(`Failed to update activity date: ${result.status}`);
-    }
-
-    const responseData: Activity = await result.json();
-    return responseData;
+    const data = await result.json();
+    return data;
   } catch (e) {
-    console.error("Error updating activity date:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }

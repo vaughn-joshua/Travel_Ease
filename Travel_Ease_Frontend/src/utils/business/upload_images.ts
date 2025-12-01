@@ -1,29 +1,34 @@
-import { endpoints } from "../../config/api";
-import type { MultiUploadResponse } from "../../types/api";
+import { endpoints } from '../../config/api';
 
-export async function upload_images(files: FileList | File[]): Promise<MultiUploadResponse | undefined> {
+interface UploadResponse {
+  urls?: string[];
+  error?: string;
+  [key: string]: unknown;
+}
+
+export async function upload_images(formData: FormData | FileList): Promise<UploadResponse | null> {
+  // Convert FileList to FormData if needed
+  if (formData instanceof FileList) {
+    const fd = new FormData();
+    for (let i = 0; i < formData.length; i++) {
+      fd.append('files', formData[i]);
+    }
+    formData = fd;
+  }
   try {
-    const formData = new FormData();
-    
-    const fileArray = Array.from(files);
-    fileArray.forEach((file) => {
-      formData.append("images", file);
-    });
-
+    const token = localStorage.getItem('token');
     const result = await fetch(endpoints.utils.uploadImages, {
-      method: "POST",
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
       body: formData,
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to upload images: ${result.status}`);
-    }
-
-    const data: MultiUploadResponse = await result.json();
+    const data = await result.json();
     return data;
   } catch (e) {
-    console.error("Error uploading images:", e);
-    throw e;
+    console.error(e);
+    return null;
   }
 }
-

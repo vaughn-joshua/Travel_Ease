@@ -1,26 +1,24 @@
-import { endpoints } from "../../config/api";
-import type { BusinessCategory } from "../../types/business";
+import { endpoints } from '../../config/api';
 
-export async function fetch_categories(
-  id: number | string
-): Promise<BusinessCategory[]> {
+interface Category {
+  category_id: number;
+  name: string;
+  [key: string]: unknown;
+}
+
+export async function fetch_categories(id: number | string): Promise<Category[] | null> {
   try {
     const result = await fetch(endpoints.business.categoriesById(id), {
-      method: "GET",
+      method: 'GET',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to fetch categories: ${result.status}`);
-    }
-
-    const data: BusinessCategory[] = await result.json();
+    const data = await result.json();
     return data;
   } catch (e) {
-    console.error("Error fetching categories:", e);
-    return [];
+    console.error(e);
+    return null;
   }
 }
-
