@@ -12,9 +12,11 @@
 
 import { TravelPlan, User } from '@prisma/client';
 
-interface PlanWithUser extends TravelPlan {
-  user?: User;
-  toJSON?: () => TravelPlan;
+interface PlanWithUser extends Partial<TravelPlan> {
+  travel_plan_id: number;
+  name: string;
+  user?: Partial<User> | null;
+  toJSON?: () => any;
 }
 
 interface PlanDTO {
@@ -26,15 +28,15 @@ interface PlanDTO {
   name: string;
   max_slots: number | null;
   visibility: boolean;
-  user_id: number;
+  user_id?: number;
   description: string | null;
   location: string | null;
   start_date: Date | null;
   end_date: Date | null;
-  status: string;
-  visibility_timestamp: Date | null;
-  visibility_end_date: Date | null;
-  user?: User;
+  status: string | null;
+  visibility_timestamp?: Date | null;
+  visibility_end_date?: Date | null;
+  user?: any;
 }
 
 /**
