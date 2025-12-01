@@ -4,8 +4,11 @@ import { formatPlan } from "../util/formatPlan.js";
 import { Request, Response } from "express";
 
 /**
- * Fetch ongoing (Active status) plans for the authenticated user
- * Supports pagination and filtering via query params
+ * Fetch ONGOING plans for the authenticated user:
+ * - Active plans where start_date <= today (trip has started)
+ * 
+ * Active plans with future start_date should NOT appear here
+ * (those belong in fetch_plans/upcoming)
  */
 export async function ongoing_plan(req: Request, res: Response) {
   try {
@@ -13,21 +16,34 @@ export async function ongoing_plan(req: Request, res: Response) {
     const { page, pageSize, skip, take } = parsePagination(req.query as Record<string, string>);
     const filters = buildPlanFilters(req.query as Record<string, string>);
 
-    // Get plan IDs where user is a participant
-    const participantPlanIds = await executeWithRetry(() =>
-      prisma.participant.findMany({
-        where: { user_id: userId, status: true },
-        select: { travel_plan_id: true }
-      })
-    );
-    const planIds = participantPlanIds.map(p => p.travel_plan_id).filter((id): id is number => id !== null);
+    // Get today's date at start of day (UTC) for consistent comparison
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
 
-    // Build where clause: Active plans where user is owner or participant
+    // Single query to get plan IDs where user is owner OR participant
+    const userPlanAccess = await executeWithRetry(() =>
+      prisma.$queryRaw<{ travel_plan_id: number }[]>`
+        SELECT DISTINCT tp.travel_plan_id 
+        FROM "TravelPlan" tp
+        LEFT JOIN "Participant" p ON tp.travel_plan_id = p.travel_plan_id AND p.user_id = ${userId} AND p.status = true
+        WHERE tp.user_id = ${userId} OR p.participant_id IS NOT NULL
+      `
+    );
+    const accessiblePlanIds = userPlanAccess.map(p => p.travel_plan_id);
+
+    if (accessiblePlanIds.length === 0) {
+      return res.json(paginatedResponse([], 0, { page, pageSize }));
+    }
+
+    // Build where clause for ONGOING plans:
+    // Active status AND start_date has passed (or is today)
     const where: any = {
+      travel_plan_id: { in: accessiblePlanIds },
       status: 'Active',
+      // Only include if start_date is today or in the past
       OR: [
-        { user_id: userId },
-        ...(planIds.length > 0 ? [{ travel_plan_id: { in: planIds } }] : [])
+        { start_date: { lte: today } },
+        { start_date: null } // Include Active plans without a start_date
       ],
       ...filters
     };
@@ -44,9 +60,17 @@ export async function ongoing_plan(req: Request, res: Response) {
             description: true,
             location: true,
             status: true,
-            max_slots: true
+            max_slots: true,
+            visibility: true,
+            _count: {
+              select: {
+                participants: {
+                  where: { status: true }
+                }
+              }
+            }
           },
-          orderBy: [{ start_date: 'asc' }],
+          orderBy: [{ start_date: 'asc' }, { travel_plan_id: 'desc' }],
           skip,
           take
         }),
@@ -54,29 +78,9 @@ export async function ongoing_plan(req: Request, res: Response) {
       ])
     );
 
-    // Get participant counts for each plan
-    const planIdList = plans.map(p => p.travel_plan_id);
-    const participantCounts = planIdList.length > 0 
-      ? await executeWithRetry(() =>
-          prisma.participant.groupBy({
-            by: ['travel_plan_id'],
-            where: { 
-              travel_plan_id: { in: planIdList },
-              status: true 
-            },
-            _count: { participant_id: true }
-          })
-        )
-      : [];
-
-    // Create a map for quick lookup
-    const countMap: Record<number, number> = {};
-    participantCounts.forEach(c => {
-      countMap[c.travel_plan_id] = c._count.participant_id;
-    });
-
+    // Format response with participant count included
     const data = plans.map(p => formatPlan(p, {
-      approvedParticipants: countMap[p.travel_plan_id] || 0
+      approvedParticipants: p._count.participants
     }));
 
     res.json(paginatedResponse(data, total, { page, pageSize }));
@@ -85,4 +89,3 @@ export async function ongoing_plan(req: Request, res: Response) {
     return handlePrismaError(error, res, 'Fetching ongoing plans');
   }
 }
-

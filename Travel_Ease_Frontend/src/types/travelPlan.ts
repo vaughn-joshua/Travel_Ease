@@ -83,6 +83,12 @@ export interface Activity {
   };
 }
 
+export interface CollaboratorPayload {
+  user_id: number;
+  role?: 'Admin' | 'Editor' | 'Viewer';
+  status?: boolean;
+}
+
 export interface CreatePlanPayload {
   title: string;
   description?: string;
@@ -90,7 +96,7 @@ export interface CreatePlanPayload {
   start_date?: string;
   end_date?: string;
   slots?: number;
-  collaborators?: number;
+  collaborators?: CollaboratorPayload[];
   is_public?: boolean;
 }
 
