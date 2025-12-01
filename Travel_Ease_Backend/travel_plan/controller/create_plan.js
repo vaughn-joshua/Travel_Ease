@@ -2,6 +2,8 @@ import { prisma, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 import { formatPlan } from "../util/formatPlan.js";
 
 export async function create_plan(req, res) {
+  // Use validated data from Zod middleware (transforms strings to numbers)
+  const validated = req.validated || req.body;
   const {
     title,
     description,
@@ -10,12 +12,22 @@ export async function create_plan(req, res) {
     end_date,
     slots,
     max_slots: maxSlotsParam,
-    collaborators,
-  } = req.body;
+    collaborators = [],
+  } = validated;
   
-  const userId = req.user.id;
-  // Prefer max_slots, fallback to slots
-  const maxSlots = maxSlotsParam ?? slots ?? null;
+  // Defensive check for user ID
+  const userId = req.user?.id;
+  if (!userId) {
+    console.error("create_plan: req.user.id is missing");
+    return res.status(401).json({ error: "User ID not found in request" });
+  }
+  
+  // Prefer max_slots, fallback to slots, ensure it's a number or null
+  const rawMaxSlots = maxSlotsParam ?? slots ?? null;
+  const maxSlots = rawMaxSlots !== null ? Number(rawMaxSlots) : null;
+  if (maxSlots !== null && (isNaN(maxSlots) || !Number.isInteger(maxSlots) || maxSlots < 1)) {
+    return res.status(400).json({ error: "max_slots must be a positive integer" });
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {

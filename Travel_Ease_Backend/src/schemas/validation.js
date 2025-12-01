@@ -20,6 +20,13 @@ export const updateProfileSchema = z.object({
   contact_no: z.string().optional()
 });
 
+// Collaborator schema for create plan
+const collaboratorSchema = z.object({
+  user_id: z.number().int().positive().or(z.string().transform(Number).pipe(z.number().int().positive())),
+  role: z.enum(['Admin', 'Editor', 'Viewer']).optional(),
+  status: z.boolean().optional()
+});
+
 // Travel Plan Schemas
 export const createPlanSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -29,7 +36,7 @@ export const createPlanSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)").optional().or(z.string().datetime().optional()),
   slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()),
   max_slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()),
-  collaborators: z.array(z.any()).optional()
+  collaborators: z.array(collaboratorSchema).optional().default([])
 });
 
 export const editPlanSchema = z.object({

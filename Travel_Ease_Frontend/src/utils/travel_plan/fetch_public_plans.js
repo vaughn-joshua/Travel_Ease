@@ -2,22 +2,26 @@ import { endpoints } from '../../config/api.js';
 
 export async function fetch_public_plans() {
   try {
-    const result = await fetch(endpoints.travelPlan.public, {
+    const res = await fetch(endpoints.travelPlan.public, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    const data = await result.json();
-    
-    // Handle paginated response format: { items: [...], total, page, pageSize, totalPages }
-    if (data && Array.isArray(data.items)) {
-      return data.items;
+    if (!res.ok) {
+      throw new Error(`Public plans failed: ${res.status}`);
     }
-    // Fallback: if data is already an array, return it directly
-    if (Array.isArray(data)) {
-      return data;
+
+    const json = await res.json();
+
+    // Backend returns { data: [...], pagination: {...} }
+    if (json && Array.isArray(json.data)) {
+      return json.data;
+    }
+    // Fallback: if json is already an array, return it directly
+    if (Array.isArray(json)) {
+      return json;
     }
     // Default to empty array if unexpected shape
     return [];

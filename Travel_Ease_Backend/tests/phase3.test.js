@@ -489,6 +489,97 @@ describe('Phase 3 - Travel Plan Domain', () => {
     });
   });
 
+  describe('Create Plan with String Values', () => {
+    it('should create plan with string slots (coerced to number)', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_plan')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          title: 'String Slots Test',
+          description: 'Testing string to number coercion',
+          location: 'Tagaytay',
+          start_date: '2025-12-15',
+          end_date: '2025-12-17',
+          slots: '5' // String value should be coerced to number
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toContain('successfully');
+      expect(response.body).toHaveProperty('travel_plan_id');
+      expect(response.body).toHaveProperty('max_slots', 5);
+      expect(response.body).toHaveProperty('slots', 5);
+      expect(response.body).toHaveProperty('title', 'String Slots Test');
+      expect(response.body).toHaveProperty('location', 'Tagaytay');
+    });
+
+    it('should create plan with max_slots string and collaborators', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_plan')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          title: 'Collaborators Test',
+          max_slots: '10', // String value
+          collaborators: [
+            { user_id: user2.user_id, role: 'Editor', status: true },
+            { user_id: user3.user_id, role: 'Viewer', status: false }
+          ]
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('travel_plan_id');
+      expect(response.body).toHaveProperty('max_slots', 10);
+
+      // Verify participants were created
+      const participants = await prisma.participant.findMany({
+        where: { travel_plan_id: response.body.travel_plan_id }
+      });
+
+      // Should have 3 participants: creator + 2 collaborators
+      expect(participants.length).toBe(3);
+      
+      // Verify creator is Admin with status true
+      const creator = participants.find(p => p.user_id === user1.user_id);
+      expect(creator.role).toBe('Admin');
+      expect(creator.status).toBe(true);
+
+      // Verify user2 is Editor with status true
+      const editor = participants.find(p => p.user_id === user2.user_id);
+      expect(editor.role).toBe('Editor');
+      expect(editor.status).toBe(true);
+
+      // Verify user3 is Viewer with status false (pending)
+      const viewer = participants.find(p => p.user_id === user3.user_id);
+      expect(viewer.role).toBe('Viewer');
+      expect(viewer.status).toBe(false);
+    });
+
+    it('should reject invalid slots value', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_plan')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          title: 'Invalid Slots Test',
+          slots: 'invalid' // Invalid string
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should create plan without slots (null max_slots)', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_plan')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          title: 'No Slots Test',
+          description: 'Plan without max_slots'
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('travel_plan_id');
+      expect(response.body.max_slots).toBeNull();
+    });
+  });
+
   describe('Public Plans', () => {
     beforeEach(async () => {
       // Create a visible plan

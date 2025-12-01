@@ -30,6 +30,7 @@ import Main_Travel_Spots from "./pages/Travel_Spots/Main_Travel_Spots";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
+import Contact from "./pages/Contact";
 // Business landing
 import Landing_Page from "./pages/Landing_Page";
 
@@ -92,6 +93,9 @@ export default function App(): React.ReactElement {
           <Route path="/profile" element={<Profile />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/onboarding" element={<Onboarding />} />
+
+          {/* Contact */}
+          <Route path="/contact" element={<Contact />} />
         </Routes>
       </main>
       <Footer />

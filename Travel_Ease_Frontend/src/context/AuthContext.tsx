@@ -137,8 +137,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Tokens should only be stored after backend verification via syncOAuthUser or loginWithEmail
     });
 
-    // Subscribe to 401 events to clear auth state when token is invalid
+    // Subscribe to 401/403 events to clear auth state when token is invalid
     const unsubscribeAuth = authEvents.onUnauthorized(() => {
+      // Clear all auth state including localStorage
+      localStorage.removeItem(PROFILE_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
       setUser(null);
       setSession(null);
       setNeedsOnboarding(false);

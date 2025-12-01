@@ -74,8 +74,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Emit unauthorized event on 401 to trigger auth state cleanup
-    if (error.response?.status === 401) {
+    // Emit unauthorized event on 401/403 to trigger auth state cleanup
+    // Backend returns 401 for missing token, 403 for invalid/expired token
+    if (error.response?.status === 401 || error.response?.status === 403) {
       authEvents.emitUnauthorized();
     }
 
