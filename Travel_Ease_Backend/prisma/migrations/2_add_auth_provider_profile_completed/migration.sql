@@ -8,3 +8,4 @@ UPDATE "user" SET "profile_completed" = true WHERE "password" IS NOT NULL;
 -- Update existing users: set auth_provider to 'email' for users with password
 UPDATE "user" SET "auth_provider" = 'email' WHERE "password" IS NOT NULL AND "auth_provider" IS NULL;
 
+

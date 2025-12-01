@@ -79,6 +79,7 @@ export const endpoints: Endpoints = {
   blogs: {
     base: `${API_BASE_URL}/blogs`,
     featured: `${API_BASE_URL}/blogs/featured`,
+    overview: `${API_BASE_URL}/blogs/overview`,
     bySlug: (slug) => `${API_BASE_URL}/blogs/${slug}`,
     byId: (id) => `${API_BASE_URL}/blogs/${id}`,
   },

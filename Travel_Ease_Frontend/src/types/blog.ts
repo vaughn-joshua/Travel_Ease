@@ -29,4 +29,10 @@ export interface BlogQueryParams {
   q?: string;
 }
 
-
+export interface BlogOverviewResponse {
+  featured: Blog[];
+  destinations: Blog[];
+  tips: Blog[];
+  clientEducation: Blog[];
+  fromCache?: boolean;
+}

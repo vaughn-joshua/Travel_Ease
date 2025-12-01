@@ -10,8 +10,12 @@ import {
   buildPaginationMeta, 
   handleSequelizeError 
 } from "../lib/queryHelpers.js";
+import { getCache, createCacheKey } from "../../services/cache.js";
 
 export const blogRoutes = Router();
+
+// In-memory cache for blog overview (short TTL)
+const overviewCache = getCache('search');
 
 /**
  * Middleware to require Google OAuth authentication for blog operations
@@ -88,6 +92,67 @@ blogRoutes.get("/featured", async (req, res, next) => {
     res.json(blogs);
   } catch (error) {
     return handleSequelizeError(error, res, 'Fetching featured blogs');
+  }
+});
+
+// GET /api/blogs/overview - Aggregated endpoint for Blogs page (public, cached)
+blogRoutes.get("/overview", async (req, res, next) => {
+  try {
+    const cacheKey = createCacheKey('blogs_overview', {});
+    const cached = overviewCache.get(cacheKey);
+    if (cached) {
+      return res.json({ ...cached, fromCache: true });
+    }
+
+    // Slim attributes for list views
+    const listAttributes = [
+      'id', 'title', 'slug', 'excerpt', 'coverImageUrl',
+      'category', 'isFeatured', 'readingMinutes', 'publishedAt', 'author', 'updatedAt'
+    ];
+
+    // Fetch all data concurrently
+    const [featured, destinations, tips, clientEducation] = await executeWithRetry(() =>
+      Promise.all([
+        Blog.findAll({
+          where: { isFeatured: true },
+          attributes: listAttributes,
+          order: [['publishedAt', 'DESC']],
+          limit: 5
+        }),
+        Blog.findAll({
+          where: { category: 'Destinations' },
+          attributes: listAttributes,
+          order: [['publishedAt', 'DESC']],
+          limit: 3
+        }),
+        Blog.findAll({
+          where: { category: 'Tips' },
+          attributes: listAttributes,
+          order: [['publishedAt', 'DESC']],
+          limit: 3
+        }),
+        Blog.findAll({
+          where: { category: 'Client Education' },
+          attributes: listAttributes,
+          order: [['publishedAt', 'DESC']],
+          limit: 3
+        })
+      ])
+    );
+
+    const payload = {
+      featured,
+      destinations,
+      tips,
+      clientEducation
+    };
+
+    // Cache for 60 seconds
+    overviewCache.set(cacheKey, payload, 60);
+
+    res.json({ ...payload, fromCache: false });
+  } catch (error) {
+    return handleSequelizeError(error, res, 'Fetching blog overview');
   }
 });
 

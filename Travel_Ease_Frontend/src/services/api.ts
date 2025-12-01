@@ -1,7 +1,26 @@
 import axios from "axios";
-import type { Blog, BlogListResponse, BlogQueryParams } from "../types/blog";
+import type { Blog, BlogListResponse, BlogQueryParams, BlogOverviewResponse } from "../types/blog";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+
+// Event emitter for auth events (e.g., 401 unauthorized)
+type AuthEventCallback = () => void;
+const authEventListeners: AuthEventCallback[] = [];
+
+export const authEvents = {
+  /** Subscribe to 401 unauthorized events */
+  onUnauthorized(callback: AuthEventCallback): () => void {
+    authEventListeners.push(callback);
+    return () => {
+      const idx = authEventListeners.indexOf(callback);
+      if (idx !== -1) authEventListeners.splice(idx, 1);
+    };
+  },
+  /** Emit unauthorized event to all listeners */
+  emitUnauthorized() {
+    authEventListeners.forEach((cb) => cb());
+  },
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -50,7 +69,17 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Only log detailed errors in development
+    // Silently ignore aborted/cancelled requests (e.g., from React StrictMode double-render)
+    if (axios.isCancel(error) || error.code === "ERR_CANCELED") {
+      return Promise.reject(error);
+    }
+
+    // Emit unauthorized event on 401 to trigger auth state cleanup
+    if (error.response?.status === 401) {
+      authEvents.emitUnauthorized();
+    }
+
+    // Only log detailed errors in development (skip abort errors)
     if (import.meta.env.DEV) {
       console.error("API Error:", {
         status: error.response?.status,
@@ -88,6 +117,12 @@ export const blogApi = {
     return response.data;
   },
 
+  // Get aggregated overview (featured + category slices) in one call
+  getOverview: async (signal?: AbortSignal): Promise<BlogOverviewResponse> => {
+    const response = await api.get("/blogs/overview", { signal });
+    return response.data;
+  },
+
   // Get single blog by slug
   getBlogBySlug: async (slug: string): Promise<Blog> => {
     const response = await api.get(`/blogs/${slug}`);
@@ -112,7 +147,7 @@ export const blogApi = {
   // Delete blog
   deleteBlog: async (id: string): Promise<void> => {
     try {
-      const response = await api.delete(`/blogs/${id}`);
+      await api.delete(`/blogs/${id}`);
       // 204 No Content is a successful response with no body
       return;
     } catch (error: any) {
@@ -182,10 +217,45 @@ interface BusinessQueryParams {
   status?: boolean;
 }
 
+// Travel spots query params
+interface TravelSpotsParams {
+  search?: string;
+  city?: string;
+  limit?: number;
+}
+
+// Travel spots response (matches backend enriched shape)
+interface TravelSpotsResponse {
+  message: string;
+  data: Array<{
+    business_id: number;
+    user_id: number | null;
+    name: string;
+    house_number: string | null;
+    street: string | null;
+    brgy: string | null;
+    city: string | null;
+    latitude: number | null;
+    longtitude: number | null;
+    description: string | null;
+    rating: number | null;
+    status: boolean | null;
+    picture: string | null;
+    reviewCount: number;
+  }>;
+  fromCache?: boolean;
+}
+
 export const businessApi = {
   // Get paginated list of businesses
   getBusinesses: async (params?: BusinessQueryParams): Promise<BusinessListResponse> => {
     const response = await api.get("/business/businesses", { params });
+    return response.data;
+  },
+
+  // Get travel spots with optional search/city/limit (public, cached on backend)
+  getTravelSpots: async (params?: TravelSpotsParams, signal?: AbortSignal): Promise<TravelSpotsResponse> => {
+    const response = await api.get("/business/travel_spots", { params, signal });
     return response.data;
   },
 

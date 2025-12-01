@@ -1,12 +1,7 @@
-import { endpoints } from "../../config/api";
+import { businessApi } from "../../services/api";
 import type { Business } from "../../types/business";
 
-// Raw response shape from backend /api/business/travel_spots
-interface TravelSpotsResponse {
-  message: string;
-  data: RawBusiness[];
-}
-
+// Raw business shape from backend /api/business/travel_spots (with reviewCount)
 interface RawBusiness {
   business_id: number;
   user_id: number | null;
@@ -21,6 +16,7 @@ interface RawBusiness {
   rating: number | null;
   status: boolean | null;
   picture: string | null;
+  reviewCount: number;
 }
 
 // Normalize backend data to match frontend Business type
@@ -42,7 +38,7 @@ function normalizeBusiness(raw: RawBusiness): Business {
     },
     menuItems: [],
     reviews: [],
-    reviewCount: 0,
+    reviewCount: raw.reviewCount ?? 0,
     location: {
       lat: raw.latitude,
       lng: raw.longtitude, // Note: backend typo
@@ -53,30 +49,35 @@ function normalizeBusiness(raw: RawBusiness): Business {
   };
 }
 
-export async function fetch_businesses(): Promise<Business[]> {
+export interface FetchBusinessesOptions {
+  search?: string;
+  city?: string;
+  limit?: number;
+  signal?: AbortSignal;
+}
+
+export async function fetch_businesses(options: FetchBusinessesOptions = {}): Promise<Business[]> {
   try {
-    const result = await fetch(endpoints.business.travelSpots, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const { search, city, limit, signal } = options;
+    const response = await businessApi.getTravelSpots({ search, city, limit }, signal);
 
-    if (!result.ok) {
-      throw new Error(`Failed to fetch businesses: ${result.status}`);
-    }
-
-    const response: TravelSpotsResponse = await result.json();
-    
     // Guard against unexpected response shapes
     if (!response.data || !Array.isArray(response.data)) {
-      console.warn("Unexpected response shape from travel_spots:", response);
+      if (import.meta.env.DEV) {
+        console.warn("Unexpected response shape from travel_spots:", response);
+      }
       return [];
     }
 
     return response.data.map(normalizeBusiness);
-  } catch (e) {
-    console.error("Error fetching businesses:", e);
+  } catch (e: any) {
+    // Ignore aborted requests
+    if (e.name === "CanceledError" || e.code === "ERR_CANCELED") {
+      return [];
+    }
+    if (import.meta.env.DEV) {
+      console.error("Error fetching businesses:", e);
+    }
     return [];
   }
 }

@@ -205,19 +205,28 @@ export default function Search_Box({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch(e as unknown as React.FormEvent);
+    }
+  };
+
   return (
     <div ref={boxRef} className="relative w-72">
-      <form onSubmit={handleSearch} className="relative">
+      <div className="relative">
         <input
           ref={inputRef}
           type="text"
           value={state.query}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full px-4 py-3 pr-12 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-gray-800 placeholder-gray-400"
         />
         <button
-          type="submit"
+          type="button"
+          onClick={handleSearch}
           className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-primary-red transition-colors"
           aria-label="Search"
         >
@@ -225,7 +234,7 @@ export default function Search_Box({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </button>
-      </form>
+      </div>
 
       {state.status === "loading" && (
         <div className="absolute right-12 top-3.5">

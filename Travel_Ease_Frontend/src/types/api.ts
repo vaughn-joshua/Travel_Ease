@@ -102,6 +102,7 @@ export interface MapEndpoints {
 export interface BlogEndpoints {
   base: string;
   featured: string;
+  overview: string;
   bySlug: (slug: string) => string;
   byId: (id: string) => string;
 }

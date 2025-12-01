@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Op } from "sequelize";
+import { Op, fn, col, literal } from "sequelize";
 import { authenticateToken } from "../src/middleware/auth.js";
 import { requireBusinessOwnership } from "../src/middleware/ownership.js";
 import { 
@@ -24,6 +24,7 @@ import {
 import { Business, BusinessReview, BusinessCategory, BusinessHours, BusinessFavorite, PriceRange, MenuItem, User } from "../src/models/index.js";
 import { sequelize, executeWithRetry } from "../src/lib/sequelize.js";
 import { handleSequelizeError } from "../src/lib/queryHelpers.js";
+import { getCache, createCacheKey } from "../services/cache.js";
 
 const router = Router();
 
@@ -125,12 +126,38 @@ router.post("/:id/menu", authenticateToken, createMenuItem);
 router.put("/:id/menu/:itemId", authenticateToken, updateMenuItem);
 router.delete("/:id/menu/:itemId", authenticateToken, deleteMenuItem);
 
+// Travel spots cache
+const travelSpotsCache = getCache('search');
+
 // Travel spots endpoints (public for browsing)
+// Supports optional query params: search, city, limit
 router.get("/travel_spots", async (req, res) => {
   try {
+    const { search, city, limit } = req.query;
+    const maxLimit = Math.min(parseInt(limit, 10) || 50, 100);
+
+    // Build cache key from query params
+    const cacheKey = createCacheKey('travel_spots', { search: search || '', city: city || '', limit: maxLimit });
+    const cached = travelSpotsCache.get(cacheKey);
+    if (cached) {
+      return res.json({ message: "Success", data: cached, fromCache: true });
+    }
+
+    // Build where clause
+    const where = { status: true };
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+    if (city) {
+      where.city = { [Op.iLike]: `%${city}%` };
+    }
+
     const businesses = await executeWithRetry(() =>
       Business.findAll({
-        where: { status: true }, // Only show approved/active businesses
+        where,
         attributes: [
           'business_id',
           'user_id',
@@ -146,13 +173,45 @@ router.get("/travel_spots", async (req, res) => {
           'status',
           'picture'
         ],
-        order: [['rating', 'DESC NULLS LAST']]
+        order: [['rating', 'DESC NULLS LAST']],
+        limit: maxLimit
       })
     );
-    
+
+    // Fetch review counts in a single query
+    const businessIds = businesses.map(b => b.business_id);
+    let reviewCounts = {};
+    if (businessIds.length > 0) {
+      const counts = await executeWithRetry(() =>
+        BusinessReview.findAll({
+          where: { business_id: { [Op.in]: businessIds } },
+          attributes: [
+            'business_id',
+            [fn('COUNT', col('review_id')), 'count']
+          ],
+          group: ['business_id'],
+          raw: true
+        })
+      );
+      reviewCounts = counts.reduce((acc, r) => {
+        acc[r.business_id] = parseInt(r.count, 10);
+        return acc;
+      }, {});
+    }
+
+    // Attach reviewCount to each business
+    const enriched = businesses.map(b => {
+      const plain = b.toJSON ? b.toJSON() : b;
+      return { ...plain, reviewCount: reviewCounts[plain.business_id] || 0 };
+    });
+
+    // Cache for 30 seconds
+    travelSpotsCache.set(cacheKey, enriched, 30);
+
     res.json({
       message: "Success",
-      data: businesses,
+      data: enriched,
+      fromCache: false
     });
   } catch (error) {
     console.error("Error fetching travel spots:", error);

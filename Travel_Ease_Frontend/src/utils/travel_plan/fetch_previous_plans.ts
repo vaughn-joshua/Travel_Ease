@@ -2,7 +2,8 @@ import { endpoints } from "../../config/api";
 import type { TravelPlan } from "../../types/travelPlan";
 
 interface PaginatedResponse {
-  data: TravelPlan[];
+  data?: TravelPlan[];
+  items?: TravelPlan[];
   pagination?: {
     page: number;
     pageSize: number;
@@ -37,8 +38,8 @@ export async function fetch_previous_plans(): Promise<TravelPlan[]> {
     }
 
     const response: PaginatedResponse = await result.json();
-    // Backend returns paginated response with data array
-    return response.data || [];
+    // Backend returns paginated response with data or items array
+    return response.data || response.items || [];
   } catch (e) {
     console.error("Error fetching previous plans:", e);
     return [];

@@ -1,54 +1,58 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetch_businesses } from "../../utils/travel_plan/fetch_businesses";
 import Business_box from "../../components/Travel_Spots/Business_box";
 import Search_Box from "../../components/Travel_Spots/Search_Box";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Business } from "../../types/business";
 
 export default function Main_Travel_Spots(): React.ReactElement {
   const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [filteredBusinesses, setFilteredBusinesses] = useState<Business[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce search input to avoid excessive API calls
+  const debouncedSearch = useDebouncedValue(searchQuery, 350);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // Abort any in-flight request when search changes or component unmounts
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const loadData = async (): Promise<void> => {
       try {
-        const data = await fetch_businesses();
+        setLoading(true);
+        setError(null);
+        const data = await fetch_businesses({
+          search: debouncedSearch || undefined,
+          signal: controller.signal,
+        });
         setBusinesses(data);
-        setFilteredBusinesses(data);
-      } catch (e) {
-        console.error("Error loading businesses:", e);
+      } catch (e: any) {
+        // Ignore aborted requests
+        if (e.name === "CanceledError" || e.code === "ERR_CANCELED") {
+          return;
+        }
+        if (import.meta.env.DEV) {
+          console.error("Error loading businesses:", e);
+        }
+        setError("Failed to load travel spots. Please try again.");
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
 
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredBusinesses(businesses);
-    } else {
-      const filtered = businesses.filter(
-        (b) =>
-          b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          b.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredBusinesses(filtered);
-    }
-  }, [searchQuery, businesses]);
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedSearch]);
 
   const handleSearch = (query: string): void => {
     setSearchQuery(query);
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Loading travel spots...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -59,17 +63,36 @@ export default function Main_Travel_Spots(): React.ReactElement {
           <Search_Box onSearch={handleSearch} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBusinesses.length === 0 ? (
-            <p className="text-gray-500 col-span-full text-center">
-              No travel spots found
-            </p>
-          ) : (
-            filteredBusinesses.map((business) => (
-              <Business_box key={business.id} business={business} />
-            ))
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-primary-red" />
+              <p className="text-gray-600">Loading travel spots...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => setSearchQuery(searchQuery)} // triggers refetch via effect
+              className="btn-primary"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {businesses.length === 0 ? (
+              <p className="text-gray-500 col-span-full text-center">
+                No travel spots found
+              </p>
+            ) : (
+              businesses.map((business) => (
+                <Business_box key={business.id} business={business} />
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

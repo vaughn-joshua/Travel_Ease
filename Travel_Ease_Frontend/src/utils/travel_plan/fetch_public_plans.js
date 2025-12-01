@@ -10,8 +10,19 @@ export async function fetch_public_plans() {
     });
 
     const data = await result.json();
-    return data;
+    
+    // Handle paginated response format: { items: [...], total, page, pageSize, totalPages }
+    if (data && Array.isArray(data.items)) {
+      return data.items;
+    }
+    // Fallback: if data is already an array, return it directly
+    if (Array.isArray(data)) {
+      return data;
+    }
+    // Default to empty array if unexpected shape
+    return [];
   } catch (e) {
-    console.log(e);
+    console.error("Error fetching public plans:", e);
+    return [];
   }
 }

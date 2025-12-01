@@ -1,17 +1,15 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import Carousel from "../component/blog/Carousel";
 import Section from "../component/blog/Section";
 import { blogApi } from "../services/api";
-import type { Blog } from "../types/blog";
+import type { Blog, BlogOverviewResponse } from "../types/blog";
 
 export default function Blogs() {
-  const [featuredBlogs, setFeaturedBlogs] = useState<Blog[]>([]);
-  const [destinationsBlogs, setDestinationsBlogs] = useState<Blog[]>([]);
-  const [tipsBlogs, setTipsBlogs] = useState<Blog[]>([]);
-  const [clientEducationBlogs, setClientEducationBlogs] = useState<Blog[]>([]);
+  const [overview, setOverview] = useState<BlogOverviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const pageTitle =
@@ -36,26 +34,26 @@ export default function Blogs() {
   }, []);
 
   useEffect(() => {
-    const fetchBlogs = async () => {
+    // Abort any in-flight request when component unmounts or re-fetches
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const fetchOverview = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const featured = await blogApi.getFeaturedBlogs();
-        setFeaturedBlogs(featured);
-
-        const [destinations, tips, clientEducation] = await Promise.all([
-          blogApi.getBlogs({ category: "Destinations", pageSize: 3 }),
-          blogApi.getBlogs({ category: "Tips", pageSize: 3 }),
-          blogApi.getBlogs({ category: "Client Education", pageSize: 3 }),
-        ]);
-
-        setDestinationsBlogs(destinations.items);
-        setTipsBlogs(tips.items);
-        setClientEducationBlogs(clientEducation.items);
+        const data = await blogApi.getOverview(controller.signal);
+        setOverview(data);
       } catch (err: any) {
+        // Ignore aborted requests
+        if (err.name === "CanceledError" || err.code === "ERR_CANCELED") {
+          return;
+        }
+
         // Only log errors in development to avoid noisy console
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error("Error fetching blogs:", err);
         }
 
@@ -83,8 +81,18 @@ export default function Blogs() {
       }
     };
 
-    fetchBlogs();
+    fetchOverview();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
+
+  // Derive individual arrays from overview for convenience
+  const featuredBlogs = overview?.featured ?? [];
+  const destinationsBlogs = overview?.destinations ?? [];
+  const tipsBlogs = overview?.tips ?? [];
+  const clientEducationBlogs = overview?.clientEducation ?? [];
 
   const structuredData = useMemo(() => {
     const combinedBlogs = [

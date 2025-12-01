@@ -8,6 +8,7 @@ import {
   type RegisterPayload,
   type UpdateProfilePayload,
 } from "../services/auth";
+import { authEvents } from "../services/api";
 
 type AuthSource = "supabase" | "password" | "google";
 
@@ -116,14 +117,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.access_token) {
-        // Store token for API calls
-        localStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
-      }
+      // Don't auto-store Supabase token - wait for explicit OAuth sync or login
+      // This prevents 401 errors when there's a stale Supabase session
+      // Tokens are stored by loginWithEmail or syncOAuthUser after backend verification
       const profile = mapSupabaseUser(session?.user ?? null);
       if (profile && !user) {
-        // Only set if we don't already have a user from localStorage
-        persistAuth(profile, session?.access_token ?? undefined);
+        // Only set basic profile if we don't already have a user from localStorage
+        // Don't persist with token - require explicit sync
+        setUser(profile);
       }
       setLoading(false);
     });
@@ -132,13 +133,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (nextSession?.access_token) {
-        localStorage.setItem(TOKEN_STORAGE_KEY, nextSession.access_token);
-      }
-      // Don't overwrite user profile on auth state change - let syncOAuthUser handle it
+      // Don't auto-store token on auth state change
+      // Tokens should only be stored after backend verification via syncOAuthUser or loginWithEmail
     });
 
-    return () => subscription.unsubscribe();
+    // Subscribe to 401 events to clear auth state when token is invalid
+    const unsubscribeAuth = authEvents.onUnauthorized(() => {
+      setUser(null);
+      setSession(null);
+      setNeedsOnboarding(false);
+      // Also sign out from Supabase to prevent it from re-providing stale tokens
+      if (isSupabaseConfigured) {
+        supabase.auth.signOut().catch(console.error);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      unsubscribeAuth();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
@@ -174,7 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await authApi.oauthSync();
       const profile = mapApiUser(data.user, "google");
-      persistAuth(profile);
+      // After successful backend verification, store the token from current session
+      const currentToken = session?.access_token ?? localStorage.getItem(TOKEN_STORAGE_KEY);
+      persistAuth(profile, currentToken);
       setNeedsOnboarding(data.needsOnboarding);
       return { isNewUser: data.isNewUser };
     } catch (error) {
