@@ -9,3 +9,5 @@ UPDATE "user" SET "profile_completed" = true WHERE "password" IS NOT NULL;
 UPDATE "user" SET "auth_provider" = 'email' WHERE "password" IS NOT NULL AND "auth_provider" IS NULL;
 
 
+
+
