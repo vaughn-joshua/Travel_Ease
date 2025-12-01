@@ -53,6 +53,8 @@ model User {
   email                 String               @unique @db.VarChar(100)
   contact_no            String?              @db.VarChar(50)
   password              String?              @db.VarChar  // NULL when using Supabase Auth
+  auth_provider         String?              @db.VarChar(50)  // 'password', 'google', etc.
+  profile_completed     Boolean?             @default(false)
   created_at            DateTime?            @default(now()) @db.Timestamp(6)
   updated_at            DateTime?            @default(now()) @updatedAt @db.Timestamp(6)
 
@@ -234,6 +236,12 @@ model Activity {
   is_priority    Boolean?    @default(false)
   lat            Float?
   lng            Float?
+  // Location fields
+  name           String?     @db.VarChar(200)
+  location       String?     @db.VarChar(300)
+  brgy           String?     @db.VarChar(200)
+  province       String?     @db.VarChar(200)
+  city           String?     @db.VarChar(200)
   
   // Relations
   business       Business?   @relation(fields: [business_id], references: [business_id], onUpdate: NoAction)

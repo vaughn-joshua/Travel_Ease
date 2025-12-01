@@ -1,8 +1,5 @@
-import { Op, fn, col } from "sequelize";
-import { TravelPlan, Participant, User } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 import { formatPlan } from "../util/formatPlan.js";
 
 /**
@@ -12,47 +9,50 @@ import { formatPlan } from "../util/formatPlan.js";
  */
 export async function public_plans(req, res) {
   try {
-    const { page, pageSize, limit, offset } = parsePagination(req.query);
+    const { page, pageSize, skip, take } = parsePagination(req.query);
     const filters = buildPlanFilters(req.query);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const where = {
       visibility: true,
-      status: { [Op.in]: ['Draft', 'Active'] }, // Only show joinable plans
+      status: { in: ['Draft', 'Active'] }, // Only show joinable plans
       // Not expired: visibility_end_date is null or in the future
-      [Op.or]: [
+      OR: [
         { visibility_end_date: null },
-        { visibility_end_date: { [Op.gte]: today } }
+        { visibility_end_date: { gte: today } }
       ],
       ...filters
     };
 
     const [plans, total] = await executeWithRetry(() =>
       Promise.all([
-        TravelPlan.findAll({
+        prisma.travelPlan.findMany({
           where,
-          attributes: [
-            'travel_plan_id',
-            'name',
-            'start_date',
-            'end_date',
-            'description',
-            'location',
-            'max_slots',
-            'visibility_timestamp',
-            'status'
-          ],
-          include: [{
-            model: User,
-            as: 'user',
-            attributes: ['user_id', 'first_name', 'last_name']
-          }],
-          order: [['visibility_timestamp', 'DESC NULLS LAST']],
-          limit,
-          offset
+          select: {
+            travel_plan_id: true,
+            name: true,
+            start_date: true,
+            end_date: true,
+            description: true,
+            location: true,
+            max_slots: true,
+            visibility: true,
+            visibility_timestamp: true,
+            status: true,
+            user: {
+              select: {
+                user_id: true,
+                first_name: true,
+                last_name: true
+              }
+            }
+          },
+          orderBy: [{ visibility_timestamp: { sort: 'desc', nulls: 'last' } }],
+          skip,
+          take
         }),
-        TravelPlan.count({ where })
+        prisma.travelPlan.count({ where })
       ])
     );
 
@@ -60,39 +60,34 @@ export async function public_plans(req, res) {
     const planIdList = plans.map(p => p.travel_plan_id);
     const participantCounts = planIdList.length > 0 
       ? await executeWithRetry(() =>
-          Participant.findAll({
+          prisma.participant.groupBy({
+            by: ['travel_plan_id'],
             where: { 
-              travel_plan_id: { [Op.in]: planIdList },
+              travel_plan_id: { in: planIdList },
               status: true 
             },
-            attributes: [
-              'travel_plan_id',
-              [fn('COUNT', col('participant_id')), 'count']
-            ],
-            group: ['travel_plan_id'],
-            raw: true
+            _count: { participant_id: true }
           })
         )
       : [];
 
     const countMap = {};
     participantCounts.forEach(c => {
-      countMap[c.travel_plan_id] = parseInt(c.count);
+      countMap[c.travel_plan_id] = c._count.participant_id;
     });
 
     // Add slot availability info with normalized DTO
     const data = plans.map(p => {
       const approvedCount = countMap[p.travel_plan_id] || 0;
-      const planData = p.toJSON ? p.toJSON() : p;
       return formatPlan(p, {
         approvedParticipants: approvedCount,
-        slotsAvailable: planData.max_slots ? planData.max_slots - approvedCount : null
+        slotsAvailable: p.max_slots ? p.max_slots - approvedCount : null
       });
     });
 
     res.json(paginatedResponse(data, total, { page, pageSize }));
   } catch (error) {
     console.error("Error fetching public plans:", error);
-    return handleSequelizeError(error, res, 'Fetching public plans');
+    return handlePrismaError(error, res, 'Fetching public plans');
   }
 }

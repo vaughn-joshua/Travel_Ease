@@ -2,8 +2,7 @@
  * Ownership and role-based access control middleware
  */
 
-import { TravelPlan, Business, Activity, Participant } from "../models/index.js";
-import { executeWithRetry } from "../lib/sequelize.js";
+import { prisma, executeWithRetry } from "../lib/prismaHelpers.js";
 
 /**
  * Verify user owns or has admin rights to a travel plan
@@ -19,8 +18,10 @@ export const requirePlanOwnership = async (req, res, next) => {
   try {
     const [plan, participant] = await executeWithRetry(() =>
       Promise.all([
-        TravelPlan.findByPk(planId),
-        Participant.findOne({
+        prisma.travelPlan.findUnique({
+          where: { travel_plan_id: planId }
+        }),
+        prisma.participant.findFirst({
           where: { travel_plan_id: planId, user_id: userId }
         })
       ])
@@ -65,7 +66,9 @@ export const requireBusinessOwnership = async (req, res, next) => {
 
   try {
     const business = await executeWithRetry(() =>
-      Business.findByPk(businessId)
+      prisma.business.findUnique({
+        where: { business_id: businessId }
+      })
     );
 
     if (!business) {
@@ -101,11 +104,11 @@ export const requireActivityAccess = async (req, res, next) => {
 
   try {
     const activity = await executeWithRetry(() =>
-      Activity.findByPk(activityId, {
-        include: [{
-          model: TravelPlan,
-          as: 'travelPlan'
-        }]
+      prisma.activity.findUnique({
+        where: { activity_id: activityId },
+        include: {
+          travel_plan: true
+        }
       })
     );
 
@@ -113,14 +116,14 @@ export const requireActivityAccess = async (req, res, next) => {
       return res.status(404).json({ error: "Activity not found" });
     }
 
-    const plan = activity.travelPlan;
+    const plan = activity.travel_plan;
     if (!plan) {
       return res.status(404).json({ error: "Associated travel plan not found" });
     }
 
     // Get participant info
     const participant = await executeWithRetry(() =>
-      Participant.findOne({
+      prisma.participant.findFirst({
         where: { travel_plan_id: plan.travel_plan_id, user_id: userId }
       })
     );

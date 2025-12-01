@@ -1,6 +1,4 @@
-import { TravelPlan, Activity } from "../../src/models/index.js";
-import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 
 /**
  * Bulk update activity dates for a travel plan
@@ -28,8 +26,9 @@ export async function update_activity(req, res) {
 
     // Get the travel plan
     const plan = await executeWithRetry(() =>
-      TravelPlan.findByPk(planId, {
-        attributes: ['travel_plan_id', 'start_date']
+      prisma.travelPlan.findUnique({
+        where: { travel_plan_id: planId },
+        select: { travel_plan_id: true, start_date: true }
       })
     );
 
@@ -39,9 +38,9 @@ export async function update_activity(req, res) {
 
     // Get activities with dates
     const activities = await executeWithRetry(() =>
-      Activity.findAll({
+      prisma.activity.findMany({
         where: { travel_plan_id: planId },
-        attributes: ['activity_id', 'target_date']
+        select: { activity_id: true, target_date: true }
       })
     );
 
@@ -77,14 +76,17 @@ export async function update_activity(req, res) {
     }
 
     // Use transaction for atomic updates
-    await sequelize.transaction(async (t) => {
-      for (const activity of activitiesWithDates) {
+    await prisma.$transaction(
+      activitiesWithDates.map(activity => {
         const currentDate = new Date(activity.target_date);
         const newDate = new Date(currentDate.getTime() + shiftMs);
         
-        await activity.update({ target_date: newDate }, { transaction: t });
-      }
-    });
+        return prisma.activity.update({
+          where: { activity_id: activity.activity_id },
+          data: { target_date: newDate }
+        });
+      })
+    );
 
     res.status(200).json({
       message: "Activities updated successfully",
@@ -93,6 +95,6 @@ export async function update_activity(req, res) {
     });
   } catch (error) {
     console.error("Error updating activities:", error);
-    return handleSequelizeError(error, res, 'Updating activities');
+    return handlePrismaError(error, res, 'Updating activities');
   }
 }

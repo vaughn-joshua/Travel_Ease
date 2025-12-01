@@ -1,6 +1,4 @@
-import { Activity } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 
 export async function delete_activity(req, res) {
   const { id } = req.params;
@@ -8,18 +6,24 @@ export async function delete_activity(req, res) {
 
   try {
     const activity = await executeWithRetry(() =>
-      Activity.findByPk(parseInt(id))
+      prisma.activity.findUnique({
+        where: { activity_id: parseInt(id) }
+      })
     );
 
     if (!activity) {
       return res.status(404).json({ error: "Activity not found" });
     }
 
-    await activity.destroy();
+    await executeWithRetry(() =>
+      prisma.activity.delete({
+        where: { activity_id: parseInt(id) }
+      })
+    );
 
     res.status(200).json({ message: "Activity deleted successfully" });
   } catch (error) {
     console.error("Error deleting activity:", error);
-    return handleSequelizeError(error, res, 'Deleting activity');
+    return handlePrismaError(error, res, 'Deleting activity');
   }
 }

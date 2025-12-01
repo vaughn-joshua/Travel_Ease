@@ -82,7 +82,20 @@ describe('Validation Schemas', () => {
   });
 
   describe('createActivitySchema', () => {
-    it('should accept valid activity data', () => {
+    it('should accept valid activity data with DB format budget range', () => {
+      const validData = {
+        travel_plan_id: 1,
+        notes: 'Visit beach',
+        target_date: '2025-07-02',
+        budget_range: '100-200',
+        lat: 11.9674,
+        lng: 121.9201
+      };
+
+      expect(() => createActivitySchema.parse(validData)).not.toThrow();
+    });
+
+    it('should accept valid activity data with API format budget range', () => {
       const validData = {
         travel_plan_id: 1,
         notes: 'Visit beach',
@@ -90,6 +103,20 @@ describe('Validation Schemas', () => {
         budget_range: 'RANGE_100_200',
         lat: 11.9674,
         lng: 121.9201
+      };
+
+      expect(() => createActivitySchema.parse(validData)).not.toThrow();
+    });
+
+    it('should accept activity with location fields', () => {
+      const validData = {
+        travel_plan_id: 1,
+        notes: 'Visit beach',
+        location: 'Boracay Beach',
+        name: 'White Beach',
+        brgy: 'Balabag',
+        city: 'Malay',
+        province: 'Aklan'
       };
 
       expect(() => createActivitySchema.parse(validData)).not.toThrow();

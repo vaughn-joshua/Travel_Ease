@@ -44,22 +44,31 @@ export const editPlanSchema = z.object({
   status: z.enum(['Draft', 'Active', 'Completed', 'Cancelled']).optional()
 });
 
+// Budget range values - accepts both API format (RANGE_X_Y) and DB format (X-Y)
+const budgetRangeValues = [
+  // DB format (preferred)
+  '0-100', '100-200', '200-400', '400-700', '700-1000', '1000-1500', '1500+',
+  // API format (legacy, normalized in controller)
+  'RANGE_0_100', 'RANGE_100_200', 'RANGE_200_400', 'RANGE_400_700', 'RANGE_700_1000', 'RANGE_1000_1500', 'RANGE_1500_PLUS'
+];
+
 // Activity Schemas
 export const createActivitySchema = z.object({
   travel_plan_id: z.number().int().positive().or(z.string().transform(Number)),
   notes: z.string().optional(),
   target_date: z.string().optional(),
-  budget_range: z.enum(['RANGE_0_100', 'RANGE_100_200', 'RANGE_200_400', 'RANGE_400_700', 'RANGE_700_1000', 'RANGE_1000_1500', 'RANGE_1500_PLUS']).optional(),
+  budget_range: z.enum(budgetRangeValues).optional(),
   lat: z.number().or(z.string().transform(Number)).optional(),
   lng: z.number().or(z.string().transform(Number)).optional(),
   location: z.string().optional(),
+  name: z.string().optional(),
   brgy: z.string().optional(),
   province: z.string().optional(),
   city: z.string().optional()
 });
 
 export const editActivitySchema = z.object({
-  budget_range: z.string().optional(),
+  budget_range: z.enum(budgetRangeValues).optional(),
   is_priority: z.boolean().optional(),
   notes: z.string().optional(),
   target_date: z.string().optional()

@@ -1,7 +1,4 @@
-import { Op, fn, col } from "sequelize";
-import { TravelPlan, Participant, User } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 import { formatPlan } from "../util/formatPlan.js";
 
 /**
@@ -20,30 +17,32 @@ export async function quick_join(req, res) {
 
     // Find visible plans with overlapping dates and matching location
     const plans = await executeWithRetry(() =>
-      TravelPlan.findAll({
+      prisma.travelPlan.findMany({
         where: {
-          [Op.and]: [
-            { start_date: { [Op.lte]: new Date(end_date) } },
-            { end_date: { [Op.gte]: new Date(start_date) } },
-            { location: { [Op.iLike]: `%${location}%` } },
+          AND: [
+            { start_date: { lte: new Date(end_date) } },
+            { end_date: { gte: new Date(start_date) } },
+            { location: { contains: location, mode: 'insensitive' } },
             { visibility: true },
-            { status: { [Op.in]: ['Draft', 'Active'] } }
+            { status: { in: ['Draft', 'Active'] } }
           ]
         },
-        attributes: [
-          'travel_plan_id',
-          'name',
-          'start_date',
-          'end_date',
-          'description',
-          'location',
-          'max_slots'
-        ],
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name']
-        }]
+        select: {
+          travel_plan_id: true,
+          name: true,
+          start_date: true,
+          end_date: true,
+          description: true,
+          location: true,
+          max_slots: true,
+          user: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true
+            }
+          }
+        }
       })
     );
 
@@ -51,41 +50,36 @@ export async function quick_join(req, res) {
     const planIds = plans.map(p => p.travel_plan_id);
     const participantCounts = planIds.length > 0 
       ? await executeWithRetry(() =>
-          Participant.findAll({
+          prisma.participant.groupBy({
+            by: ['travel_plan_id'],
             where: { 
-              travel_plan_id: { [Op.in]: planIds },
+              travel_plan_id: { in: planIds },
               status: true 
             },
-            attributes: [
-              'travel_plan_id',
-              [fn('COUNT', col('participant_id')), 'count']
-            ],
-            group: ['travel_plan_id'],
-            raw: true
+            _count: { participant_id: true }
           })
         )
       : [];
 
     const countMap = {};
     participantCounts.forEach(c => {
-      countMap[c.travel_plan_id] = parseInt(c.count);
+      countMap[c.travel_plan_id] = c._count.participant_id;
     });
 
     // Add slot availability with normalized DTO
     const data = plans.map(p => {
-      const planData = p.toJSON ? p.toJSON() : p;
       const approvedCount = countMap[p.travel_plan_id] || 0;
       return formatPlan(p, {
         approvedParticipants: approvedCount,
-        slotsAvailable: planData.max_slots ? planData.max_slots - approvedCount : null,
-        isFull: planData.max_slots ? approvedCount >= planData.max_slots : false
+        slotsAvailable: p.max_slots ? p.max_slots - approvedCount : null,
+        isFull: p.max_slots ? approvedCount >= p.max_slots : false
       });
     });
 
     res.json(data);
   } catch (error) {
     console.error("Error in quick join search:", error);
-    return handleSequelizeError(error, res, 'Quick join search');
+    return handlePrismaError(error, res, 'Quick join search');
   }
 }
 
@@ -106,7 +100,9 @@ export async function request_join(req, res) {
 
     // Get plan
     const plan = await executeWithRetry(() =>
-      TravelPlan.findByPk(planId)
+      prisma.travelPlan.findUnique({
+        where: { travel_plan_id: planId }
+      })
     );
 
     if (!plan) {
@@ -124,7 +120,7 @@ export async function request_join(req, res) {
 
     // Check for duplicate (pending or approved)
     const existing = await executeWithRetry(() =>
-      Participant.findOne({
+      prisma.participant.findFirst({
         where: { travel_plan_id: planId, user_id: userId }
       })
     );
@@ -139,7 +135,7 @@ export async function request_join(req, res) {
 
     // Check slot availability (only count approved participants)
     const approvedCount = await executeWithRetry(() =>
-      Participant.count({
+      prisma.participant.count({
         where: { travel_plan_id: planId, status: true }
       })
     );
@@ -153,22 +149,30 @@ export async function request_join(req, res) {
 
     // Create pending participant (join request)
     const participant = await executeWithRetry(() =>
-      Participant.create({
-        travel_plan_id: planId,
-        user_id: userId,
-        role: 'Viewer',
-        status: false // Pending approval
+      prisma.participant.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: userId,
+          role: 'Viewer',
+          status: false // Pending approval
+        }
       })
     );
 
     // Fetch with user info
     const participantWithUser = await executeWithRetry(() =>
-      Participant.findByPk(participant.participant_id, {
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'email']
-        }]
+      prisma.participant.findUnique({
+        where: { participant_id: participant.participant_id },
+        include: {
+          user: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true
+            }
+          }
+        }
       })
     );
 
@@ -178,10 +182,10 @@ export async function request_join(req, res) {
     });
   } catch (error) {
     console.error("Error requesting to join:", error);
-    if (error.name === 'SequelizeUniqueConstraintError') {
+    if (error.code === 'P2002') {
       return res.status(409).json({ error: "You already have a pending request for this plan" });
     }
-    return handleSequelizeError(error, res, 'Requesting to join');
+    return handlePrismaError(error, res, 'Requesting to join');
   }
 }
 
@@ -193,17 +197,22 @@ export async function get_pending_requests(req, res) {
     const { id } = req.params;
 
     const pending = await executeWithRetry(() =>
-      Participant.findAll({
+      prisma.participant.findMany({
         where: {
           travel_plan_id: parseInt(id),
           status: false // Pending
         },
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'email']
-        }],
-        order: [['joined_at', 'ASC']]
+        include: {
+          user: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { joined_at: 'asc' }
       })
     );
 
@@ -214,7 +223,7 @@ export async function get_pending_requests(req, res) {
     });
   } catch (error) {
     console.error("Error fetching pending requests:", error);
-    return handleSequelizeError(error, res, 'Fetching pending requests');
+    return handlePrismaError(error, res, 'Fetching pending requests');
   }
 }
 
@@ -229,7 +238,9 @@ export async function approve_join(req, res) {
 
     // Get plan
     const plan = await executeWithRetry(() =>
-      TravelPlan.findByPk(planId)
+      prisma.travelPlan.findUnique({
+        where: { travel_plan_id: planId }
+      })
     );
 
     if (!plan) {
@@ -238,7 +249,9 @@ export async function approve_join(req, res) {
 
     // Find the pending participant
     const participant = await executeWithRetry(() =>
-      Participant.findByPk(participantIdInt)
+      prisma.participant.findUnique({
+        where: { participant_id: participantIdInt }
+      })
     );
 
     if (!participant) {
@@ -255,7 +268,7 @@ export async function approve_join(req, res) {
 
     // Check slot availability before approving
     const approvedCount = await executeWithRetry(() =>
-      Participant.count({
+      prisma.participant.count({
         where: { travel_plan_id: planId, status: true }
       })
     );
@@ -268,16 +281,20 @@ export async function approve_join(req, res) {
     }
 
     // Approve the participant
-    await participant.update({ status: true });
-
-    // Fetch updated with user info
     const updated = await executeWithRetry(() =>
-      Participant.findByPk(participantIdInt, {
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'email']
-        }]
+      prisma.participant.update({
+        where: { participant_id: participantIdInt },
+        data: { status: true },
+        include: {
+          user: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true
+            }
+          }
+        }
       })
     );
 
@@ -287,7 +304,7 @@ export async function approve_join(req, res) {
     });
   } catch (error) {
     console.error("Error approving join request:", error);
-    return handleSequelizeError(error, res, 'Approving join request');
+    return handlePrismaError(error, res, 'Approving join request');
   }
 }
 
@@ -301,7 +318,9 @@ export async function deny_join(req, res) {
     const participantIdInt = parseInt(participantId);
 
     const participant = await executeWithRetry(() =>
-      Participant.findByPk(participantIdInt)
+      prisma.participant.findUnique({
+        where: { participant_id: participantIdInt }
+      })
     );
 
     if (!participant) {
@@ -319,11 +338,15 @@ export async function deny_join(req, res) {
       });
     }
 
-    await participant.destroy();
+    await executeWithRetry(() =>
+      prisma.participant.delete({
+        where: { participant_id: participantIdInt }
+      })
+    );
 
     res.json({ message: "Join request denied" });
   } catch (error) {
     console.error("Error denying join request:", error);
-    return handleSequelizeError(error, res, 'Denying join request');
+    return handlePrismaError(error, res, 'Denying join request');
   }
 }

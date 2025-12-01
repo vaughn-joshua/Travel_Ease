@@ -4,7 +4,8 @@ import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
 import Search_Box from "../map_components/Search_Box";
-import type { TravelPlanDates, BUDGET_RANGES } from "../../types/travelPlan";
+import type { TravelPlanDates, BudgetRange, CreateActivityPayload } from "../../types/travelPlan";
+import { BUDGET_RANGES } from "../../types/travelPlan";
 import type { Business } from "../../types/business";
 import type { SearchResult } from "../../types/map";
 
@@ -17,19 +18,9 @@ interface CreateActivityProps {
 
 interface FormData {
   target_date: string;
-  budget_range: string;
+  budget_range: BudgetRange | "";
   notes: string;
 }
-
-const budget_range = [
-  "0-100",
-  "100-200",
-  "200-400",
-  "400-700",
-  "700-1000",
-  "1000-1500",
-  "1500+",
-];
 
 export default function Create_Activity({
   on_close,
@@ -73,18 +64,18 @@ export default function Create_Activity({
         return;
       }
 
-      const payload = {
+      const payload: CreateActivityPayload = {
         travel_plan_id: typeof id === "string" ? parseInt(id) : id,
-        user_id: 1, // TODO: Get from auth context
         lat: search_result.lat,
         lng: search_result.lng,
         location: search_result.name,
+        name: search_result.name,
         brgy: search_result.address?.barangay || "",
         province: search_result.address?.province || "",
         city: search_result.address?.city || "",
         target_date: typeof value === "string" ? value : value.toISOString(),
-        budget_range: data.budget_range,
-        notes: data.notes,
+        budget_range: data.budget_range || undefined,
+        notes: data.notes || undefined,
       };
 
       await create_activity(payload);
@@ -156,7 +147,7 @@ export default function Create_Activity({
               className="text_box"
             >
               <option value="">--Select--</option>
-              {budget_range.map((range) => (
+              {BUDGET_RANGES.map((range) => (
                 <option key={range} value={range}>
                   {range.includes("+")
                     ? `₱${range}`

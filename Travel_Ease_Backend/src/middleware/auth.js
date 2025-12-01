@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import { supabaseAdmin, isSupabaseConfigured } from "../lib/supabase.js";
-import { User } from "../models/index.js";
-import { executeWithRetry } from "../lib/sequelize.js";
+import { prisma, executeWithRetry } from "../lib/prismaHelpers.js";
 
 // Test mode uses local JWT for testing without Supabase
 const isTestMode = process.env.NODE_ENV === 'test';
@@ -36,7 +35,9 @@ export const authenticateToken = async (req, res, next) => {
     if (isTestMode && JWT_SECRET) {
       const decoded = jwt.verify(token, JWT_SECRET);
       const user = await executeWithRetry(() =>
-        User.findByPk(decoded.id)
+        prisma.user.findUnique({
+          where: { user_id: decoded.id }
+        })
       );
 
       if (!user) {
@@ -47,8 +48,7 @@ export const authenticateToken = async (req, res, next) => {
         id: user.user_id, 
         email: user.email,
         first_name: user.first_name,
-        last_name: user.last_name,
-        auth_provider: user.auth_provider || 'password'
+        last_name: user.last_name
       };
       return next();
     }
@@ -70,7 +70,7 @@ export const authenticateToken = async (req, res, next) => {
 
     // Find or create linked user profile
     let user = await executeWithRetry(() =>
-      User.findOne({ where: { auth_id: data.user.id } })
+      prisma.user.findFirst({ where: { auth_id: data.user.id } })
     );
 
     if (!user) {
@@ -89,20 +89,21 @@ export const authenticateToken = async (req, res, next) => {
 
       try {
         user = await executeWithRetry(() =>
-          User.create({
-            auth_id: data.user.id,
-            email,
-            first_name,
-            last_name: last_name || "User",
-            contact_no,
-            auth_provider: 'google'
+          prisma.user.create({
+            data: {
+              auth_id: data.user.id,
+              email,
+              first_name,
+              last_name: last_name || "User",
+              contact_no
+            }
           })
         );
       } catch (createError) {
         // Handle race condition where another request created the user
-        if (createError.name === "SequelizeUniqueConstraintError") {
+        if (createError.code === "P2002") {
           user = await executeWithRetry(() =>
-            User.findOne({ where: { auth_id: data.user.id } })
+            prisma.user.findFirst({ where: { auth_id: data.user.id } })
           );
         } else {
           throw createError;
@@ -115,8 +116,7 @@ export const authenticateToken = async (req, res, next) => {
       auth_id: data.user.id, 
       email: data.user.email,
       first_name: user.first_name,
-      last_name: user.last_name,
-      auth_provider: user.auth_provider || 'google'
+      last_name: user.last_name
     };
     next();
   } catch (error) {

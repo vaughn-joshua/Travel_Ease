@@ -48,22 +48,39 @@ export interface TravelPlanDates {
   end: string;
 }
 
+// Activity DTO - matches backend normalized response
 export interface Activity {
   activity_id: number;
   travel_plan_id: number;
+  business_id?: number | null;
   user_id: number;
-  name: string;
-  location: string;
-  lat: number;
-  lng: number;
-  brgy: string;
-  province: string;
-  city: string;
-  target_date: string;
-  budget_range: string;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
+  
+  // Location fields
+  location: string | null;
+  name: string | null;
+  lat: number | null;
+  lng: number | null;
+  brgy: string | null;
+  province: string | null;
+  city: string | null;
+  
+  // Activity details
+  notes: string | null;
+  target_date: string | null;
+  budget_range: BudgetRange | null;
+  is_priority: boolean;
+  
+  // User info from relation (flattened)
+  first_name?: string;
+  last_name?: string;
+  
+  // Business relation if included
+  business?: {
+    business_id: number;
+    name: string;
+    latitude: number | null;
+    longtitude: number | null;
+  };
 }
 
 export interface CreatePlanPayload {
@@ -83,20 +100,26 @@ export interface UpdatePlanPayload extends Partial<CreatePlanPayload> {
 
 export interface CreateActivityPayload {
   travel_plan_id: number;
-  user_id: number;
+  // Location fields
+  location?: string;
   name?: string;
-  location: string;
-  lat: number;
-  lng: number;
-  brgy: string;
-  province: string;
-  city: string;
-  target_date: string;
-  budget_range: string;
+  lat?: number;
+  lng?: number;
+  brgy?: string;
+  province?: string;
+  city?: string;
+  // Activity details
+  target_date?: string;
+  budget_range?: BudgetRange;
   notes?: string;
 }
 
-export interface UpdateActivityPayload extends Partial<CreateActivityPayload> {}
+export interface UpdateActivityPayload {
+  target_date?: string;
+  budget_range?: BudgetRange;
+  notes?: string;
+  is_priority?: boolean;
+}
 
 export interface EditActivityDatePayload {
   target_date: string;

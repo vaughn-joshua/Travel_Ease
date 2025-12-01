@@ -1,6 +1,5 @@
-import { Activity } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
+import { normalizeBudgetRange, formatActivity } from "../util/activityConstants.js";
 
 export async function create_activity(req, res) {
   const {
@@ -11,6 +10,7 @@ export async function create_activity(req, res) {
     lat,
     lng,
     location,
+    name,
     brgy,
     province,
     city,
@@ -21,24 +21,32 @@ export async function create_activity(req, res) {
 
   try {
     const activity = await executeWithRetry(() =>
-      Activity.create({
-        travel_plan_id: parseInt(travel_plan_id),
-        notes,
-        target_date: target_date ? new Date(target_date) : null,
-        budget_range,
-        user_id: userId,
-        lat: lat ? parseFloat(lat) : null,
-        lng: lng ? parseFloat(lng) : null
+      prisma.activity.create({
+        data: {
+          travel_plan_id: parseInt(travel_plan_id),
+          notes,
+          target_date: target_date ? new Date(target_date) : null,
+          budget_range: normalizeBudgetRange(budget_range),
+          user_id: userId,
+          lat: lat ? parseFloat(lat) : null,
+          lng: lng ? parseFloat(lng) : null,
+          // Location fields
+          location: location || null,
+          name: name || null,
+          brgy: brgy || null,
+          province: province || null,
+          city: city || null
+        }
       })
     );
 
     console.log("created activity successfully");
     res.status(201).json({ 
       message: "Activity created successfully",
-      activity_id: activity.activity_id
+      ...formatActivity(activity)
     });
   } catch (error) {
     console.error("Error creating activity:", error);
-    return handleSequelizeError(error, res, 'Creating activity');
+    return handlePrismaError(error, res, 'Creating activity');
   }
 }

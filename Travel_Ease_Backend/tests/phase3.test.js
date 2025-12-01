@@ -395,14 +395,18 @@ describe('Phase 3 - Travel Plan Domain', () => {
         });
       planId = res.body.travel_plan_id;
 
-      // Create activities
+      // Create activities with location and budget data
       await request(app)
         .post('/api/travel_plan/create_activity')
         .set('Authorization', `Bearer ${token1}`)
         .send({
           travel_plan_id: planId,
           notes: 'Activity 1',
-          target_date: '2025-08-01'
+          target_date: '2025-08-01',
+          budget_range: '100-200',
+          location: 'Beach Resort',
+          lat: 14.5,
+          lng: 120.9
         });
 
       await request(app)
@@ -411,7 +415,8 @@ describe('Phase 3 - Travel Plan Domain', () => {
         .send({
           travel_plan_id: planId,
           notes: 'Activity 2',
-          target_date: '2025-08-02'
+          target_date: '2025-08-02',
+          budget_range: '200-400'
         });
     });
 
@@ -435,6 +440,52 @@ describe('Phase 3 - Travel Plan Domain', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain('Missing required parameter');
+    });
+
+    it('should create activity with normalized DTO response', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_activity')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          travel_plan_id: planId,
+          notes: 'Test Activity',
+          target_date: '2025-08-03',
+          budget_range: '400-700',
+          location: 'Test Location',
+          name: 'Test Name',
+          brgy: 'Test Brgy',
+          city: 'Test City',
+          province: 'Test Province',
+          lat: 14.5,
+          lng: 120.9
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toContain('successfully');
+      expect(response.body).toHaveProperty('activity_id');
+      expect(response.body).toHaveProperty('location', 'Test Location');
+      expect(response.body).toHaveProperty('name', 'Test Name');
+      expect(response.body).toHaveProperty('budget_range', '400-700');
+      expect(response.body).toHaveProperty('lat', 14.5);
+      expect(response.body).toHaveProperty('lng', 120.9);
+    });
+
+    it('should fetch activities with normalized DTO', async () => {
+      const response = await request(app)
+        .get(`/api/travel_plan/activities/${planId}`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThanOrEqual(2);
+      
+      const activity = response.body[0];
+      expect(activity).toHaveProperty('activity_id');
+      expect(activity).toHaveProperty('travel_plan_id');
+      expect(activity).toHaveProperty('notes');
+      expect(activity).toHaveProperty('target_date');
+      expect(activity).toHaveProperty('budget_range');
+      expect(activity).toHaveProperty('is_priority');
     });
   });
 

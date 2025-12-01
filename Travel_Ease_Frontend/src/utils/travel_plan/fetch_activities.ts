@@ -28,6 +28,7 @@ export async function fetch_activities(id: number | string): Promise<Activity[]>
       throw new Error(`Failed to fetch activities: ${result.status}`);
     }
 
+    // Backend returns normalized Activity DTOs
     const data: Activity[] = await result.json();
     return data;
   } catch (e) {

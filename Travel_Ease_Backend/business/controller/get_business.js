@@ -1,7 +1,5 @@
-import { Op, Sequelize } from "sequelize";
-import { Business, BusinessCategory, BusinessHours, PriceRange, User } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError, parsePagination, buildPaginationMeta } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
+import { parsePagination, buildPaginationMeta } from "../../src/lib/prismaHelpers.js";
 
 export async function get_businesses(req, res) {
   try {
@@ -13,7 +11,7 @@ export async function get_businesses(req, res) {
       status,
     } = req.query;
 
-    const { page, pageSize, limit, offset } = parsePagination(req.query);
+    const { page, pageSize, skip, take } = parsePagination(req.query);
 
     // Build where clause
     const where = {};
@@ -25,27 +23,25 @@ export async function get_businesses(req, res) {
 
     // Search by name or description
     if (search) {
-      where[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } },
-        { city: { [Op.iLike]: `%${search}%` } },
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    // For category and price filters, we need subqueries
-    let categoryFilter = null;
+    // For category filter, we need a subquery
     if (category) {
       // Get business IDs with this category
       const businessesWithCategory = await executeWithRetry(() =>
-        BusinessCategory.findAll({
+        prisma.businessCategory.findMany({
           where: { category_name: category },
-          attributes: ['business_id'],
-          raw: true
+          select: { business_id: true }
         })
       );
-      const businessIds = businessesWithCategory.map(b => b.business_id);
+      const businessIds = businessesWithCategory.map(b => b.business_id).filter(Boolean);
       if (businessIds.length > 0) {
-        where.business_id = { [Op.in]: businessIds };
+        where.business_id = { in: businessIds };
       } else {
         // No businesses with this category
         return res.status(200).json({
@@ -55,37 +51,30 @@ export async function get_businesses(req, res) {
       }
     }
 
-    // Price range filter is complex - skip for now and filter in JS if needed
-    // This is a simplification; a more robust solution would use raw SQL
-
     const [businesses, total] = await executeWithRetry(() =>
       Promise.all([
-        Business.findAll({
+        prisma.business.findMany({
           where,
-          include: [
-            {
-              model: BusinessCategory,
-              as: 'categories',
-              include: [{
-                model: PriceRange,
-                as: 'priceRanges'
-              }]
+          include: {
+            categories: {
+              include: {
+                price_ranges: true
+              }
             },
-            {
-              model: BusinessHours,
-              as: 'businessHours'
-            },
-            {
-              model: User,
-              as: 'user',
-              attributes: ['user_id', 'first_name', 'last_name']
+            business_hours: true,
+            user: {
+              select: {
+                user_id: true,
+                first_name: true,
+                last_name: true
+              }
             }
-          ],
-          limit,
-          offset,
-          order: [['rating', 'DESC NULLS LAST'], ['name', 'ASC']]
+          },
+          skip,
+          take,
+          orderBy: [{ rating: { sort: 'desc', nulls: 'last' } }, { name: 'asc' }]
         }),
-        Business.count({ where })
+        prisma.business.count({ where })
       ])
     );
 
@@ -94,7 +83,7 @@ export async function get_businesses(req, res) {
     if (minPrice || maxPrice) {
       filteredBusinesses = businesses.filter(business => {
         for (const cat of business.categories || []) {
-          for (const pr of cat.priceRanges || []) {
+          for (const pr of cat.price_ranges || []) {
             const matchesMin = !minPrice || pr.max_price >= parseInt(minPrice);
             const matchesMax = !maxPrice || pr.min_price <= parseInt(maxPrice);
             if (matchesMin && matchesMax) return true;
@@ -105,7 +94,7 @@ export async function get_businesses(req, res) {
     }
 
     // Normalize response
-    const items = filteredBusinesses.map(b => normalizeBusiness(b.toJSON()));
+    const items = filteredBusinesses.map(b => normalizeBusiness(b));
 
     res.status(200).json({
       items,
@@ -113,7 +102,7 @@ export async function get_businesses(req, res) {
     });
   } catch (error) {
     console.error("Error fetching businesses:", error);
-    return handleSequelizeError(error, res, 'Fetching businesses');
+    return handlePrismaError(error, res, 'Fetching businesses');
   }
 }
 
@@ -123,9 +112,9 @@ export async function get_businesses(req, res) {
 export async function getCategories(req, res) {
   try {
     const categories = await executeWithRetry(() =>
-      BusinessCategory.findAll({
-        attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('category_name')), 'category_name']],
-        raw: true
+      prisma.businessCategory.findMany({
+        distinct: ['category_name'],
+        select: { category_name: true }
       })
     );
 
@@ -134,7 +123,7 @@ export async function getCategories(req, res) {
     });
   } catch (error) {
     console.error("Error fetching categories:", error);
-    return handleSequelizeError(error, res, 'Fetching categories');
+    return handlePrismaError(error, res, 'Fetching categories');
   }
 }
 
@@ -147,7 +136,7 @@ function normalizeBusiness(business) {
   let maxPrice = null;
 
   for (const cat of business.categories || []) {
-    for (const pr of cat.priceRanges || []) {
+    for (const pr of cat.price_ranges || []) {
       if (minPrice === null || pr.min_price < minPrice) minPrice = pr.min_price;
       if (maxPrice === null || pr.max_price > maxPrice) maxPrice = pr.max_price;
     }
@@ -177,7 +166,7 @@ function normalizeBusiness(business) {
 
   // Normalize hours
   const hours = {};
-  for (const h of business.businessHours || []) {
+  for (const h of business.business_hours || []) {
     const day = h.day_of_week?.toLowerCase();
     if (day) {
       hours[day] = {

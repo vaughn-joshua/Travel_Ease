@@ -1,6 +1,4 @@
-import { TravelPlan } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 import { formatPlan } from "../util/formatPlan.js";
 
 export async function plans_id(req, res) {
@@ -8,19 +6,20 @@ export async function plans_id(req, res) {
     const { id } = req.params;
 
     const plan = await executeWithRetry(() =>
-      TravelPlan.findByPk(parseInt(id), {
-        attributes: [
-          'travel_plan_id',
-          'name',
-          'user_id',
-          'start_date',
-          'end_date',
-          'description',
-          'location',
-          'status',
-          'max_slots',
-          'visibility'
-        ]
+      prisma.travelPlan.findUnique({
+        where: { travel_plan_id: parseInt(id) },
+        select: {
+          travel_plan_id: true,
+          name: true,
+          user_id: true,
+          start_date: true,
+          end_date: true,
+          description: true,
+          location: true,
+          status: true,
+          max_slots: true,
+          visibility: true
+        }
       })
     );
 
@@ -32,6 +31,6 @@ export async function plans_id(req, res) {
     res.json(formatPlan(plan)); // Return as single object with normalized DTO
   } catch (error) {
     console.error("Error fetching plan:", error);
-    return handleSequelizeError(error, res, 'Fetching plan');
+    return handlePrismaError(error, res, 'Fetching plan');
   }
 }

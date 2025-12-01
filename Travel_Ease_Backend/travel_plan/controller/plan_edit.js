@@ -1,6 +1,4 @@
-import { TravelPlan } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 
 // Valid status transitions: current status -> allowed next statuses
 const STATUS_TRANSITIONS = {
@@ -37,7 +35,9 @@ export async function plan_edit(req, res) {
   try {
     // Fetch current plan state
     const currentPlan = await executeWithRetry(() =>
-      TravelPlan.findByPk(parseInt(id))
+      prisma.travelPlan.findUnique({
+        where: { travel_plan_id: parseInt(id) }
+      })
     );
 
     if (!currentPlan) {
@@ -93,22 +93,27 @@ export async function plan_edit(req, res) {
     }
 
     // Perform update
-    await currentPlan.update(updateData);
+    const updatedPlan = await executeWithRetry(() =>
+      prisma.travelPlan.update({
+        where: { travel_plan_id: parseInt(id) },
+        data: updateData
+      })
+    );
 
     res.status(200).json({
       message: "Travel plan updated successfully",
       plan: {
-        travel_plan_id: currentPlan.travel_plan_id,
-        name: currentPlan.name,
-        status: currentPlan.status,
-        visibility: currentPlan.visibility,
-        visibility_timestamp: currentPlan.visibility_timestamp,
-        start_date: currentPlan.start_date,
-        end_date: currentPlan.end_date
+        travel_plan_id: updatedPlan.travel_plan_id,
+        name: updatedPlan.name,
+        status: updatedPlan.status,
+        visibility: updatedPlan.visibility,
+        visibility_timestamp: updatedPlan.visibility_timestamp,
+        start_date: updatedPlan.start_date,
+        end_date: updatedPlan.end_date
       }
     });
   } catch (error) {
     console.error("Error editing plan:", error);
-    return handleSequelizeError(error, res, 'Editing plan');
+    return handlePrismaError(error, res, 'Editing plan');
   }
 }

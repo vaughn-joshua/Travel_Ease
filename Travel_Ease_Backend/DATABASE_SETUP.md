@@ -274,6 +274,59 @@ psql "postgresql://..." < backup.sql
   });
   ```
 
+## Running Tests
+
+### SSL Configuration for Tests
+
+Tests may fail with SSL certificate errors when connecting to Supabase or other remote PostgreSQL instances. The test setup automatically handles this by setting `NODE_TLS_REJECT_UNAUTHORIZED=0` to accept self-signed certificates.
+
+**Running tests:**
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # With coverage report
+```
+
+### Using Local PostgreSQL for Tests
+
+For faster and more reliable tests, use a local PostgreSQL instance:
+
+1. Create a test database:
+```bash
+psql postgres
+CREATE DATABASE travelease_test;
+\q
+```
+
+2. Update your `.env` to point to the test database:
+```env
+DATABASE_URL="postgresql://localhost:5432/travelease_test"
+```
+
+3. Push the schema:
+```bash
+npx prisma db push
+```
+
+### Using Supabase for Tests
+
+If you must use Supabase for tests, ensure your connection string includes SSL parameters:
+
+```env
+DATABASE_URL="postgresql://postgres.[ref]:[pass]@....supabase.com:5432/postgres?sslmode=require"
+```
+
+The test setup will automatically set `NODE_TLS_REJECT_UNAUTHORIZED=0` to handle self-signed certificate warnings.
+
+### Troubleshooting Test Failures
+
+| Error | Solution |
+|-------|----------|
+| `self-signed certificate in certificate chain` | Ensure `NODE_TLS_REJECT_UNAUTHORIZED=0` is set (automatic in test setup) |
+| `ECONNREFUSED` | Check if PostgreSQL is running and DATABASE_URL is correct |
+| `relation "user" does not exist` | Run `npx prisma db push` to create tables |
+| `SSL connection required` | Add `?sslmode=require` to DATABASE_URL |
+
 ## Need Help?
 
 - Prisma Docs: https://www.prisma.io/docs

@@ -1,6 +1,4 @@
-import { TravelPlan, Participant } from "../../src/models/index.js";
-import { sequelize, executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 import { formatPlan } from "../util/formatPlan.js";
 
 export async function create_plan(req, res) {
@@ -20,26 +18,30 @@ export async function create_plan(req, res) {
   const maxSlots = maxSlotsParam ?? slots ?? null;
 
   try {
-    const result = await sequelize.transaction(async (t) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Create travel plan
-      const travelPlan = await TravelPlan.create({
-        name: title,
-        user_id: userId,
-        start_date: start_date ? new Date(start_date) : null,
-        end_date: end_date ? new Date(end_date) : null,
-        description,
-        max_slots: maxSlots,
-        location,
-        status: 'Draft'
-      }, { transaction: t });
+      const travelPlan = await tx.travelPlan.create({
+        data: {
+          name: title,
+          user_id: userId,
+          start_date: start_date ? new Date(start_date) : null,
+          end_date: end_date ? new Date(end_date) : null,
+          description,
+          max_slots: maxSlots,
+          location,
+          status: 'Draft'
+        }
+      });
 
       // Add creator as Admin participant (always approved)
-      await Participant.create({
-        travel_plan_id: travelPlan.travel_plan_id,
-        user_id: userId,
-        role: 'Admin',
-        status: true
-      }, { transaction: t });
+      await tx.participant.create({
+        data: {
+          travel_plan_id: travelPlan.travel_plan_id,
+          user_id: userId,
+          role: 'Admin',
+          status: true
+        }
+      });
 
       // Add collaborators with slot enforcement for approved ones
       if (collaborators?.length > 0) {
@@ -54,12 +56,14 @@ export async function create_plan(req, res) {
           // Skip approved collaborators if would exceed max_slots
           if (wantsApproved && maxSlots && approvedCount >= maxSlots) continue;
           
-          await Participant.create({
-            travel_plan_id: travelPlan.travel_plan_id,
-            user_id: collab.user_id,
-            role: collab.role || 'Viewer',
-            status: wantsApproved
-          }, { transaction: t });
+          await tx.participant.create({
+            data: {
+              travel_plan_id: travelPlan.travel_plan_id,
+              user_id: collab.user_id,
+              role: collab.role || 'Viewer',
+              status: wantsApproved
+            }
+          });
           
           if (wantsApproved) approvedCount++;
         }
@@ -74,6 +78,6 @@ export async function create_plan(req, res) {
     });
   } catch (error) {
     console.error("Error creating travel plan:", error);
-    return handleSequelizeError(error, res, 'Creating travel plan');
+    return handlePrismaError(error, res, 'Creating travel plan');
   }
 }

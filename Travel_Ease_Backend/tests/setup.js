@@ -3,12 +3,21 @@
  */
 
 import { beforeAll, afterAll } from 'vitest';
-import { prisma } from '../src/lib/prisma.js';
+
+// ============================================
+// SSL / TLS configuration for test environment
+// ============================================
+// Allow self-signed certificates when connecting to Supabase or other SSL DBs
+// This must be set BEFORE importing Prisma client
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Set test environment
 process.env.NODE_ENV = 'test';
 process.env.AUTH_MODE = 'local'; // Use local JWT for testing
-process.env.JWT_SECRET = 'test-secret-key';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key';
+
+// Now import Prisma (after env vars are set)
+const { prisma } = await import('../src/lib/prisma.js');
 
 // Clean up database before tests
 beforeAll(async () => {

@@ -13,6 +13,14 @@ interface ActivitiesProps {
   onSendData: (lat: number, lng: number) => void;
 }
 
+// Helper to format budget range for display
+const formatBudgetRange = (range: string | null): string => {
+  if (!range) return "";
+  if (range.includes("+")) return `₱${range}`;
+  const [min, max] = range.split("-");
+  return `₱${min} - ₱${max}`;
+};
+
 export default function Activities({
   reference_id,
   load_state,
@@ -78,7 +86,7 @@ export default function Activities({
   };
 
   const click_plan = (plan: Activity): void => {
-    if (status === "view") {
+    if (status === "view" && plan.lat && plan.lng) {
       onSendData(plan.lat, plan.lng);
     }
   };
@@ -89,20 +97,36 @@ export default function Activities({
         {!plans && <p>loading...</p>}
 
         {plans &&
-          plans.map((plan, index) => (
+          plans.map((plan) => (
             <div
-              key={index}
+              key={plan.activity_id}
               className="card cursor-pointer"
               onClick={() => click_plan(plan)}
             >
-              <h1 className="font-semibold">{plan.location}</h1>
-              <p>{plan.name}</p>
-              <p className="text-sm text-gray-600">
-                {plan.brgy}, {plan.province}, {plan.city}
-              </p>
-              <p className="text-sm">{plan.notes}</p>
-              <p className="text-sm text-gray-500">{plan.target_date}</p>
-              <p className="text-sm text-gray-500">{plan.budget_range}</p>
+              {/* Display location name if available */}
+              {plan.location && (
+                <h1 className="font-semibold">{plan.location}</h1>
+              )}
+              {/* Display address components if available */}
+              {(plan.brgy || plan.city || plan.province) && (
+                <p className="text-sm text-gray-600">
+                  {[plan.brgy, plan.city, plan.province].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {/* Notes */}
+              {plan.notes && <p className="text-sm">{plan.notes}</p>}
+              {/* Target date */}
+              {plan.target_date && (
+                <p className="text-sm text-gray-500">{plan.target_date}</p>
+              )}
+              {/* Budget range - formatted for display */}
+              {plan.budget_range && (
+                <p className="text-sm text-gray-500">{formatBudgetRange(plan.budget_range)}</p>
+              )}
+              {/* Priority indicator */}
+              {plan.is_priority && (
+                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Priority</span>
+              )}
 
               {status !== "join" && status !== "planner" && (
                 <div className="mt-2 space-x-2">

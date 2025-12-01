@@ -1,6 +1,4 @@
-import { User, BusinessFavorite, TravelPlanFavorite, Business, TravelPlan } from "../src/models/index.js";
-import { executeWithRetry } from "../src/lib/sequelize.js";
-import { handleSequelizeError, USER_SAFE_ATTRIBUTES } from "../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError, USER_SAFE_SELECT } from "../src/lib/prismaHelpers.js";
 import { supabaseAdmin, isSupabaseConfigured } from "../src/lib/supabase.js";
 
 async function register(req, res) {
@@ -17,7 +15,7 @@ async function register(req, res) {
 
     // Check if user already exists
     const existingUser = await executeWithRetry(() =>
-      User.findOne({ where: { email } })
+      prisma.user.findUnique({ where: { email } })
     );
 
     if (existingUser) {
@@ -41,17 +39,17 @@ async function register(req, res) {
       return res.status(400).json({ error: error.message });
     }
 
-    // Create user profile in our database with auth_provider set to 'password'
+    // Create user profile in our database
     const user = await executeWithRetry(() =>
-      User.create({
-        auth_id: data.user.id,
-        email,
-        first_name,
-        last_name,
-        contact_no,
-        password: null,
-        auth_provider: 'password',
-        profile_completed: true  // Email registrations have complete profiles
+      prisma.user.create({
+        data: {
+          auth_id: data.user.id,
+          email,
+          first_name,
+          last_name,
+          contact_no,
+          password: null
+        }
       })
     );
 
@@ -63,15 +61,13 @@ async function register(req, res) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no,
-        auth_provider: user.auth_provider,
-        profile_completed: user.profile_completed
+        contact_no: user.contact_no
       },
       supabase_user_id: data.user.id
     });
   } catch (error) {
     console.error("Error in register:", error);
-    return handleSequelizeError(error, res, 'User registration');
+    return handlePrismaError(error, res, 'User registration');
   }
 }
 
@@ -99,9 +95,16 @@ async function login(req, res) {
 
     // Get user profile from our database
     const user = await executeWithRetry(() =>
-      User.findOne({
+      prisma.user.findFirst({
         where: { auth_id: data.user.id },
-        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'auth_provider', 'profile_completed']
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true
+        }
       })
     );
 
@@ -117,9 +120,7 @@ async function login(req, res) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no,
-        auth_provider: user.auth_provider || 'password',
-        profile_completed: user.profile_completed
+        contact_no: user.contact_no
       },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -127,7 +128,7 @@ async function login(req, res) {
     });
   } catch (error) {
     console.error("Error in login:", error);
-    return handleSequelizeError(error, res, 'User login');
+    return handlePrismaError(error, res, 'User login');
   }
 }
 
@@ -142,7 +143,9 @@ async function favorite(req, res) {
 
     if (business_id) {
       const favorite = await executeWithRetry(() =>
-        BusinessFavorite.create({ user_id, business_id })
+        prisma.businessFavorite.create({
+          data: { user_id, business_id }
+        })
       );
       return res.status(201).json({ 
         message: "Business added to favorites",
@@ -150,7 +153,9 @@ async function favorite(req, res) {
       });
     } else if (travel_plan_id) {
       const favorite = await executeWithRetry(() =>
-        TravelPlanFavorite.create({ user_id, travel_plan_id })
+        prisma.travelPlanFavorite.create({
+          data: { user_id, travel_plan_id }
+        })
       );
       return res.status(201).json({ 
         message: "Travel plan added to favorites",
@@ -162,11 +167,11 @@ async function favorite(req, res) {
   } catch (error) {
     console.error("Error adding favorite:", error);
     
-    if (error.name === 'SequelizeUniqueConstraintError') {
+    if (error.code === 'P2002') {
       return res.status(409).json({ error: "Already in favorites" });
     }
     
-    return handleSequelizeError(error, res, 'Adding favorite');
+    return handlePrismaError(error, res, 'Adding favorite');
   }
 }
 
@@ -180,27 +185,39 @@ async function remove_favorite(req, res) {
     }
 
     if (business_id) {
-      const deleted = await executeWithRetry(() =>
-        BusinessFavorite.destroy({
+      const existing = await executeWithRetry(() =>
+        prisma.businessFavorite.findFirst({
           where: { user_id, business_id }
         })
       );
       
-      if (deleted === 0) {
+      if (!existing) {
         return res.status(404).json({ error: "Favorite not found" });
       }
+
+      await executeWithRetry(() =>
+        prisma.businessFavorite.delete({
+          where: { favorite_id: existing.favorite_id }
+        })
+      );
       
       return res.json({ message: "Business removed from favorites" });
     } else if (travel_plan_id) {
-      const deleted = await executeWithRetry(() =>
-        TravelPlanFavorite.destroy({
+      const existing = await executeWithRetry(() =>
+        prisma.travelPlanFavorite.findFirst({
           where: { user_id, travel_plan_id }
         })
       );
       
-      if (deleted === 0) {
+      if (!existing) {
         return res.status(404).json({ error: "Favorite not found" });
       }
+
+      await executeWithRetry(() =>
+        prisma.travelPlanFavorite.delete({
+          where: { favorite_id: existing.favorite_id }
+        })
+      );
       
       return res.json({ message: "Travel plan removed from favorites" });
     } else {
@@ -208,7 +225,7 @@ async function remove_favorite(req, res) {
     }
   } catch (error) {
     console.error("Error removing favorite:", error);
-    return handleSequelizeError(error, res, 'Removing favorite');
+    return handlePrismaError(error, res, 'Removing favorite');
   }
 }
 
@@ -219,21 +236,35 @@ async function favorite_id(req, res) {
 
     const [businessFavorites, travelPlanFavorites] = await executeWithRetry(() =>
       Promise.all([
-        BusinessFavorite.findAll({
+        prisma.businessFavorite.findMany({
           where: { user_id: userId },
-          include: [{
-            model: Business,
-            as: 'business',
-            attributes: ['business_id', 'name', 'description', 'picture', 'rating', 'city']
-          }]
+          include: {
+            business: {
+              select: {
+                business_id: true,
+                name: true,
+                description: true,
+                picture: true,
+                rating: true,
+                city: true
+              }
+            }
+          }
         }),
-        TravelPlanFavorite.findAll({
+        prisma.travelPlanFavorite.findMany({
           where: { user_id: userId },
-          include: [{
-            model: TravelPlan,
-            as: 'travelPlan',
-            attributes: ['travel_plan_id', 'name', 'description', 'start_date', 'end_date', 'location']
-          }]
+          include: {
+            travel_plan: {
+              select: {
+                travel_plan_id: true,
+                name: true,
+                description: true,
+                start_date: true,
+                end_date: true,
+                location: true
+              }
+            }
+          }
         })
       ])
     );
@@ -244,7 +275,7 @@ async function favorite_id(req, res) {
     });
   } catch (error) {
     console.error("Error fetching favorites:", error);
-    return handleSequelizeError(error, res, 'Fetching favorites');
+    return handlePrismaError(error, res, 'Fetching favorites');
   }
 }
 
@@ -253,8 +284,17 @@ async function user_id(req, res) {
     const { id } = req.params;
 
     const user = await executeWithRetry(() =>
-      User.findByPk(parseInt(id), {
-        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'created_at']
+      prisma.user.findUnique({
+        where: { user_id: parseInt(id) },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true,
+          created_at: true
+        }
       })
     );
 
@@ -265,7 +305,7 @@ async function user_id(req, res) {
     res.json(user);
   } catch (error) {
     console.error("Error fetching user:", error);
-    return handleSequelizeError(error, res, 'Fetching user');
+    return handlePrismaError(error, res, 'Fetching user');
   }
 }
 
@@ -278,12 +318,21 @@ async function oauth_sync(req, res) {
   try {
     // The authenticateToken middleware already verified the token and attached req.user
     // req.user contains: { id, auth_id, email, first_name, last_name }
-    const { id, auth_id, email, first_name, last_name } = req.user;
+    const { id } = req.user;
 
     // Fetch full user profile
     const user = await executeWithRetry(() =>
-      User.findByPk(id, {
-        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'auth_provider', 'profile_completed', 'created_at']
+      prisma.user.findUnique({
+        where: { user_id: id },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true,
+          created_at: true
+        }
       })
     );
 
@@ -291,13 +340,8 @@ async function oauth_sync(req, res) {
       return res.status(404).json({ error: "User profile not found" });
     }
 
-    // Check if this is a newly created user (profile not completed)
-    const isNewUser = !user.profile_completed;
-
-    // If auth_provider is not set, update it to 'google' (for OAuth users)
-    if (!user.auth_provider) {
-      await user.update({ auth_provider: 'google' });
-    }
+    // Check if this is a newly created user (no contact info = likely new)
+    const isNewUser = !user.contact_no;
 
     res.json({
       message: isNewUser ? "Welcome! Please complete your profile." : "OAuth sync successful",
@@ -307,16 +351,14 @@ async function oauth_sync(req, res) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no,
-        auth_provider: user.auth_provider || 'google',
-        profile_completed: user.profile_completed
+        contact_no: user.contact_no
       },
       isNewUser,
       needsOnboarding: isNewUser
     });
   } catch (error) {
     console.error("Error in oauth_sync:", error);
-    return handleSequelizeError(error, res, 'OAuth sync');
+    return handlePrismaError(error, res, 'OAuth sync');
   }
 }
 
@@ -329,7 +371,9 @@ async function update_profile(req, res) {
     const { first_name, last_name, contact_no } = req.body;
 
     const user = await executeWithRetry(() =>
-      User.findByPk(userId)
+      prisma.user.findUnique({
+        where: { user_id: userId }
+      })
     );
 
     if (!user) {
@@ -341,30 +385,28 @@ async function update_profile(req, res) {
     if (first_name !== undefined) updateData.first_name = first_name;
     if (last_name !== undefined) updateData.last_name = last_name;
     if (contact_no !== undefined) updateData.contact_no = contact_no;
-    
-    // Mark profile as completed if basic info is provided
-    if (first_name && last_name) {
-      updateData.profile_completed = true;
-    }
 
-    await user.update(updateData);
+    const updatedUser = await executeWithRetry(() =>
+      prisma.user.update({
+        where: { user_id: userId },
+        data: updateData
+      })
+    );
 
     res.json({
       message: "Profile updated successfully",
       user: {
-        user_id: user.user_id,
-        auth_id: user.auth_id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        contact_no: user.contact_no,
-        auth_provider: user.auth_provider,
-        profile_completed: user.profile_completed
+        user_id: updatedUser.user_id,
+        auth_id: updatedUser.auth_id,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        email: updatedUser.email,
+        contact_no: updatedUser.contact_no
       }
     });
   } catch (error) {
     console.error("Error updating profile:", error);
-    return handleSequelizeError(error, res, 'Updating profile');
+    return handlePrismaError(error, res, 'Updating profile');
   }
 }
 
@@ -376,8 +418,17 @@ async function get_me(req, res) {
     const userId = req.user.id;
 
     const user = await executeWithRetry(() =>
-      User.findByPk(userId, {
-        attributes: ['user_id', 'auth_id', 'first_name', 'last_name', 'email', 'contact_no', 'auth_provider', 'profile_completed', 'created_at']
+      prisma.user.findUnique({
+        where: { user_id: userId },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true,
+          created_at: true
+        }
       })
     );
 
@@ -388,7 +439,7 @@ async function get_me(req, res) {
     res.json(user);
   } catch (error) {
     console.error("Error fetching profile:", error);
-    return handleSequelizeError(error, res, 'Fetching profile');
+    return handlePrismaError(error, res, 'Fetching profile');
   }
 }
 
@@ -401,7 +452,9 @@ async function delete_account(req, res) {
     const authId = req.user.auth_id;
 
     const user = await executeWithRetry(() =>
-      User.findByPk(userId)
+      prisma.user.findUnique({
+        where: { user_id: userId }
+      })
     );
 
     if (!user) {
@@ -421,20 +474,22 @@ async function delete_account(req, res) {
     // Delete associated favorites first
     await executeWithRetry(() =>
       Promise.all([
-        BusinessFavorite.destroy({ where: { user_id: userId } }),
-        TravelPlanFavorite.destroy({ where: { user_id: userId } })
+        prisma.businessFavorite.deleteMany({ where: { user_id: userId } }),
+        prisma.travelPlanFavorite.deleteMany({ where: { user_id: userId } })
       ])
     );
 
     // Delete user from local database
     await executeWithRetry(() =>
-      user.destroy()
+      prisma.user.delete({
+        where: { user_id: userId }
+      })
     );
 
     res.json({ message: "Account deleted successfully" });
   } catch (error) {
     console.error("Error deleting account:", error);
-    return handleSequelizeError(error, res, 'Deleting account');
+    return handlePrismaError(error, res, 'Deleting account');
   }
 }
 

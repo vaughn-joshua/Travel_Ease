@@ -1,8 +1,5 @@
-import { Op, fn, col } from "sequelize";
-import { TravelPlan, Participant } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../util/pagination.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
 import { formatPlan } from "../util/formatPlan.js";
 
 /**
@@ -12,48 +9,47 @@ import { formatPlan } from "../util/formatPlan.js";
 export async function ongoing_plan(req, res) {
   try {
     const userId = req.user.id;
-    const { page, pageSize, limit, offset } = parsePagination(req.query);
+    const { page, pageSize, skip, take } = parsePagination(req.query);
     const filters = buildPlanFilters(req.query);
 
     // Get plan IDs where user is a participant
     const participantPlanIds = await executeWithRetry(() =>
-      Participant.findAll({
+      prisma.participant.findMany({
         where: { user_id: userId, status: true },
-        attributes: ['travel_plan_id'],
-        raw: true
+        select: { travel_plan_id: true }
       })
     );
-    const planIds = participantPlanIds.map(p => p.travel_plan_id);
+    const planIds = participantPlanIds.map(p => p.travel_plan_id).filter(Boolean);
 
     // Build where clause: Active plans where user is owner or participant
     const where = {
       status: 'Active',
-      [Op.or]: [
+      OR: [
         { user_id: userId },
-        ...(planIds.length > 0 ? [{ travel_plan_id: { [Op.in]: planIds } }] : [])
+        ...(planIds.length > 0 ? [{ travel_plan_id: { in: planIds } }] : [])
       ],
       ...filters
     };
 
     const [plans, total] = await executeWithRetry(() =>
       Promise.all([
-        TravelPlan.findAll({
+        prisma.travelPlan.findMany({
           where,
-          attributes: [
-            'travel_plan_id',
-            'name',
-            'start_date',
-            'end_date',
-            'description',
-            'location',
-            'status',
-            'max_slots'
-          ],
-          order: [['start_date', 'ASC NULLS LAST']],
-          limit,
-          offset
+          select: {
+            travel_plan_id: true,
+            name: true,
+            start_date: true,
+            end_date: true,
+            description: true,
+            location: true,
+            status: true,
+            max_slots: true
+          },
+          orderBy: [{ start_date: { sort: 'asc', nulls: 'last' } }],
+          skip,
+          take
         }),
-        TravelPlan.count({ where })
+        prisma.travelPlan.count({ where })
       ])
     );
 
@@ -61,17 +57,13 @@ export async function ongoing_plan(req, res) {
     const planIdList = plans.map(p => p.travel_plan_id);
     const participantCounts = planIdList.length > 0 
       ? await executeWithRetry(() =>
-          Participant.findAll({
+          prisma.participant.groupBy({
+            by: ['travel_plan_id'],
             where: { 
-              travel_plan_id: { [Op.in]: planIdList },
+              travel_plan_id: { in: planIdList },
               status: true 
             },
-            attributes: [
-              'travel_plan_id',
-              [fn('COUNT', col('participant_id')), 'count']
-            ],
-            group: ['travel_plan_id'],
-            raw: true
+            _count: { participant_id: true }
           })
         )
       : [];
@@ -79,7 +71,7 @@ export async function ongoing_plan(req, res) {
     // Create a map for quick lookup
     const countMap = {};
     participantCounts.forEach(c => {
-      countMap[c.travel_plan_id] = parseInt(c.count);
+      countMap[c.travel_plan_id] = c._count.participant_id;
     });
 
     const data = plans.map(p => formatPlan(p, {
@@ -89,6 +81,6 @@ export async function ongoing_plan(req, res) {
     res.json(paginatedResponse(data, total, { page, pageSize }));
   } catch (error) {
     console.error("Error fetching ongoing plans:", error);
-    return handleSequelizeError(error, res, 'Fetching ongoing plans');
+    return handlePrismaError(error, res, 'Fetching ongoing plans');
   }
 }

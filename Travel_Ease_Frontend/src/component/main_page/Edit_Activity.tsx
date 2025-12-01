@@ -3,7 +3,8 @@ import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
 import { edit_activity } from "../../utils/travel_plan/edit_activity";
-import type { Activity, TravelPlanDates } from "../../types/travelPlan";
+import type { Activity, TravelPlanDates, BudgetRange, UpdateActivityPayload } from "../../types/travelPlan";
+import { BUDGET_RANGES } from "../../types/travelPlan";
 
 interface EditActivityProps {
   on_close: () => void;
@@ -13,19 +14,9 @@ interface EditActivityProps {
 
 interface FormData {
   target_date: string;
-  budget_range: string;
+  budget_range: BudgetRange | "";
   notes: string;
 }
-
-const budget_range = [
-  "0-100",
-  "100-200",
-  "200-400",
-  "400-700",
-  "700-1000",
-  "1000-1500",
-  "1500+",
-];
 
 export default function Edit_Activity({
   on_close,
@@ -50,8 +41,8 @@ export default function Edit_Activity({
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      target_date: formatDate(data.target_date),
-      budget_range: data.budget_range,
+      target_date: data.target_date ? formatDate(data.target_date) : "",
+      budget_range: data.budget_range || "",
       notes: data.notes || "",
     },
   });
@@ -68,10 +59,10 @@ export default function Edit_Activity({
 
   const on_submit = async (formData: FormData): Promise<void> => {
     try {
-      const payload = {
+      const payload: UpdateActivityPayload = {
         target_date: value.toISOString(),
-        budget_range: formData.budget_range,
-        notes: formData.notes,
+        budget_range: formData.budget_range || undefined,
+        notes: formData.notes || undefined,
       };
 
       await edit_activity(data.activity_id, payload);
@@ -121,7 +112,7 @@ export default function Edit_Activity({
               className="text_box"
             >
               <option value="">--Select--</option>
-              {budget_range.map((range) => (
+              {BUDGET_RANGES.map((range) => (
                 <option key={range} value={range}>
                   {range.includes("+")
                     ? `₱${range}`

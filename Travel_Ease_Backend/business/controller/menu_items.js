@@ -3,9 +3,7 @@
  * CRUD operations for business menu items
  */
 
-import { Business, MenuItem } from "../../src/models/index.js";
-import { executeWithRetry } from "../../src/lib/sequelize.js";
-import { handleSequelizeError } from "../../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../../src/lib/prismaHelpers.js";
 
 /**
  * Get all menu items for a business
@@ -20,9 +18,9 @@ export async function getMenuItems(req, res) {
 
   try {
     const menuItems = await executeWithRetry(() =>
-      MenuItem.findAll({
+      prisma.menuItem.findMany({
         where: { business_id: businessId },
-        order: [['category', 'ASC'], ['name', 'ASC']]
+        orderBy: [{ category: 'asc' }, { name: 'asc' }]
       })
     );
 
@@ -40,7 +38,7 @@ export async function getMenuItems(req, res) {
     res.json({ menuItems: normalized });
   } catch (error) {
     console.error("Error fetching menu items:", error);
-    return handleSequelizeError(error, res, 'Fetching menu items');
+    return handlePrismaError(error, res, 'Fetching menu items');
   }
 }
 
@@ -65,8 +63,9 @@ export async function createMenuItem(req, res) {
   try {
     // Verify ownership
     const business = await executeWithRetry(() =>
-      Business.findByPk(businessId, {
-        attributes: ['user_id']
+      prisma.business.findUnique({
+        where: { business_id: businessId },
+        select: { user_id: true }
       })
     );
 
@@ -79,14 +78,16 @@ export async function createMenuItem(req, res) {
     }
 
     const menuItem = await executeWithRetry(() =>
-      MenuItem.create({
-        business_id: businessId,
-        name,
-        description: description || null,
-        price: parseFloat(price),
-        image_url: imageUrl || null,
-        category: category || null,
-        is_available: isAvailable,
+      prisma.menuItem.create({
+        data: {
+          business_id: businessId,
+          name,
+          description: description || null,
+          price: parseFloat(price),
+          image_url: imageUrl || null,
+          category: category || null,
+          is_available: isAvailable,
+        }
       })
     );
 
@@ -103,7 +104,7 @@ export async function createMenuItem(req, res) {
     });
   } catch (error) {
     console.error("Error creating menu item:", error);
-    return handleSequelizeError(error, res, 'Creating menu item');
+    return handlePrismaError(error, res, 'Creating menu item');
   }
 }
 
@@ -125,8 +126,9 @@ export async function updateMenuItem(req, res) {
   try {
     // Verify ownership
     const business = await executeWithRetry(() =>
-      Business.findByPk(businessId, {
-        attributes: ['user_id']
+      prisma.business.findUnique({
+        where: { business_id: businessId },
+        select: { user_id: true }
       })
     );
 
@@ -140,7 +142,9 @@ export async function updateMenuItem(req, res) {
 
     // Verify menu item exists and belongs to this business
     const existingItem = await executeWithRetry(() =>
-      MenuItem.findByPk(itemId)
+      prisma.menuItem.findUnique({
+        where: { menu_item_id: itemId }
+      })
     );
 
     if (!existingItem || existingItem.business_id !== businessId) {
@@ -155,22 +159,27 @@ export async function updateMenuItem(req, res) {
     if (category !== undefined) updateData.category = category;
     if (isAvailable !== undefined) updateData.is_available = isAvailable;
 
-    await existingItem.update(updateData);
+    const updatedItem = await executeWithRetry(() =>
+      prisma.menuItem.update({
+        where: { menu_item_id: itemId },
+        data: updateData
+      })
+    );
 
     res.json({
       menuItem: {
-        id: existingItem.menu_item_id,
-        name: existingItem.name,
-        description: existingItem.description,
-        price: parseFloat(existingItem.price),
-        imageUrl: existingItem.image_url,
-        category: existingItem.category,
-        isAvailable: existingItem.is_available,
+        id: updatedItem.menu_item_id,
+        name: updatedItem.name,
+        description: updatedItem.description,
+        price: parseFloat(updatedItem.price),
+        imageUrl: updatedItem.image_url,
+        category: updatedItem.category,
+        isAvailable: updatedItem.is_available,
       }
     });
   } catch (error) {
     console.error("Error updating menu item:", error);
-    return handleSequelizeError(error, res, 'Updating menu item');
+    return handlePrismaError(error, res, 'Updating menu item');
   }
 }
 
@@ -190,8 +199,9 @@ export async function deleteMenuItem(req, res) {
   try {
     // Verify ownership
     const business = await executeWithRetry(() =>
-      Business.findByPk(businessId, {
-        attributes: ['user_id']
+      prisma.business.findUnique({
+        where: { business_id: businessId },
+        select: { user_id: true }
       })
     );
 
@@ -205,18 +215,24 @@ export async function deleteMenuItem(req, res) {
 
     // Verify menu item exists and belongs to this business
     const existingItem = await executeWithRetry(() =>
-      MenuItem.findByPk(itemId)
+      prisma.menuItem.findUnique({
+        where: { menu_item_id: itemId }
+      })
     );
 
     if (!existingItem || existingItem.business_id !== businessId) {
       return res.status(404).json({ error: "Menu item not found" });
     }
 
-    await existingItem.destroy();
+    await executeWithRetry(() =>
+      prisma.menuItem.delete({
+        where: { menu_item_id: itemId }
+      })
+    );
 
     res.json({ message: "Menu item deleted successfully" });
   } catch (error) {
     console.error("Error deleting menu item:", error);
-    return handleSequelizeError(error, res, 'Deleting menu item');
+    return handlePrismaError(error, res, 'Deleting menu item');
   }
 }

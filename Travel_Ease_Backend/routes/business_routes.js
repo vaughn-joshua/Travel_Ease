@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { Op, fn, col, literal } from "sequelize";
 import { authenticateToken } from "../src/middleware/auth.js";
 import { requireBusinessOwnership } from "../src/middleware/ownership.js";
 import { 
@@ -21,9 +20,7 @@ import {
   updateMenuItem,
   deleteMenuItem,
 } from "../business/index.js";
-import { Business, BusinessReview, BusinessCategory, BusinessHours, BusinessFavorite, PriceRange, MenuItem, User } from "../src/models/index.js";
-import { sequelize, executeWithRetry } from "../src/lib/sequelize.js";
-import { handleSequelizeError } from "../src/lib/queryHelpers.js";
+import { prisma, executeWithRetry, handlePrismaError } from "../src/lib/prismaHelpers.js";
 import { getCache, createCacheKey } from "../services/cache.js";
 
 const router = Router();
@@ -47,19 +44,13 @@ router.get("/my-businesses", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     
     const businesses = await executeWithRetry(() =>
-      Business.findAll({
+      prisma.business.findMany({
         where: { user_id: userId },
-        include: [
-          {
-            model: BusinessCategory,
-            as: 'categories'
-          },
-          {
-            model: BusinessHours,
-            as: 'businessHours'
-          }
-        ],
-        order: [['business_id', 'DESC']]
+        include: {
+          categories: true,
+          business_hours: true
+        },
+        orderBy: { business_id: 'desc' }
       })
     );
     
@@ -70,7 +61,7 @@ router.get("/my-businesses", authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user's businesses:", error);
-    return handleSequelizeError(error, res, 'Fetching user businesses');
+    return handlePrismaError(error, res, 'Fetching user businesses');
   }
 });
 
@@ -79,44 +70,41 @@ router.delete("/delete_business/:id", authenticateToken, requireBusinessOwnershi
   const businessId = parseInt(req.params.id);
   
   try {
-    await sequelize.transaction(async (t) => {
+    await prisma.$transaction(async (tx) => {
       // Get category IDs for this business
-      const categories = await BusinessCategory.findAll({
+      const categories = await tx.businessCategory.findMany({
         where: { business_id: businessId },
-        attributes: ['category_id'],
-        transaction: t
+        select: { category_id: true }
       });
       
       const categoryIds = categories.map(c => c.category_id);
       
       // Delete price ranges
       if (categoryIds.length > 0) {
-        await PriceRange.destroy({
-          where: { category_id: { [Op.in]: categoryIds } },
-          transaction: t
+        await tx.priceRange.deleteMany({
+          where: { category_id: { in: categoryIds } }
         });
       }
       
       // Delete related records
       await Promise.all([
-        BusinessCategory.destroy({ where: { business_id: businessId }, transaction: t }),
-        BusinessHours.destroy({ where: { business_id: businessId }, transaction: t }),
-        BusinessReview.destroy({ where: { business_id: businessId }, transaction: t }),
-        BusinessFavorite.destroy({ where: { business_id: businessId }, transaction: t }),
-        MenuItem.destroy({ where: { business_id: businessId }, transaction: t })
+        tx.businessCategory.deleteMany({ where: { business_id: businessId } }),
+        tx.businessHours.deleteMany({ where: { business_id: businessId } }),
+        tx.businessReview.deleteMany({ where: { business_id: businessId } }),
+        tx.businessFavorite.deleteMany({ where: { business_id: businessId } }),
+        tx.menuItem.deleteMany({ where: { business_id: businessId } })
       ]);
       
       // Delete the business
-      await Business.destroy({
-        where: { business_id: businessId },
-        transaction: t
+      await tx.business.delete({
+        where: { business_id: businessId }
       });
     });
     
     res.json({ message: "Business deleted successfully" });
   } catch (error) {
     console.error("Error deleting business:", error);
-    return handleSequelizeError(error, res, 'Deleting business');
+    return handlePrismaError(error, res, 'Deleting business');
   }
 });
 
@@ -146,35 +134,35 @@ router.get("/travel_spots", async (req, res) => {
     // Build where clause
     const where = { status: true };
     if (search) {
-      where[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } }
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
       ];
     }
     if (city) {
-      where.city = { [Op.iLike]: `%${city}%` };
+      where.city = { contains: city, mode: 'insensitive' };
     }
 
     const businesses = await executeWithRetry(() =>
-      Business.findAll({
+      prisma.business.findMany({
         where,
-        attributes: [
-          'business_id',
-          'user_id',
-          'name',
-          'house_number',
-          'street',
-          'brgy',
-          'city',
-          'latitude',
-          'longtitude',
-          'description',
-          'rating',
-          'status',
-          'picture'
-        ],
-        order: [['rating', 'DESC NULLS LAST']],
-        limit: maxLimit
+        select: {
+          business_id: true,
+          user_id: true,
+          name: true,
+          house_number: true,
+          street: true,
+          brgy: true,
+          city: true,
+          latitude: true,
+          longtitude: true,
+          description: true,
+          rating: true,
+          status: true,
+          picture: true
+        },
+        orderBy: [{ rating: { sort: 'desc', nulls: 'last' } }],
+        take: maxLimit
       })
     );
 
@@ -183,27 +171,23 @@ router.get("/travel_spots", async (req, res) => {
     let reviewCounts = {};
     if (businessIds.length > 0) {
       const counts = await executeWithRetry(() =>
-        BusinessReview.findAll({
-          where: { business_id: { [Op.in]: businessIds } },
-          attributes: [
-            'business_id',
-            [fn('COUNT', col('review_id')), 'count']
-          ],
-          group: ['business_id'],
-          raw: true
+        prisma.businessReview.groupBy({
+          by: ['business_id'],
+          where: { business_id: { in: businessIds } },
+          _count: { review_id: true }
         })
       );
       reviewCounts = counts.reduce((acc, r) => {
-        acc[r.business_id] = parseInt(r.count, 10);
+        acc[r.business_id] = r._count.review_id;
         return acc;
       }, {});
     }
 
     // Attach reviewCount to each business
-    const enriched = businesses.map(b => {
-      const plain = b.toJSON ? b.toJSON() : b;
-      return { ...plain, reviewCount: reviewCounts[plain.business_id] || 0 };
-    });
+    const enriched = businesses.map(b => ({
+      ...b,
+      reviewCount: reviewCounts[b.business_id] || 0
+    }));
 
     // Cache for 30 seconds
     travelSpotsCache.set(cacheKey, enriched, 30);
@@ -215,7 +199,7 @@ router.get("/travel_spots", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching travel spots:", error);
-    return handleSequelizeError(error, res, 'Fetching travel spots');
+    return handlePrismaError(error, res, 'Fetching travel spots');
   }
 });
 
@@ -224,14 +208,18 @@ router.get("/travel_spots/reviews/:id", async (req, res) => {
   
   try {
     const reviews = await executeWithRetry(() =>
-      BusinessReview.findAll({
+      prisma.businessReview.findMany({
         where: { business_id: businessId },
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name']
-        }],
-        order: [['review_date', 'DESC']]
+        include: {
+          user: {
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true
+            }
+          }
+        },
+        orderBy: { review_date: 'desc' }
       })
     );
     
@@ -241,7 +229,7 @@ router.get("/travel_spots/reviews/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching reviews:", error);
-    return handleSequelizeError(error, res, 'Fetching reviews');
+    return handlePrismaError(error, res, 'Fetching reviews');
   }
 }); 
 

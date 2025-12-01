@@ -1,14 +1,12 @@
 /**
  * Common pagination and filtering utilities for travel plan listings
- * Updated for Sequelize ORM
+ * Updated for Prisma ORM
  */
-
-import { Op } from 'sequelize';
 
 /**
  * Parse pagination params from request query
  * @param {object} query - req.query object
- * @returns {object} - { page, pageSize, skip, limit, offset }
+ * @returns {object} - { page, pageSize, skip, take }
  */
 export function parsePagination(query) {
   const page = Math.max(1, parseInt(query.page) || 1);
@@ -18,50 +16,52 @@ export function parsePagination(query) {
     page, 
     pageSize, 
     skip,
+    take: pageSize,
+    // Aliases for compatibility
     limit: pageSize,
     offset: skip
   };
 }
 
 /**
- * Build common filter conditions for travel plans (Sequelize format)
+ * Build common filter conditions for travel plans (Prisma format)
  * @param {object} query - req.query object
- * @returns {object} - Sequelize where conditions
+ * @returns {object} - Prisma where conditions
  */
 export function buildPlanFilters(query) {
   const filters = {};
 
   // Search by name or description
   if (query.search) {
-    filters[Op.or] = [
-      { name: { [Op.iLike]: `%${query.search}%` } },
-      { description: { [Op.iLike]: `%${query.search}%` } }
+    filters.OR = [
+      { name: { contains: query.search, mode: 'insensitive' } },
+      { description: { contains: query.search, mode: 'insensitive' } }
     ];
   }
 
   // Filter by location
   if (query.location) {
-    filters.location = { [Op.iLike]: `%${query.location}%` };
+    filters.location = { contains: query.location, mode: 'insensitive' };
   }
 
   // Date range filters
   if (query.startDateFrom || query.startDateTo) {
     filters.start_date = {};
     if (query.startDateFrom) {
-      filters.start_date[Op.gte] = new Date(query.startDateFrom);
+      filters.start_date.gte = new Date(query.startDateFrom);
     }
     if (query.startDateTo) {
-      filters.start_date[Op.lte] = new Date(query.startDateTo);
+      filters.start_date.lte = new Date(query.startDateTo);
     }
   }
   
   if (query.endDateFrom || query.endDateTo) {
     filters.end_date = {};
     if (query.endDateFrom) {
-      filters.end_date[Op.gte] = new Date(query.endDateFrom);
+      filters.end_date.gte = new Date(query.endDateFrom);
     }
     if (query.endDateTo) {
-      filters.end_date[Op.lte] = new Date(query.endDateTo);
+      filters.end_date.lte = new Date(query.endDateTo);
     }
   }
 
