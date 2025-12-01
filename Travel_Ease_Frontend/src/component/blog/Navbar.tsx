@@ -5,12 +5,19 @@ import { useAuth } from "../../context/AuthContext";
 interface NavItem {
   label: string;
   path: string;
+  requiresAuth?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { label: "Map", path: "/map" },
+// Public nav items (visible to all)
+const publicNavItems: NavItem[] = [
+  { label: "Home", path: "/" },
   { label: "Spots", path: "/travel_spots_page" },
-  { label: "Blogs", path: "/blogs" },
+];
+
+// Auth-only nav items (visible only when logged in)
+const authNavItems: NavItem[] = [
+  { label: "Plans", path: "/plans", requiresAuth: true },
+  { label: "Map", path: "/map", requiresAuth: true },
 ];
 
 const isEditorEnabled = () => {
@@ -43,11 +50,20 @@ const Navbar: React.FC = () => {
   };
 
   const isActive = (path: string) => {
-    if (path === "/blogs") {
-      return location.pathname === "/blogs" || location.pathname === "/";
+    if (path === "/") {
+      // Home is active when on / or /blogs
+      return location.pathname === "/" || location.pathname === "/blogs" || location.pathname.startsWith("/blogs/");
     }
-    return location.pathname === path;
+    if (path === "/plans") {
+      return location.pathname === "/plans" || location.pathname.startsWith("/planner/");
+    }
+    return location.pathname === path || location.pathname.startsWith(path + "/");
   };
+
+  // Build nav items based on auth state
+  const navItems = user 
+    ? [...publicNavItems, ...authNavItems]
+    : publicNavItems;
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 shadow-sm backdrop-blur-lg">
@@ -56,7 +72,7 @@ const Navbar: React.FC = () => {
         aria-label="Primary navigation"
       >
         <Link
-          to="/"
+          to={user ? "/plans" : "/"}
           className="flex items-center gap-3 rounded-full border border-transparent bg-white/70 px-3 py-1 text-base font-semibold text-gray-900 transition hover:border-primary-red/30 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2 focus-visible:ring-offset-white"
         >
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-red to-primary-red-dark text-white">

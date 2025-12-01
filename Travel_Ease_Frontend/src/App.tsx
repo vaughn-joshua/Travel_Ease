@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./component/blog/Navbar";
 import Footer from "./component/blog/Footer";
+import { RequireAuth, LandingRoute } from "./routes/AuthRoutes";
 
 // Blog pages
 import Blogs from "./pages/Blogs";
@@ -47,12 +48,20 @@ export default function App(): React.ReactElement {
   const location = useLocation();
   const isFullscreen = fullscreenRoutes.some(route => location.pathname.startsWith(route));
 
-  // Fullscreen layout (for map)
+  // Fullscreen layout (for map) - requires auth
   if (isFullscreen) {
     return (
       <Routes>
-        <Route path="/map" element={<Main_Map_Page />} />
-        <Route path="/map/div" element={<Main_Landing_Page />} />
+        <Route path="/map" element={
+          <RequireAuth>
+            <Main_Map_Page />
+          </RequireAuth>
+        } />
+        <Route path="/map/div" element={
+          <RequireAuth>
+            <Main_Landing_Page />
+          </RequireAuth>
+        } />
       </Routes>
     );
   }
@@ -63,18 +72,31 @@ export default function App(): React.ReactElement {
       <Navbar />
       <main className="flex-grow">
         <Routes>
-          {/* Travel Plan routes */}
-          <Route path="/" element={<Main_Page />} />
-          <Route path="/planner/:status/:id" element={<Planner />} />
+          {/* Landing route: blogs for visitors, redirect to /plans for authenticated */}
+          <Route path="/" element={<LandingRoute publicComponent={<Blogs />} />} />
 
-          {/* Travel spots */}
+          {/* Plans dashboard - requires auth */}
+          <Route path="/plans" element={
+            <RequireAuth>
+              <Main_Page />
+            </RequireAuth>
+          } />
+
+          {/* Planner - requires auth */}
+          <Route path="/planner/:status/:id" element={
+            <RequireAuth>
+              <Planner />
+            </RequireAuth>
+          } />
+
+          {/* Travel spots - public */}
           <Route path="/travel_spots_page" element={<Main_Travel_Spots />} />
 
           {/* Business landing/registration */}
           <Route path="/business_landing_page" element={<Landing_Page />} />
           <Route path="/business/:id" element={<Business_Page />} />
 
-          {/* Blog routes */}
+          {/* Blog routes - public */}
           <Route path="/blogs" element={<Blogs />} />
           <Route path="/blogs/new" element={<NewBlog />} />
           <Route path="/blogs/:slug/edit" element={<EditBlog />} />
