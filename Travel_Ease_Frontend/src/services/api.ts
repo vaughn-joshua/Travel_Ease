@@ -94,10 +94,14 @@ api.interceptors.response.use(
         console.error("Internal server error - check backend logs");
       } else if (error.response?.status === 503) {
         console.error("Service unavailable - database may be down");
+      } else if (error.response?.data?.code === 'CONNECTION_ERROR') {
+        console.error("Database connection error - Supabase may be paused or unreachable");
       } else if (error.code === "ECONNREFUSED") {
         console.error("Connection refused - is the backend server running?");
       } else if (error.code === "ERR_NETWORK") {
         console.error("Network error - check your internet connection");
+      } else if (error.code === "ECONNABORTED") {
+        console.error("Request timeout - backend may be slow or database unreachable");
       }
     }
 

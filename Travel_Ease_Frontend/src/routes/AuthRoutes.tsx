@@ -2,7 +2,7 @@
  * Auth-Aware Routing Components
  * 
  * RequireAuth: Protects routes that require authentication
- * LandingRoute: Shows blogs for visitors, redirects authenticated users to /plans
+ * LandingRoute: Shows blogs for all users (home page is always blogs)
  */
 
 import React from "react";
@@ -45,12 +45,11 @@ interface LandingRouteProps {
 }
 
 /**
- * Landing route component that shows different content based on auth state.
- * - Unauthenticated: Shows the public component (blogs)
- * - Authenticated: Redirects to /plans
+ * Landing route component - shows the same content (blogs) for all users.
+ * No longer redirects authenticated users to /plans.
  */
 export function LandingRoute({ publicComponent }: LandingRouteProps): React.ReactElement {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   // Show loading state while auth is resolving
   if (loading) {
@@ -61,12 +60,7 @@ export function LandingRoute({ publicComponent }: LandingRouteProps): React.Reac
     );
   }
 
-  // Authenticated users go to plans
-  if (user) {
-    return <Navigate to="/plans" replace />;
-  }
-
-  // Unauthenticated users see the public component
+  // Show blogs for everyone (authenticated and unauthenticated)
   return <>{publicComponent}</>;
 }
 

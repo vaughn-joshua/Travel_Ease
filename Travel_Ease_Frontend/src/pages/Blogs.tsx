@@ -61,8 +61,10 @@ export default function Blogs() {
         const status = err.response?.status;
         const errorCode = err.response?.data?.code;
         
-        if (status === 503 || errorCode === 'P1001' || errorCode === 'P1002') {
-          setError("Service temporarily unavailable. Please try again in a few moments.");
+        if (status === 503 || errorCode === 'P1001' || errorCode === 'P1002' || errorCode === 'CONNECTION_ERROR') {
+          setError("Database temporarily unavailable. The service will resume shortly - please try again in a few moments.");
+        } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+          setError("Request timed out. The server may be experiencing high load - please try again.");
         } else if (status === 500) {
           setError("Server error: Please try again later or contact support.");
         } else if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
