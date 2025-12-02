@@ -107,44 +107,58 @@ export async function edit_business(req: Request, res: Response) {
               }
             });
 
-            // Create price ranges for new categories if price data provided
+            // Create price ranges for new categories only if both prices are provided
+            // (avoids defaulting missing values to 0 and losing data)
             const minPrice = updateData.min_price;
             const maxPrice = updateData.max_price;
 
-            if (minPrice !== undefined || maxPrice !== undefined) {
+            if (minPrice !== undefined && maxPrice !== undefined) {
               await tx.priceRange.create({
                 data: {
                   category_id: newCategory.category_id,
-                  min_price: minPrice || 0,
-                  max_price: maxPrice || 0,
+                  min_price: minPrice,
+                  max_price: maxPrice,
                 }
               });
             }
           }
         }
       } else if (updateData.min_price !== undefined || updateData.max_price !== undefined) {
-        // Update price ranges for existing categories
+        // Update price ranges for existing categories, preserving values not being updated
         const existingCategories = await tx.businessCategory.findMany({
           where: { business_id: businessId },
-          select: { category_id: true }
+          include: { price_ranges: true }
         });
 
         if (existingCategories.length > 0) {
-          const categoryIds = existingCategories.map(c => c.category_id);
-          // Delete existing price ranges
-          await tx.priceRange.deleteMany({
-            where: { category_id: { in: categoryIds } }
-          });
-
-          // Create new price ranges
           for (const cat of existingCategories) {
-            await tx.priceRange.create({
-              data: {
-                category_id: cat.category_id,
-                min_price: updateData.min_price || 0,
-                max_price: updateData.max_price || 0,
-              }
-            });
+            // Get existing price range for this category (if any)
+            const existingPriceRange = cat.price_ranges[0];
+
+            if (existingPriceRange) {
+              // Update existing price range, preserving values not provided
+              await tx.priceRange.update({
+                where: { id: existingPriceRange.id },
+                data: {
+                  min_price: updateData.min_price !== undefined 
+                    ? updateData.min_price 
+                    : existingPriceRange.min_price,
+                  max_price: updateData.max_price !== undefined 
+                    ? updateData.max_price 
+                    : existingPriceRange.max_price,
+                }
+              });
+            } else if (updateData.min_price !== undefined && updateData.max_price !== undefined) {
+              // Only create new price range if both values are provided
+              await tx.priceRange.create({
+                data: {
+                  category_id: cat.category_id,
+                  min_price: updateData.min_price,
+                  max_price: updateData.max_price,
+                }
+              });
+            }
+            // If only one value provided and no existing range, skip (can't create partial range)
           }
         }
       }

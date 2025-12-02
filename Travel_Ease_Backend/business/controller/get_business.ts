@@ -6,6 +6,16 @@ interface BusinessWhere {
   status?: boolean;
   OR?: Array<{ name?: { contains: string; mode: string }; description?: { contains: string; mode: string }; city?: { contains: string; mode: string } }>;
   business_id?: { in: number[] };
+  categories?: {
+    some: {
+      price_ranges: {
+        some: {
+          max_price?: { gte: number };
+          min_price?: { lte: number };
+        };
+      };
+    };
+  };
 }
 
 export async function get_businesses(req: Request, res: Response) {
@@ -58,6 +68,24 @@ export async function get_businesses(req: Request, res: Response) {
       }
     }
 
+    // Filter by price range at database level (fixes pagination count mismatch)
+    if (minPrice || maxPrice) {
+      const priceFilter: { max_price?: { gte: number }; min_price?: { lte: number } } = {};
+      if (minPrice) {
+        priceFilter.max_price = { gte: parseInt(minPrice as string, 10) };
+      }
+      if (maxPrice) {
+        priceFilter.min_price = { lte: parseInt(maxPrice as string, 10) };
+      }
+      where.categories = {
+        some: {
+          price_ranges: {
+            some: priceFilter
+          }
+        }
+      };
+    }
+
     const [businesses, total] = await executeWithRetry(() =>
       Promise.all([
         prisma.business.findMany({
@@ -85,23 +113,8 @@ export async function get_businesses(req: Request, res: Response) {
       ])
     );
 
-    // Filter by price range in JS if needed
-    let filteredBusinesses = businesses;
-    if (minPrice || maxPrice) {
-      filteredBusinesses = businesses.filter(business => {
-        for (const cat of business.categories || []) {
-          for (const pr of cat.price_ranges || []) {
-            const matchesMin = !minPrice || pr.max_price >= parseInt(minPrice as string);
-            const matchesMax = !maxPrice || pr.min_price <= parseInt(maxPrice as string);
-            if (matchesMin && matchesMax) return true;
-          }
-        }
-        return false;
-      });
-    }
-
     // Normalize response
-    const items = filteredBusinesses.map(b => normalizeBusiness(b));
+    const items = businesses.map(b => normalizeBusiness(b));
 
     res.status(200).json({
       items,
