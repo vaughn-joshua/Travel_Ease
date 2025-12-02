@@ -3,8 +3,13 @@ import { Link } from "react-router-dom";
 import Carousel from "../component/blog/Carousel";
 import Section from "../component/blog/Section";
 import { useBlogOverview } from "../features/blogs/queries";
+import { useAuth } from "../context/AuthContext";
 
 export default function Blogs() {
+  // Get auth state to conditionally show CTA
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
+
   // Use TanStack Query hook for data fetching
   const {
     data: overview,
@@ -196,10 +201,10 @@ export default function Blogs() {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
               <Link
-                to="/plans"
+                to={isLoggedIn ? "/plans" : "/signup"}
                 className="w-full max-w-xs rounded-full border border-white bg-white px-7 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary-red transition hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-red sm:w-auto"
               >
-                Start Creating Plans
+                {isLoggedIn ? "Start Creating Plans" : "Join Us Today!"}
               </Link>
               <Link
                 to="/blogs/new"
