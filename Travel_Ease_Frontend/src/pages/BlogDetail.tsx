@@ -1,35 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { useBlogDetail } from "../features/blogs/queries";
 import { blogApi } from "../services/api";
-import type { Blog } from "../types/blog";
 
 export default function BlogDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [blog, setBlog] = useState<Blog | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  useEffect(() => {
-    const fetchBlog = async () => {
-      if (!slug) return;
-
-      try {
-        setLoading(true);
-        const blogData = await blogApi.getBlogBySlug(slug);
-        setBlog(blogData);
-      } catch (err) {
-        setError("Blog not found");
-        console.error("Error fetching blog:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBlog();
-  }, [slug]);
+  // Use TanStack Query hook for fetching blog detail
+  const { data: blog, isLoading, isError } = useBlogDetail(slug);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -45,9 +26,9 @@ export default function BlogDetail() {
       alert("Cannot delete: Blog information is missing.");
       return;
     }
-    
+
     setDeleting(true);
-    
+
     try {
       console.log("Deleting blog with ID:", blog.id);
       await blogApi.deleteBlog(blog.id);
@@ -55,9 +36,10 @@ export default function BlogDetail() {
       navigate("/blogs");
     } catch (err: any) {
       console.error("Error deleting blog:", err);
-      const errorMessage = err.response?.data?.error || 
-                          err.message || 
-                          "Failed to delete blog post. Please try again.";
+      const errorMessage =
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to delete blog post. Please try again.";
       alert(errorMessage);
     } finally {
       setDeleting(false);
@@ -65,7 +47,7 @@ export default function BlogDetail() {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -76,7 +58,7 @@ export default function BlogDetail() {
     );
   }
 
-  if (error || !blog) {
+  if (isError || !blog) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -119,7 +101,7 @@ export default function BlogDetail() {
               </svg>
               Back to Blogs
             </Link>
-            
+
             <div className="flex gap-3">
               <Link
                 to={`/blogs/${slug}/edit`}
@@ -171,12 +153,15 @@ export default function BlogDetail() {
               </button>
             </div>
           </div>
-          
+
           {showDeleteConfirm && (
             <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-red-900 mb-2">Confirm Delete</h3>
+              <h3 className="text-lg font-semibold text-red-900 mb-2">
+                Confirm Delete
+              </h3>
               <p className="text-red-800 mb-4">
-                Are you sure you want to delete this blog post? This action cannot be undone.
+                Are you sure you want to delete this blog post? This action
+                cannot be undone.
               </p>
               <div className="flex gap-4">
                 <button

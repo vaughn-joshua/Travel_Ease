@@ -29,14 +29,17 @@ export async function fetch_plans(): Promise<TravelPlan[]> {
       },
     });
 
-    // 401/403 means token is missing or invalid - clear it and return empty
+    // 401/403 means token is missing or invalid - clear it and return empty (silently)
     if (result.status === 401 || result.status === 403) {
       localStorage.removeItem("token");
       return [];
     }
 
     if (!result.ok) {
-      console.error(`Failed to fetch plans: ${result.status}`);
+      // Only log non-auth errors in development
+      if (import.meta.env.DEV) {
+        console.error(`Failed to fetch plans: ${result.status}`);
+      }
       return [];
     }
 
@@ -44,8 +47,8 @@ export async function fetch_plans(): Promise<TravelPlan[]> {
     // Backend returns normalized DTOs in data array
     return response.data;
   } catch (e) {
-    // Only log non-auth errors
-    if (!(e instanceof TypeError && e.message.includes('fetch'))) {
+    // Only log non-network errors in development
+    if (import.meta.env.DEV && !(e instanceof TypeError && e.message.includes('fetch'))) {
       console.error("Error fetching plans:", e);
     }
     return [];

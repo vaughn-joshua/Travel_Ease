@@ -1,49 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
-import type { TravelPlan } from "../../types/travelPlan";
+import { useOngoingPlans } from "../../features/travelPlans/queries";
 
 export default function Ongoing_Plans(): React.ReactElement {
   const navigate = useNavigate();
   const { loading: authLoading } = useAuth();
-  const [plans, setPlans] = useState<TravelPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadPlans = useCallback(async () => {
-    // Check for token in localStorage (the fetch utility also checks this)
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+  // Check for token in localStorage to determine if user is authenticated
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetch_ongoing_plans();
-      setPlans(data);
-    } catch (err) {
-      console.error("Error fetching ongoing plans:", err);
-      setError("Failed to load ongoing plans");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!authLoading) {
-      loadPlans();
-    }
-  }, [authLoading, loadPlans]);
+  // Use TanStack Query hook for fetching ongoing plans
+  const {
+    data: plans = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useOngoingPlans(!authLoading && Boolean(token));
 
   const handle_click = (id: number): void => {
     navigate(`/planner/view/${id}`);
   };
 
   // Show loading while auth is resolving or plans are loading
-  if (authLoading || loading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red"></div>
@@ -52,12 +32,14 @@ export default function Ongoing_Plans(): React.ReactElement {
   }
 
   // Show error state with retry option
-  if (error) {
+  if (isError) {
     return (
       <div className="text-center py-4">
-        <p className="text-red-500 mb-2">{error}</p>
-        <button 
-          onClick={loadPlans}
+        <p className="text-red-500 mb-2">
+          {(error as Error)?.message || "Failed to load ongoing plans"}
+        </p>
+        <button
+          onClick={() => refetch()}
           className="text-primary-red hover:underline"
         >
           Try again
@@ -89,9 +71,9 @@ export default function Ongoing_Plans(): React.ReactElement {
           <p className="text-sm text-gray-500 mt-2">
             {plan.start_date} - {plan.end_date}
           </p>
-          {plan.participants !== undefined && (
+          {plan.approvedParticipants !== undefined && (
             <p className="text-xs text-gray-400 mt-2">
-              {plan.participants}/{plan.max_slots} participants
+              {plan.approvedParticipants}/{plan.max_slots} participants
             </p>
           )}
         </div>

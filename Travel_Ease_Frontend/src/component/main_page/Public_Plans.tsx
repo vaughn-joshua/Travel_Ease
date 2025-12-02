@@ -1,27 +1,31 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetch_public_plans } from "../../utils/travel_plan/fetch_public_plans";
-import type { TravelPlan } from "../../types/travelPlan";
+import { usePublicPlans } from "../../features/travelPlans/queries";
 
 export default function Public_Plans(): React.ReactElement {
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<TravelPlan[]>([]);
 
-  useEffect(() => {
-    const load_plans = async (): Promise<void> => {
-      try {
-        const data = await fetch_public_plans();
-        setPlans(data);
-      } catch (e) {
-        console.error("Error fetching public plans:", e);
-      }
-    };
-    load_plans();
-  }, []);
+  // Use TanStack Query hook for fetching public plans
+  const { data: plans = [], isLoading, isError } = usePublicPlans();
 
   const handle_click = (id: number): void => {
     navigate(`/planner/join/${id}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-red-500">Failed to load public plans</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -47,4 +51,3 @@ export default function Public_Plans(): React.ReactElement {
     </div>
   );
 }
-

@@ -1,48 +1,30 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { userApi } from "../services/api";
-
-interface BusinessFavorite {
-  favorite_id: number;
-  user_id: number;
-  business_id: number;
-  business: {
-    business_id: number;
-    name: string;
-    description: string | null;
-    picture: string | null;
-    rating: number | null;
-    city: string | null;
-  };
-}
-
-interface TravelPlanFavorite {
-  favorite_id: number;
-  user_id: number;
-  travel_plan_id: number;
-  travel_plan: {
-    travel_plan_id: number;
-    name: string;
-    description: string | null;
-    start_date: string;
-    end_date: string;
-    location: string | null;
-  };
-}
+import { useFavorites } from "../features/favorites/queries";
+import { useRemoveFavorite } from "../features/favorites/mutations";
 
 type TabType = "businesses" | "plans";
+import { useState } from "react";
 
 export default function Favorites(): React.ReactElement {
   const navigate = useNavigate();
   const { user, loading: authLoading, isConfigured } = useAuth();
-
-  const [businessFavorites, setBusinessFavorites] = useState<BusinessFavorite[]>([]);
-  const [planFavorites, setPlanFavorites] = useState<TravelPlanFavorite[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("businesses");
-  const [removingId, setRemovingId] = useState<number | null>(null);
+
+  // Use TanStack Query for fetching favorites
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+  } = useFavorites(Boolean(user));
+
+  // Use mutation hook for removing favorites
+  const removeFavoriteMutation = useRemoveFavorite();
+
+  const businessFavorites = data?.business_favorites ?? [];
+  const planFavorites = data?.travel_plan_favorites ?? [];
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -51,61 +33,15 @@ export default function Favorites(): React.ReactElement {
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch favorites
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      if (!user) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await userApi.getFavorites("me");
-        setBusinessFavorites((data.business_favorites || []) as BusinessFavorite[]);
-        setPlanFavorites((data.travel_plan_favorites || []) as TravelPlanFavorite[]);
-      } catch (err: any) {
-        console.error("Error fetching favorites:", err);
-        setError(err.response?.data?.error || "Failed to load favorites");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchFavorites();
-    }
-  }, [user]);
-
-  const handleRemoveBusinessFavorite = async (businessId: number) => {
-    try {
-      setRemovingId(businessId);
-      await userApi.removeFavorite({ business_id: businessId });
-      setBusinessFavorites((prev) =>
-        prev.filter((f) => f.business_id !== businessId)
-      );
-    } catch (err: any) {
-      console.error("Error removing favorite:", err);
-      setError(err.response?.data?.error || "Failed to remove favorite");
-    } finally {
-      setRemovingId(null);
-    }
+  const handleRemoveBusinessFavorite = (businessId: number) => {
+    removeFavoriteMutation.mutate({ business_id: businessId });
   };
 
-  const handleRemovePlanFavorite = async (planId: number) => {
-    try {
-      setRemovingId(planId);
-      await userApi.removeFavorite({ travel_plan_id: planId });
-      setPlanFavorites((prev) =>
-        prev.filter((f) => f.travel_plan_id !== planId)
-      );
-    } catch (err: any) {
-      console.error("Error removing favorite:", err);
-      setError(err.response?.data?.error || "Failed to remove favorite");
-    } finally {
-      setRemovingId(null);
-    }
+  const handleRemovePlanFavorite = (planId: number) => {
+    removeFavoriteMutation.mutate({ travel_plan_id: planId });
   };
 
-  if (authLoading || loading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
@@ -134,6 +70,11 @@ export default function Favorites(): React.ReactElement {
     );
   }
 
+  const errorMessage =
+    isError && error
+      ? (error as any).response?.data?.error || "Failed to load favorites"
+      : null;
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex items-center justify-between">
@@ -151,15 +92,9 @@ export default function Favorites(): React.ReactElement {
         </button>
       </div>
 
-      {error && (
+      {errorMessage && (
         <div className="mb-6 rounded-lg bg-red-50 p-4 text-red-700">
-          {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-2 font-medium underline"
-          >
-            Dismiss
-          </button>
+          {errorMessage}
         </div>
       )}
 
@@ -225,7 +160,7 @@ export default function Favorites(): React.ReactElement {
                 className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
               >
                 <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                  {fav.business.picture ? (
+                  {fav.business?.picture ? (
                     <img
                       src={fav.business.picture}
                       alt={fav.business.name}
@@ -251,36 +186,40 @@ export default function Favorites(): React.ReactElement {
                 </div>
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/businesses/${fav.business.business_id}`}
+                    to={`/businesses/${fav.business?.business_id}`}
                     className="font-semibold text-gray-900 hover:text-primary-red"
                   >
-                    {fav.business.name}
+                    {fav.business?.name}
                   </Link>
-                  {fav.business.city && (
+                  {fav.business?.city && (
                     <p className="text-sm text-gray-500">{fav.business.city}</p>
                   )}
-                  {fav.business.rating !== null && (
-                    <div className="mt-1 flex items-center gap-1 text-sm">
-                      <svg
-                        className="h-4 w-4 text-yellow-500"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                      <span className="text-gray-600">
-                        {Number(fav.business.rating).toFixed(1)}
-                      </span>
-                    </div>
-                  )}
+                  {fav.business?.rating !== null &&
+                    fav.business?.rating !== undefined && (
+                      <div className="mt-1 flex items-center gap-1 text-sm">
+                        <svg
+                          className="h-4 w-4 text-yellow-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-gray-600">
+                          {Number(fav.business.rating).toFixed(1)}
+                        </span>
+                      </div>
+                    )}
                 </div>
                 <button
-                  onClick={() => handleRemoveBusinessFavorite(fav.business_id)}
-                  disabled={removingId === fav.business_id}
+                  onClick={() =>
+                    fav.business?.business_id &&
+                    handleRemoveBusinessFavorite(fav.business.business_id)
+                  }
+                  disabled={removeFavoriteMutation.isPending}
                   className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
                   title="Remove from favorites"
                 >
-                  {removingId === fav.business_id ? (
+                  {removeFavoriteMutation.isPending ? (
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary-red" />
                   ) : (
                     <svg
@@ -356,28 +295,34 @@ export default function Favorites(): React.ReactElement {
                 </div>
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/planner/view/${fav.travel_plan.travel_plan_id}`}
+                    to={`/planner/view/${fav.travel_plan?.travel_plan_id}`}
                     className="font-semibold text-gray-900 hover:text-primary-red"
                   >
-                    {fav.travel_plan.name}
+                    {fav.travel_plan?.name}
                   </Link>
-                  {fav.travel_plan.location && (
+                  {fav.travel_plan?.location && (
                     <p className="text-sm text-gray-500">
                       {fav.travel_plan.location}
                     </p>
                   )}
                   <p className="mt-1 text-xs text-gray-400">
-                    {new Date(fav.travel_plan.start_date).toLocaleDateString()} -{" "}
-                    {new Date(fav.travel_plan.end_date).toLocaleDateString()}
+                    {fav.travel_plan?.start_date &&
+                      new Date(fav.travel_plan.start_date).toLocaleDateString()}{" "}
+                    -{" "}
+                    {fav.travel_plan?.end_date &&
+                      new Date(fav.travel_plan.end_date).toLocaleDateString()}
                   </p>
                 </div>
                 <button
-                  onClick={() => handleRemovePlanFavorite(fav.travel_plan_id)}
-                  disabled={removingId === fav.travel_plan_id}
+                  onClick={() =>
+                    fav.travel_plan?.travel_plan_id &&
+                    handleRemovePlanFavorite(fav.travel_plan.travel_plan_id)
+                  }
+                  disabled={removeFavoriteMutation.isPending}
                   className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
                   title="Remove from favorites"
                 >
-                  {removingId === fav.travel_plan_id ? (
+                  {removeFavoriteMutation.isPending ? (
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary-red" />
                   ) : (
                     <svg
@@ -401,4 +346,3 @@ export default function Favorites(): React.ReactElement {
     </div>
   );
 }
-

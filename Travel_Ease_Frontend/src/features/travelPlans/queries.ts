@@ -1,0 +1,109 @@
+/**
+ * Travel Plan Query Hooks
+ *
+ * TanStack Query hooks for travel plan read operations.
+ * Reuses existing utility functions under utils/travel_plan which handle auth headers.
+ */
+
+import { useQuery } from "@tanstack/react-query";
+import { travelPlanKeys } from "../../lib/queryKeys";
+import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
+import { fetch_previous_plans } from "../../utils/travel_plan/fetch_previous_plans";
+import { fetch_public_plans } from "../../utils/travel_plan/fetch_public_plans";
+import { fetch_plans } from "../../utils/travel_plan/fetch_plans";
+import { fetch_plan_id } from "../../utils/travel_plan/fetch_plan_id";
+import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
+import { fetch_participants } from "../../utils/travel_plan/fetch_participants";
+import type { TravelPlan, Activity } from "../../types/travelPlan";
+import type { Participant } from "../../utils/travel_plan/fetch_participants";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useOngoingPlans
+// Fetches the current user's ongoing (active) travel plans.
+// Requires authentication; returns empty array if not logged in.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useOngoingPlans(enabled = true) {
+  return useQuery<TravelPlan[], Error>({
+    queryKey: travelPlanKeys.ongoing(),
+    queryFn: fetch_ongoing_plans,
+    enabled,
+    // Ongoing plans can change frequently; keep default staleTime
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// usePreviousPlans
+// Fetches the current user's completed/past travel plans.
+// ─────────────────────────────────────────────────────────────────────────────
+export function usePreviousPlans(enabled = true) {
+  return useQuery<TravelPlan[], Error>({
+    queryKey: travelPlanKeys.previous(),
+    queryFn: fetch_previous_plans,
+    enabled,
+    staleTime: 1000 * 60, // Previous plans don't change often
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useUpcomingPlans
+// Fetches the current user's upcoming/draft travel plans.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useUpcomingPlans(enabled = true) {
+  return useQuery<TravelPlan[], Error>({
+    queryKey: travelPlanKeys.list({ status: "upcoming" }),
+    queryFn: fetch_plans,
+    enabled,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// usePublicPlans
+// Fetches publicly visible travel plans (for discovery / quick join).
+// ─────────────────────────────────────────────────────────────────────────────
+export function usePublicPlans() {
+  return useQuery<TravelPlan[], Error>({
+    queryKey: travelPlanKeys.public(),
+    queryFn: fetch_public_plans,
+    staleTime: 1000 * 30,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useTravelPlanDetail
+// Fetches a single travel plan by ID.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useTravelPlanDetail(id: number | string | undefined) {
+  return useQuery<TravelPlan | null, Error>({
+    queryKey: travelPlanKeys.detail(id ?? ""),
+    queryFn: () => fetch_plan_id(id!),
+    enabled: id !== undefined && id !== "",
+    staleTime: 1000 * 30,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useTravelPlanActivities
+// Fetches activities for a given travel plan.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useTravelPlanActivities(planId: number | string | undefined) {
+  return useQuery<Activity[], Error>({
+    queryKey: travelPlanKeys.activities(planId ?? ""),
+    queryFn: () => fetch_activities(Number(planId)),
+    enabled: planId !== undefined && planId !== "",
+    staleTime: 1000 * 30,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useTravelPlanParticipants
+// Fetches participants/collaborators for a given travel plan.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useTravelPlanParticipants(planId: number | string | undefined) {
+  return useQuery<Participant[], Error>({
+    queryKey: travelPlanKeys.participants(planId ?? ""),
+    queryFn: () => fetch_participants(Number(planId)),
+    enabled: planId !== undefined && planId !== "",
+    staleTime: 1000 * 60,
+  });
+}
+

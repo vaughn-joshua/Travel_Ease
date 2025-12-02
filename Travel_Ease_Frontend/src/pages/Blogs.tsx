@@ -1,17 +1,19 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Carousel from "../component/blog/Carousel";
 import Section from "../component/blog/Section";
-import { blogApi } from "../services/api";
-import type { Blog, BlogOverviewResponse } from "../types/blog";
+import { useBlogOverview } from "../features/blogs/queries";
 
 export default function Blogs() {
-  const [overview, setOverview] = useState<BlogOverviewResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
-  const MAX_RETRIES = 2;
+  // Use TanStack Query hook for data fetching
+  const {
+    data: overview,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useBlogOverview();
 
   useEffect(() => {
     const pageTitle =
@@ -33,91 +35,6 @@ export default function Blogs() {
       meta.content = pageDescription;
       document.head.appendChild(meta);
     }
-  }, []);
-
-  useEffect(() => {
-    // Abort any in-flight request when component unmounts or re-fetches
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    const fetchOverview = async (attempt = 0) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const data = await blogApi.getOverview(controller.signal);
-        setOverview(data);
-        setRetryCount(0); // Reset retry count on success
-      } catch (err: any) {
-        // Ignore aborted requests
-        if (err.name === "CanceledError" || err.code === "ERR_CANCELED") {
-          return;
-        }
-
-        // Only log errors in development to avoid noisy console
-        if (import.meta.env.DEV) {
-          console.error("Error fetching blogs:", err);
-        }
-
-        // Handle specific HTTP status codes
-        const status = err.response?.status;
-        const errorCode = err.response?.data?.code;
-        
-        // Check if this is a retryable error
-        const isRetryable = 
-          status === 503 || 
-          status === 504 ||
-          errorCode === 'CONNECTION_ERROR' ||
-          errorCode === 'TIMEOUT' ||
-          err.code === 'ECONNABORTED' ||
-          err.message?.includes('timeout');
-        
-        // Auto-retry for transient errors (up to MAX_RETRIES)
-        if (isRetryable && attempt < MAX_RETRIES) {
-          const delay = Math.min(1000 * Math.pow(2, attempt), 4000); // Exponential backoff: 1s, 2s, 4s
-          if (import.meta.env.DEV) {
-            console.log(`Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`);
-          }
-          setTimeout(() => {
-            if (!controller.signal.aborted) {
-              setRetryCount(attempt + 1);
-              fetchOverview(attempt + 1);
-            }
-          }, delay);
-          return;
-        }
-        
-        // Set user-friendly error message
-        if (status === 503 || errorCode === 'P1001' || errorCode === 'P1002' || errorCode === 'CONNECTION_ERROR') {
-          setError("Database temporarily unavailable. The service will resume shortly - please try again in a few moments.");
-        } else if (status === 504 || errorCode === 'TIMEOUT') {
-          setError("The server took too long to respond. Please try again.");
-        } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-          setError("Request timed out. The server may be experiencing high load - please try again.");
-        } else if (status === 500) {
-          setError("Server error: Please try again later or contact support.");
-        } else if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
-          setError(
-            "Cannot connect to server. Please check your connection and try again."
-          );
-        } else if (status === 404) {
-          setError("Blog data not found. Please try again later.");
-        } else if (status === 400) {
-          setError("Invalid request. Please refresh the page.");
-        } else {
-          setError("Failed to load blogs. Please try again later.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOverview();
-
-    return () => {
-      controller.abort();
-    };
   }, []);
 
   // Derive individual arrays from overview for convenience
@@ -176,14 +93,50 @@ export default function Blogs() {
     };
   }, [clientEducationBlogs, destinationsBlogs, featuredBlogs, tipsBlogs]);
 
-  if (loading) {
+  // Derive user-friendly error message
+  const errorMessage = useMemo(() => {
+    if (!isError || !error) return null;
+    const err = error as any;
+    const status = err.response?.status;
+    const errorCode = err.response?.data?.code;
+
+    if (
+      status === 503 ||
+      errorCode === "P1001" ||
+      errorCode === "P1002" ||
+      errorCode === "CONNECTION_ERROR"
+    ) {
+      return "Database temporarily unavailable. The service will resume shortly - please try again in a few moments.";
+    }
+    if (status === 504 || errorCode === "TIMEOUT") {
+      return "The server took too long to respond. Please try again.";
+    }
+    if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
+      return "Request timed out. The server may be experiencing high load - please try again.";
+    }
+    if (status === 500) {
+      return "Server error: Please try again later or contact support.";
+    }
+    if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
+      return "Cannot connect to server. Please check your connection and try again.";
+    }
+    if (status === 404) {
+      return "Blog data not found. Please try again later.";
+    }
+    if (status === 400) {
+      return "Invalid request. Please refresh the page.";
+    }
+    return "Failed to load blogs. Please try again later.";
+  }, [isError, error]);
+
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary-red" />
           <p className="text-base text-gray-600">
-            {retryCount > 0 
-              ? `Retrying... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`
+            {isFetching
+              ? "Loading travel inspiration for you..."
               : "Loading travel inspiration for you..."}
           </p>
         </div>
@@ -191,15 +144,12 @@ export default function Blogs() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md text-center">
-          <p className="mb-4 font-medium text-red-600">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-primary"
-          >
+          <p className="mb-4 font-medium text-red-600">{errorMessage}</p>
+          <button onClick={() => refetch()} className="btn-primary">
             Try Again
           </button>
         </div>
