@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetch_plan_id } from "../utils/travel_plan/fetch_plan_id";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTravelPlanDetail } from "../features/travelPlans/queries";
 import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
 import { edit_plan } from "../utils/travel_plan/edit_plan";
 import Activities from "../component/main_page/Activities";
@@ -9,9 +10,10 @@ import Create_Activity from "../component/main_page/Create_Activity";
 import Collaborators from "../component/main_page/Collaborators";
 import React from "react";
 import Landing_Page from "./Landing_Page";
-import type { TravelPlan, TravelPlanDates } from "../types/travelPlan";
+import type { TravelPlanDates } from "../types/travelPlan";
 import type { Business } from "../types/business";
 import { useAuth } from "../context/AuthContext";
+import { travelPlanKeys } from "../lib/queryKeys";
 
 const itineraryRoute = {
   start: [14.1154, 120.9618] as [number, number],
@@ -27,9 +29,48 @@ interface ClickedActivity {
 export default function Planner(): React.ReactElement {
   const { id, status } = useParams<{ id: string; status: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { user, loading: authLoading, session } = useAuth();
 
-  const [plan, setPlan] = useState<TravelPlan | undefined>();
+  // Track token availability - re-check when auth loading changes or session changes
+  const [tokenReady, setTokenReady] = useState(false);
+  const [tokenChecked, setTokenChecked] = useState(false);
+  
+  useEffect(() => {
+    // Only check for token AFTER auth loading is complete
+    if (!authLoading) {
+      // Small delay to ensure AuthContext has synced the token
+      const checkToken = () => {
+        const token = localStorage.getItem("token");
+        const hasToken = !!token;
+        
+        // Debug logging
+        console.log("Planner auth check:", { 
+          authLoading, 
+          hasToken, 
+          hasSession: !!session,
+          hasUser: !!user,
+          tokenLength: token?.length 
+        });
+        
+        setTokenReady(hasToken);
+        setTokenChecked(true);
+      };
+      
+      // Give AuthContext a moment to sync the token
+      const timeoutId = setTimeout(checkToken, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [authLoading, session, user]);
+
+  // Use TanStack Query for plan data - only enable when auth is ready and we have a token
+  const { 
+    data: plan, 
+    isLoading: planLoading, 
+    error: planError,
+    refetch: refetchPlan 
+  } = useTravelPlanDetail(tokenReady && tokenChecked ? id : undefined);
+
   const [days, setDays] = useState<number>(0);
   const [businesses, setBusinesses] = useState<Business[] | undefined>();
   const [loadActivity, setLoadActivity] = useState<boolean>(false);
@@ -47,8 +88,8 @@ export default function Planner(): React.ReactElement {
   });
 
   const handle_close = (): void => {
-    window.location.reload();
-    console.log("closing na");
+    // Invalidate and refetch instead of full page reload
+    queryClient.invalidateQueries({ queryKey: travelPlanKeys.detail(id ?? "") });
     setActiveModal("");
   };
 
@@ -57,53 +98,54 @@ export default function Planner(): React.ReactElement {
     setClickActivity({ start: null, end: [lat, long] });
   };
 
+  // Load businesses separately (they don't need auth)
   useEffect(() => {
-    const load_data = async (): Promise<void> => {
+    const loadBusinesses = async (): Promise<void> => {
       try {
-        if (!id) return;
         const business_data = await fetch_businesses();
-        const plan_data = await fetch_plan_id(id);
-
-        if (plan_data) {
-          setPlan(plan_data);
-        }
         setBusinesses(business_data);
       } catch (e) {
-        console.error("Error loading planner data:", e);
+        console.error("Error loading businesses:", e);
       }
     };
 
-    load_data();
-  }, [id, activeModal]);
+    loadBusinesses();
+  }, []);
+
+  // Refetch plan when modal closes (for edit updates)
+  useEffect(() => {
+    if (activeModal === "" && id) {
+      refetchPlan();
+    }
+  }, [activeModal, id, refetchPlan]);
+
+  // Calculate days and dates from plan
+  const { calculatedDays, calculatedDates } = useMemo(() => {
+    if (!plan?.start_date || !plan?.end_date) {
+      return { calculatedDays: 1, calculatedDates: { start: "", end: "" } };
+    }
+
+    const start = new Date(plan.start_date);
+    const end = new Date(plan.end_date);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      console.warn("Invalid date values:", plan.start_date, plan.end_date);
+      return { calculatedDays: 1, calculatedDates: { start: "", end: "" } };
+    }
+
+    const diff = end.getTime() - start.getTime();
+    const dayCount = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+
+    return {
+      calculatedDays: dayCount,
+      calculatedDates: { start: start.toISOString(), end: end.toISOString() }
+    };
+  }, [plan?.start_date, plan?.end_date]);
 
   useEffect(() => {
-    if (plan) {
-      // Handle null/undefined dates
-      if (!plan.start_date || !plan.end_date) {
-        console.warn("Plan dates are missing");
-        setDays(1);
-        setDates({ start: "", end: "" });
-        return;
-      }
-
-      const start = new Date(plan.start_date);
-      const end = new Date(plan.end_date);
-
-      // Validate dates
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        console.warn("Invalid date values:", plan.start_date, plan.end_date);
-        setDays(1);
-        setDates({ start: "", end: "" });
-        return;
-      }
-
-      const diff = end.getTime() - start.getTime();
-      const dayCount = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
-
-      setDays(dayCount);
-      setDates({ start: start.toISOString(), end: end.toISOString() });
-    }
-  }, [plan]);
+    setDays(calculatedDays);
+    setDates(calculatedDates);
+  }, [calculatedDays, calculatedDates]);
 
   const click_day = (i: number): void => {
     setLoadActivity((prev) => !prev);
@@ -130,8 +172,70 @@ export default function Planner(): React.ReactElement {
     }
   };
 
+  // Show loading state - wait for auth to complete and token to be checked
+  if (authLoading || !tokenChecked || planLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {authLoading ? "Checking authentication..." : !tokenChecked ? "Verifying session..." : "Loading plan..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no token after auth completes
+  if (!tokenReady && tokenChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Authentication required</p>
+          <p className="text-gray-500 text-sm mb-4">Please log in to view this plan.</p>
+          <button 
+            onClick={() => navigate("/login")} 
+            className="hard_btn"
+          >
+            Log In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (planError) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Failed to load plan</p>
+          <p className="text-gray-500 text-sm mb-4">{planError.message}</p>
+          <button 
+            onClick={() => refetchPlan()} 
+            className="hard_btn"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!plan) {
-    return <p>loading...</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-gray-600">Plan not found</p>
+          <button 
+            onClick={() => navigate("/plans")} 
+            className="soft_btn mt-4"
+          >
+            Back to Plans
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

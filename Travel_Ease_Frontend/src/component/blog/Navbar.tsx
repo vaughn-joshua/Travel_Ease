@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 interface NavItem {
@@ -25,8 +25,10 @@ const isEditorEnabled = () => {
 
 const Navbar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, loading, isGoogleAuth, signOut } = useAuth();
+  const [redirecting, setRedirecting] = useState(false);
+  const { user, loading, isGoogleAuth, signOut, signInWithGoogle, isConfigured } = useAuth();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -43,10 +45,47 @@ const Navbar: React.FC = () => {
   }, []);
 
   const handleSignOut = async () => {
+    // signOut handles errors internally (including benign AuthSessionMissingError)
+    await signOut();
+  };
+
+  const handleCreateBusinessClick = async (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    event.preventDefault();
+    if (loading || redirecting) return;
+
+    const targetPath = "/businesses/onboarding";
+
+    // Remember intended destination post-auth
+    localStorage.setItem("auth_redirect", targetPath);
+
+    // Store the user's email for verification after Google OAuth
+    // This ensures the Google account matches the logged-in user
+    if (user?.email) {
+      localStorage.setItem("business_auth_email", user.email);
+    }
+    
+    // Store the current user profile so we can restore it if there's a mismatch
+    // This preserves the original session state during the OAuth flow
+    if (user) {
+      localStorage.setItem("travelEaseOriginalUser", JSON.stringify(user));
+    }
+
+    // If Supabase is not configured, fall back to login page
+    if (!isConfigured) {
+      navigate("/login", { replace: true, state: { from: targetPath } });
+      return;
+    }
+
+    // Always trigger Google OAuth for business creation (even for logged-in users)
+    // This ensures the user verifies their identity via Google
+    setRedirecting(true);
     try {
-      await signOut();
+      await signInWithGoogle();
+      // Note: signInWithGoogle redirects to Google, so we won't reach here
     } catch (error) {
-      console.error("Sign out failed:", error);
+      console.error("Google sign-in failed:", error);
+      setRedirecting(false);
+      navigate("/login", { replace: true, state: { from: targetPath } });
     }
   };
 
@@ -104,6 +143,28 @@ const Navbar: React.FC = () => {
 
         {/* Desktop Right Actions */}
         <div className="hidden items-center gap-2 md:flex">
+          {/* Create Business - visible only to authenticated users */}
+          {user && !loading && (
+            <button
+              onClick={handleCreateBusinessClick}
+              disabled={redirecting}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary-red hover:bg-primary-red/5 hover:text-primary-red disabled:cursor-wait disabled:opacity-70"
+              title="Create a business account"
+            >
+              {redirecting ? (
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              )}
+              <span className="hidden lg:inline">{redirecting ? "Redirecting…" : "Create Business"}</span>
+            </button>
+          )}
+
           {/* Guest Actions */}
           {!user && !loading && (
             <>
@@ -130,18 +191,6 @@ const Navbar: React.FC = () => {
           {/* Authenticated Actions */}
           {user && !loading && (
             <div className="flex items-center gap-2">
-              {/* Create Business Account */}
-              <Link
-                to="/create_business"
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-primary-red hover:bg-primary-red/5 hover:text-primary-red"
-                title="Create a business account"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <span className="hidden lg:inline">Create Business</span>
-              </Link>
-
               {/* Publish (for Google users with editor enabled) */}
               {isEditorEnabled() && isGoogleAuth && (
                 <Link
@@ -269,15 +318,23 @@ const Navbar: React.FC = () => {
               </Link>
 
               {/* Create Business Account */}
-              <Link
-                to="/create_business"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-base font-medium text-gray-700 transition-colors hover:border-primary-red hover:bg-primary-red/5 hover:text-primary-red"
+              <button
+                onClick={handleCreateBusinessClick}
+                disabled={redirecting}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-base font-medium text-gray-700 transition-colors hover:border-primary-red hover:bg-primary-red/5 hover:text-primary-red disabled:cursor-wait disabled:opacity-70"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                Create Business Account
-              </Link>
+                {redirecting ? (
+                  <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                )}
+                {redirecting ? "Redirecting…" : "Create Business Account"}
+              </button>
 
               {/* Publish (for Google users with editor enabled) */}
               {isEditorEnabled() && isGoogleAuth && (

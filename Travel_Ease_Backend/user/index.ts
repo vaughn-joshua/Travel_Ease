@@ -323,7 +323,6 @@ async function user_id(req: Request, res: Response) {
 async function oauth_sync(req: Request, res: Response) {
   try {
     // The authenticateToken middleware already verified the token and attached req.user
-    // req.user contains: { id, auth_id, email, first_name, last_name }
     const { id } = req.user!;
 
     // Fetch full user profile
@@ -337,8 +336,9 @@ async function oauth_sync(req: Request, res: Response) {
           last_name: true,
           email: true,
           contact_no: true,
-          created_at: true
-        }
+          created_at: true,
+          auth_provider: true,
+        },
       })
     );
 
@@ -357,10 +357,11 @@ async function oauth_sync(req: Request, res: Response) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no
+        contact_no: user.contact_no,
+        auth_provider: user.auth_provider ?? 'google',
       },
       isNewUser,
-      needsOnboarding: isNewUser
+      needsOnboarding: isNewUser,
     });
   } catch (error) {
     console.error('Error in oauth_sync:', error);

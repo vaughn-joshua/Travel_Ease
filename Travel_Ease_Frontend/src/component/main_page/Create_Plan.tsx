@@ -93,7 +93,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
         location: d.location,
         start_date: d.start_date,
         end_date: d.end_date,
-        slots: d.slots ? parseInt(d.slots, 10) : undefined,
+        slots: d.slots ? parseInt(d.slots, 10) : undefined, // Backend accepts both slots and max_slots
       };
       
       console.log("Creating plan with payload:", payload);

@@ -50,6 +50,11 @@ export interface TravelPlanEndpoints {
   previous: string;
   public: string;
   quickJoin: string;
+  requestJoin: string;
+  joinPlan: string;
+  pendingRequests: (id: number | string) => string;
+  approveJoin: (planId: number | string, participantId: number | string) => string;
+  denyJoin: (planId: number | string, participantId: number | string) => string;
   byId: (id: number | string) => string;
   activities: (id: number | string) => string;
   createActivity: string;

@@ -33,12 +33,19 @@ export async function plan_edit(req: Request, res: Response) {
     status,
   } = req.body;
 
+  const planId = parseInt(id);
+
   try {
-    // Fetch current plan state
-    const currentPlan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
-        where: { travel_plan_id: parseInt(id) }
-      })
+    // Fetch current plan state with approved participant count
+    const [currentPlan, approvedCount] = await executeWithRetry(() =>
+      Promise.all([
+        prisma.travelPlan.findUnique({
+          where: { travel_plan_id: planId }
+        }),
+        prisma.participant.count({
+          where: { travel_plan_id: planId, status: true }
+        })
+      ])
     );
 
     if (!currentPlan) {
@@ -65,7 +72,30 @@ export async function plan_edit(req: Request, res: Response) {
     // Simple field updates
     if (description !== undefined) updateData.description = description;
     if (location !== undefined) updateData.location = location;
-    if (max_slots !== undefined) updateData.max_slots = parseInt(max_slots) || null;
+    
+    // Validate max_slots against current approved participants
+    if (max_slots !== undefined) {
+      const newMaxSlots = max_slots === null ? null : parseInt(max_slots);
+      if (newMaxSlots !== null && newMaxSlots < approvedCount) {
+        return res.status(400).json({
+          error: "Cannot reduce max_slots below current participant count",
+          details: `Current approved participants: ${approvedCount}, requested max_slots: ${newMaxSlots}`
+        });
+      }
+      updateData.max_slots = newMaxSlots;
+    }
+    
+    // Validate date range
+    const newStartDate = start_date !== undefined ? (start_date ? new Date(start_date) : null) : currentPlan.start_date;
+    const newEndDate = end_date !== undefined ? (end_date ? new Date(end_date) : null) : currentPlan.end_date;
+    
+    if (newStartDate && newEndDate && newStartDate > newEndDate) {
+      return res.status(400).json({
+        error: "Invalid date range",
+        details: "Start date must be before or equal to end date"
+      });
+    }
+    
     if (start_date !== undefined) updateData.start_date = start_date ? new Date(start_date) : null;
     if (end_date !== undefined) updateData.end_date = end_date ? new Date(end_date) : null;
 

@@ -110,3 +110,35 @@ export async function update_participant_role(
   }
 }
 
+export async function approve_participant(
+  planId: number | string,
+  userId: number
+): Promise<Participant | undefined> {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Authentication required");
+    }
+
+    const result = await fetch(endpoints.travelPlan.participantById(planId, userId), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status: true }),
+    });
+
+    if (!result.ok) {
+      const error = await result.json();
+      throw new Error(error.error || `Failed to approve participant: ${result.status}`);
+    }
+
+    const response = await result.json();
+    return response.participant;
+  } catch (e) {
+    console.error("Error approving participant:", e);
+    throw e;
+  }
+}
+

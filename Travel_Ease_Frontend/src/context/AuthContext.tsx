@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { AxiosError } from "axios";
 import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
 import {
   authApi,
@@ -40,6 +41,9 @@ interface AuthContextType {
 
 const PROFILE_STORAGE_KEY = "travelEaseUser";
 const TOKEN_STORAGE_KEY = "token";
+const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
+// Key to store the original user profile during business auth flow
+const ORIGINAL_USER_KEY = "travelEaseOriginalUser";
 
 // Cache context on globalThis to survive Vite HMR and prevent "useAuth must be used within an AuthProvider" errors
 const AUTH_CONTEXT_KEY = "__TRAVEL_EASE_AUTH_CONTEXT__";
@@ -111,7 +115,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const clearAuthState = async () => {
+    persistAuth(null, null);
+    setSession(null);
+    setNeedsOnboarding(false);
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut().catch(console.error);
+    }
+  };
+
   useEffect(() => {
+    // Check if we're in a business auth flow (email verification pending)
+    const businessAuthEmail = localStorage.getItem(BUSINESS_AUTH_EMAIL_KEY);
+    const isInBusinessAuthFlow = !!businessAuthEmail;
+    
+    // Load stored profile
     const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (storedProfile) {
       try {
@@ -128,23 +146,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("AuthContext: getSession result", { 
+        hasSession: !!currentSession, 
+        hasAccessToken: !!currentSession?.access_token,
+        userEmail: currentSession?.user?.email 
+      });
       
-      // If we have a stored user profile AND a valid Supabase session, sync the token
-      // This handles the case where the user was logged in previously but the token wasn't stored
-      const storedUser = localStorage.getItem(PROFILE_STORAGE_KEY);
-      const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-      
-      if (session?.access_token && storedUser && !storedToken) {
-        // User has a valid session and stored profile but no token - sync it
-        localStorage.setItem(TOKEN_STORAGE_KEY, session.access_token);
+      // If we're in a business auth flow, check for email mismatch BEFORE updating any state
+      if (isInBusinessAuthFlow && currentSession?.user?.email) {
+        const sessionEmail = currentSession.user.email.toLowerCase();
+        const expectedEmail = businessAuthEmail!.toLowerCase();
+        
+        if (sessionEmail !== expectedEmail) {
+          // Email mismatch - DON'T update session or user state
+          // Keep the original user from localStorage intact
+          console.log("Business auth email mismatch on mount - preserving original user");
+          setLoading(false);
+          return;
+        }
       }
       
-      const profile = mapSupabaseUser(session?.user ?? null);
-      if (profile && !user) {
+      setSession(currentSession);
+      
+      // ALWAYS sync the token when we have a valid Supabase session
+      // This ensures API calls can work immediately after auth loads
+      if (currentSession?.access_token) {
+        console.log("AuthContext: Syncing token from Supabase session to localStorage");
+        localStorage.setItem(TOKEN_STORAGE_KEY, currentSession.access_token);
+      } else {
+        console.log("AuthContext: No Supabase session or access_token available");
+        // If we have a stored profile but no valid Supabase session,
+        // the session has expired - clear the stored auth state
+        if (storedProfile) {
+          console.log("AuthContext: Stored profile exists but Supabase session expired - clearing auth state");
+          localStorage.removeItem(PROFILE_STORAGE_KEY);
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          setUser(null);
+          setNeedsOnboarding(false);
+        }
+      }
+      
+      const profile = mapSupabaseUser(currentSession?.user ?? null);
+      if (profile && !storedProfile) {
         // Only set basic profile if we don't already have a user from localStorage
         setUser(profile);
+        // Also persist the profile so future page loads have it
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
       }
       setLoading(false);
     });
@@ -152,23 +200,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Check if we're in a business auth flow that requires email verification
+      const currentBusinessAuthEmail = localStorage.getItem(BUSINESS_AUTH_EMAIL_KEY);
+      const newSessionEmail = nextSession?.user?.email;
+      
+      // If we're in a business auth flow and the emails don't match,
+      // DON'T update the session state - keep the original user logged in
+      if (currentBusinessAuthEmail && newSessionEmail) {
+        if (currentBusinessAuthEmail.toLowerCase() !== newSessionEmail.toLowerCase()) {
+          // Email mismatch during business auth - don't update session state
+          // The AuthCallback component will handle showing the error
+          console.log("Business auth email mismatch - preserving original session");
+          return;
+        }
+      }
+      
       setSession(nextSession);
-      // Don't auto-store token on auth state change
-      // Tokens should only be stored after backend verification via syncOAuthUser or loginWithEmail
+      
+      // Sync the token when auth state changes (e.g., token refresh)
+      // Only do this if we have a stored user profile (user has been verified)
+      const storedUser = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (nextSession?.access_token && storedUser) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, nextSession.access_token);
+      }
     });
 
     // Subscribe to 401/403 events to clear auth state when token is invalid
     const unsubscribeAuth = authEvents.onUnauthorized(() => {
-      // Clear all auth state including localStorage
-      localStorage.removeItem(PROFILE_STORAGE_KEY);
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      setUser(null);
-      setSession(null);
-      setNeedsOnboarding(false);
-      // Also sign out from Supabase to prevent it from re-providing stale tokens
-      if (isSupabaseConfigured) {
-        supabase.auth.signOut().catch(console.error);
-      }
+      clearAuthState().catch(console.error);
     });
 
     return () => {
@@ -211,11 +270,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await authApi.oauthSync();
       const profile = mapApiUser(data.user, "google");
       // After successful backend verification, store the token from current session
-      const currentToken = session?.access_token ?? localStorage.getItem(TOKEN_STORAGE_KEY);
+      const currentToken =
+        session?.access_token ?? localStorage.getItem(TOKEN_STORAGE_KEY);
       persistAuth(profile, currentToken);
       setNeedsOnboarding(data.needsOnboarding);
       return { isNewUser: data.isNewUser };
     } catch (error) {
+      if (error instanceof AxiosError) {
+        const status = error.response?.status;
+        const code = error.response?.data?.code;
+        const message =
+          error.response?.data?.error ||
+          error.message ||
+          "Authentication failed. Please try again.";
+
+        if (status === 403 && code === "ACCOUNT_NOT_REGISTERED") {
+          await clearAuthState();
+          const err = new Error(message);
+          err.name = "ACCOUNT_NOT_REGISTERED";
+          throw err;
+        }
+
+        if (status === 400 && code === "OAUTH_EMAIL_MISSING") {
+          await clearAuthState();
+          const err = new Error(message);
+          err.name = "OAUTH_EMAIL_MISSING";
+          throw err;
+        }
+      }
+
       console.error("OAuth sync error:", error);
       throw error;
     }
@@ -253,17 +336,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Sign out error:", error.message);
-        throw error;
-      }
-    }
-
-    persistAuth(null, null);
-    setSession(null);
-    setNeedsOnboarding(false);
+    await clearAuthState();
   };
 
   // Check if user is authenticated via Google

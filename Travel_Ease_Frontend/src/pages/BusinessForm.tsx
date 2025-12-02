@@ -65,6 +65,12 @@ const initialFormData: FormData = {
   lng: null,
 };
 
+/**
+ * BusinessForm
+ *
+ * This component assumes the user is already authenticated (wrapped by RequireSupabaseAuth
+ * via BusinessOnboarding). It renders the business registration/edit form.
+ */
 export default function BusinessForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -78,19 +84,12 @@ export default function BusinessForm() {
   const [successMessage, setSuccessMessage] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login", { replace: true });
-    }
-  }, [user, authLoading, navigate]);
-
   // Fetch existing business data if editing
   useEffect(() => {
-    if (isEdit && id) {
+    if (isEdit && id && user) {
       fetchBusiness(id);
     }
-  }, [id, isEdit]);
+  }, [id, isEdit, user]);
 
   const fetchBusiness = async (businessId: string) => {
     try {
@@ -293,49 +292,13 @@ export default function BusinessForm() {
     return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  // Show loading state while checking auth
-  if (authLoading) {
+  // Show loading state while checking auth (should be brief since parent handles auth)
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary-red" />
           <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login prompt if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="mx-auto w-16 h-16 bg-primary-red/10 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Sign In Required</h1>
-          <p className="text-gray-600 mb-8">
-            You need to be signed in to register or edit a business on TravelEase.
-          </p>
-          <div className="flex flex-col gap-4">
-            <Link to="/login" className="btn-primary">
-              Sign In
-            </Link>
-            <p className="text-sm text-gray-500">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary-red hover:underline">
-                Sign up
-              </Link>
-            </p>
-          </div>
-          <Link
-            to="/businesses"
-            className="inline-flex items-center text-primary-red hover:text-primary-red-dark transition-colors mt-8"
-          >
-            ← Back to Businesses
-          </Link>
         </div>
       </div>
     );

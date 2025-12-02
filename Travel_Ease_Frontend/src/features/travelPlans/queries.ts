@@ -71,13 +71,23 @@ export function usePublicPlans() {
 // ─────────────────────────────────────────────────────────────────────────────
 // useTravelPlanDetail
 // Fetches a single travel plan by ID.
+// Only enabled when we have an ID and a valid auth token.
 // ─────────────────────────────────────────────────────────────────────────────
 export function useTravelPlanDetail(id: number | string | undefined) {
+  const hasToken = !!localStorage.getItem("token");
+  
   return useQuery<TravelPlan | null, Error>({
     queryKey: travelPlanKeys.detail(id ?? ""),
     queryFn: () => fetch_plan_id(id!),
-    enabled: id !== undefined && id !== "",
+    enabled: id !== undefined && id !== "" && hasToken,
     staleTime: 1000 * 30,
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error.message.includes('401') || error.message.includes('Session expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }
 

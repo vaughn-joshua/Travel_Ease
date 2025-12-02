@@ -38,7 +38,15 @@ export const createPlanSchema = z.object({
   slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()),
   max_slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()),
   collaborators: z.array(collaboratorSchema).optional().default([])
-});
+}).refine(
+  (data) => {
+    if (data.start_date && data.end_date) {
+      return new Date(data.start_date) <= new Date(data.end_date);
+    }
+    return true;
+  },
+  { message: 'Start date must be before or equal to end date', path: ['end_date'] }
+);
 
 export const editPlanSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -47,10 +55,18 @@ export const editPlanSchema = z.object({
   location: z.string().optional(),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
-  max_slots: z.number().or(z.string()).optional(),
+  max_slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()).nullable(),
   visibility: z.boolean().optional(),
   status: z.enum(['Draft', 'Active', 'Completed', 'Cancelled']).optional()
-});
+}).refine(
+  (data) => {
+    if (data.start_date && data.end_date) {
+      return new Date(data.start_date) <= new Date(data.end_date);
+    }
+    return true;
+  },
+  { message: 'Start date must be before or equal to end date', path: ['end_date'] }
+);
 
 // Budget range values - accepts both API format (RANGE_X_Y) and DB format (X-Y)
 const budgetRangeValues = [

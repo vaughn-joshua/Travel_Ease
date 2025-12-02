@@ -3,6 +3,7 @@ import {
   fetch_participants,
   remove_participant,
   update_participant_role,
+  approve_participant,
   type Participant,
 } from "../../utils/travel_plan/fetch_participants";
 
@@ -66,6 +67,20 @@ export default function Collaborators({
       );
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to update role");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApprove = async (userId: number): Promise<void> => {
+    try {
+      setActionLoading(userId);
+      await approve_participant(planId, userId);
+      setParticipants((prev) =>
+        prev.map((p) => (p.user_id === userId ? { ...p, status: true } : p))
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to approve participant");
     } finally {
       setActionLoading(null);
     }
@@ -262,9 +277,7 @@ export default function Collaborators({
                       {isOwner && (
                         <div className="flex gap-2">
                           <button
-                            onClick={() =>
-                              handleRoleChange(participant.user_id, "Viewer")
-                            }
+                            onClick={() => handleApprove(participant.user_id)}
                             disabled={actionLoading === participant.user_id}
                             className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
                           >

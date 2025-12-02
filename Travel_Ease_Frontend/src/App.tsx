@@ -13,6 +13,7 @@ import EditBlog from "./pages/EditBlog";
 import Businesses from "./pages/Businesses";
 import BusinessDetail from "./pages/BusinessDetail";
 import BusinessForm from "./pages/BusinessForm";
+import BusinessOnboarding from "./pages/BusinessOnboarding";
 import MyBusinesses from "./pages/MyBusinesses";
 import Business_Page from "./pages/Business_Page";
 
@@ -104,7 +105,8 @@ export default function App(): React.ReactElement {
 
           {/* Business directory routes */}
           <Route path="/businesses" element={<Businesses />} />
-          <Route path="/businesses/new" element={<BusinessForm />} />
+          <Route path="/businesses/onboarding" element={<BusinessOnboarding />} />
+          <Route path="/businesses/new" element={<BusinessOnboarding />} />
           <Route path="/businesses/my" element={<MyBusinesses />} />
           <Route path="/businesses/:id" element={<BusinessDetail />} />
           <Route path="/businesses/:id/edit" element={<BusinessForm />} />

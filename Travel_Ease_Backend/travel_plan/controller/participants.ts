@@ -277,12 +277,52 @@ export async function collaborators_edit(req: Request, res: Response) {
       return res.status(400).json({ error: "collaborators array is required" });
     }
 
-    // Check admin count before bulk update
-    const currentAdmins = await executeWithRetry(() =>
+    // Get plan with max_slots and current approved count
+    const [plan, currentApprovedCount, currentAdmins] = await executeWithRetry(() =>
+      Promise.all([
+        prisma.travelPlan.findUnique({
+          where: { travel_plan_id: planId }
+        }),
+        prisma.participant.count({
+          where: { travel_plan_id: planId, status: true }
+        }),
+        prisma.participant.findMany({
+          where: { travel_plan_id: planId, role: 'Admin', status: true }
+        })
+      ])
+    );
+
+    if (!plan) {
+      return res.status(404).json({ error: "Travel plan not found" });
+    }
+
+    // Calculate how many new approvals are being requested
+    const existingParticipants = await executeWithRetry(() =>
       prisma.participant.findMany({
-        where: { travel_plan_id: planId, role: 'Admin', status: true }
+        where: { travel_plan_id: planId }
       })
     );
+
+    const existingMap = new Map(existingParticipants.map(p => [p.user_id, p]));
+    let newApprovals = 0;
+
+    for (const collab of collaborators) {
+      const existing = existingMap.get(collab.user_id);
+      const willBeApproved = collab.status === true;
+      const wasApproved = existing?.status === true;
+      
+      if (willBeApproved && !wasApproved) {
+        newApprovals++;
+      }
+    }
+
+    // Check slot limits
+    if (plan.max_slots && (currentApprovedCount + newApprovals) > plan.max_slots) {
+      return res.status(400).json({
+        error: "Cannot approve - would exceed max slots",
+        details: `Current: ${currentApprovedCount}, New approvals: ${newApprovals}, Max: ${plan.max_slots}`
+      });
+    }
 
     // Validate that at least one admin will remain after updates
     const adminIds = currentAdmins.map(a => a.user_id);
@@ -302,12 +342,7 @@ export async function collaborators_edit(req: Request, res: Response) {
     let count = 0;
     await prisma.$transaction(async (tx) => {
       for (const collab of collaborators) {
-        const existing = await tx.participant.findFirst({
-          where: { 
-            travel_plan_id: planId, 
-            user_id: collab.user_id 
-          }
-        });
+        const existing = existingMap.get(collab.user_id);
 
         if (existing) {
           await tx.participant.update({

@@ -12,6 +12,87 @@ interface JwtPayload {
   email?: string;
 }
 
+/**
+ * Middleware to require Google OAuth authentication.
+ * This ensures the user authenticated via Google and the Google email
+ * matches their registered email in our database.
+ * Use this for sensitive operations like business creation.
+ */
+export const requireGoogleAuth = async (req: Request, res: Response, next: NextFunction) => {
+  // First run the standard auth check
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // Skip Google requirement in test mode
+  if (isTestMode && JWT_SECRET) {
+    return next();
+  }
+
+  if (!isSupabaseConfigured()) {
+    return res.status(503).json({ 
+      error: 'Authentication service unavailable',
+      details: 'Supabase is not configured.'
+    });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin!.auth.getUser(token);
+    
+    if (error || !data.user) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    // Check if this is a Google OAuth session
+    const provider = data.user.app_metadata?.provider;
+    if (provider !== 'google') {
+      return res.status(403).json({
+        error: 'Google authentication required for this action.',
+        code: 'GOOGLE_AUTH_REQUIRED',
+      });
+    }
+
+    const googleEmail = data.user.email;
+    if (!googleEmail) {
+      return res.status(400).json({
+        error: 'Google account does not provide an email address.',
+        code: 'OAUTH_EMAIL_MISSING',
+      });
+    }
+
+    // Verify the Google email matches the user's registered email
+    const user = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { email: googleEmail },
+      })
+    );
+
+    if (!user) {
+      return res.status(403).json({
+        error: 'This Google account is not registered in our system. Please use a registered email address.',
+        code: 'ACCOUNT_NOT_REGISTERED',
+      });
+    }
+
+    // Attach user info to request
+    req.user = {
+      id: user.user_id,
+      auth_id: data.user.id,
+      email: googleEmail,
+      first_name: user.first_name,
+      last_name: user.last_name,
+    };
+
+    next();
+  } catch (error) {
+    console.error('Google auth verification error:', error);
+    return res.status(403).json({ error: 'Authentication verification failed' });
+  }
+};
+
 export const authenticateApiKey = (req: Request, res: Response, next: NextFunction) => {
   const apiKey = req.headers['x-api-key'] as string | undefined;
   const expectedApiKey = process.env.API_KEY;
@@ -74,52 +155,41 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
 
-    // Find or create linked user profile
+    const email = data.user.email;
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Authenticated account does not provide an email address.',
+        code: 'OAUTH_EMAIL_MISSING',
+      });
+    }
+
     let user = await executeWithRetry(() =>
-      prisma.user.findFirst({ where: { auth_id: data.user.id } })
+      prisma.user.findUnique({
+        where: { email },
+      })
     );
 
     if (!user) {
-      const meta = data.user.user_metadata || {};
-      const email = data.user.email;
-      const fallbackName = email ? email.split('@')[0] : 'User';
-
-      const first_name =
-        meta.first_name ||
-        meta.firstName ||
-        meta.given_name ||
-        fallbackName ||
-        'User';
-      const last_name = meta.last_name || meta.lastName || meta.family_name || '';
-      const contact_no = meta.contact_no || meta.phone || meta.phone_number || null;
-
-      try {
-        user = await executeWithRetry(() =>
-          prisma.user.create({
-            data: {
-              auth_id: data.user.id,
-              email: email || '',
-              first_name,
-              last_name: last_name || 'User',
-              contact_no
-            }
-          })
-        );
-      } catch (createError: unknown) {
-        // Handle race condition where another request created the user
-        const prismaError = createError as { code?: string };
-        if (prismaError.code === 'P2002') {
-          user = await executeWithRetry(() =>
-            prisma.user.findFirst({ where: { auth_id: data.user.id } })
-          );
-        } else {
-          throw createError;
-        }
-      }
+      return res.status(403).json({
+        error: 'This Google account is not registered in our system.',
+        code: 'ACCOUNT_NOT_REGISTERED',
+      });
     }
 
-    if (!user) {
-      return res.status(500).json({ error: 'Failed to create or find user' });
+    if (!user.auth_id || user.auth_id !== data.user.id) {
+      const provider =
+        (data.user.app_metadata?.provider as string | undefined) ?? 'google';
+
+      user = await executeWithRetry(() =>
+        prisma.user.update({
+          where: { user_id: user!.user_id },
+          data: {
+            auth_id: data.user.id,
+            auth_provider: provider,
+          },
+        })
+      );
     }
 
     req.user = { 
