@@ -116,7 +116,7 @@ export default function Businesses() {
       <section className="relative overflow-hidden text-white">
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1920&q=80"
+            src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=75"
             alt="Local businesses and cafes"
             className="h-full w-full object-cover"
             loading="lazy"

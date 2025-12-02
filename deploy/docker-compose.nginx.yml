@@ -1,9 +1,10 @@
 # =============================================================================
-# TravelEase Docker Compose - Nginx + Backend
+# TravelEase Docker Compose - Nginx + Backend + Redis
 # =============================================================================
 # This compose file sets up:
 # - Nginx as a reverse proxy (ports 80, 443)
 # - Node.js backend API (internal port 3001)
+# - Redis for caching and rate limiting (internal port 6379)
 #
 # Prerequisites:
 # - SSL certificates in ./certs/ or mounted from host
@@ -18,6 +19,31 @@
 version: '3.8'
 
 services:
+  # ---------------------------------------------------------------------------
+  # Redis Cache & Rate Limiting
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: travelease-redis
+    restart: unless-stopped
+    # Internal port - not exposed to host, only accessible within Docker network
+    expose:
+      - "6379"
+    # Optional: Expose to host for debugging (comment out in production)
+    # ports:
+    #   - "6379:6379"
+    volumes:
+      # Persist Redis data (optional - remove for ephemeral cache)
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    networks:
+      - travelease-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ---------------------------------------------------------------------------
   # Nginx Reverse Proxy
   # ---------------------------------------------------------------------------
@@ -85,9 +111,16 @@ services:
       # Map provider
       - MAP_PROVIDER=${MAP_PROVIDER:-osm}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
+      # Redis configuration (uses Docker service name as host)
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       # Mount node_modules as anonymous volume to use container's modules
       - /app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - travelease-network
     healthcheck:
@@ -102,9 +135,12 @@ networks:
     driver: bridge
 
 # =============================================================================
-# Volume definitions (optional - for persistent data)
+# Volume definitions
 # =============================================================================
-# volumes:
-#   nginx-logs:
-#   backend-logs:
+volumes:
+  # Redis data persistence (optional - comment out for ephemeral cache)
+  redis-data:
+    driver: local
+  # nginx-logs:
+  # backend-logs:
 

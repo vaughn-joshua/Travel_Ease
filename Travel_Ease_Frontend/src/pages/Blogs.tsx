@@ -162,7 +162,7 @@ export default function Blogs() {
       <section className="relative overflow-hidden text-white">
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80"
+            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=75"
             alt="Traveler walking along a beach with waves at sunrise"
             className="h-full w-full object-cover"
             loading="lazy"

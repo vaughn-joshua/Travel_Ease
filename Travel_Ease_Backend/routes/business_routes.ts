@@ -21,9 +21,15 @@ import {
   deleteMenuItem,
 } from '../business/index.js';
 import { prisma, executeWithRetry, handlePrismaError } from '../src/lib/prismaHelpers.js';
-import { getCache, createCacheKey } from '../services/cache.js';
+import { cacheResult, buildCacheKey, invalidateCachePattern } from '../src/lib/cache.js';
 
 const router = Router();
+
+// Cache TTLs (in seconds)
+const CACHE_TTL = {
+  TRAVEL_SPOTS: 60,     // 1 minute for travel spots listing
+  CATEGORIES: 300,      // 5 minutes for categories (rarely change)
+};
 
 // Create routes (auth + validation)
 router.post('/create_business', authenticateToken, validate(createBusinessSchema), create_business);
@@ -114,28 +120,20 @@ router.post('/:id/menu', authenticateToken, createMenuItem);
 router.put('/:id/menu/:itemId', authenticateToken, updateMenuItem);
 router.delete('/:id/menu/:itemId', authenticateToken, deleteMenuItem);
 
-// Travel spots cache
-const travelSpotsCache = getCache('search');
-
 interface TravelSpotsQuery {
   search?: string;
   city?: string;
   limit?: string;
 }
 
-// Travel spots endpoints (public for browsing)
-// Supports optional query params: search, city, limit
+// Travel spots endpoints (public for browsing, cached)
+// Cache key: business:travel_spots:<params>
+// TTL: 1 minute
+// Clear cache: Use invalidateCachePattern('business:') after business create/update/delete
 router.get('/travel_spots', async (req: Request<object, object, object, TravelSpotsQuery>, res: Response) => {
   try {
     const { search, city, limit } = req.query;
     const maxLimit = Math.min(parseInt(limit || '50', 10) || 50, 100);
-
-    // Build cache key from query params
-    const cacheKey = createCacheKey('travel_spots', { search: search || '', city: city || '', limit: maxLimit });
-    const cached = travelSpotsCache.get(cacheKey);
-    if (cached) {
-      return res.json({ message: 'Success', data: cached, fromCache: true });
-    }
 
     // Build where clause
     const where: Record<string, unknown> = { status: true };
@@ -149,59 +147,65 @@ router.get('/travel_spots', async (req: Request<object, object, object, TravelSp
       where.city = { contains: city, mode: 'insensitive' };
     }
 
-    const businesses = await executeWithRetry(() =>
-      prisma.business.findMany({
-        where,
-        select: {
-          business_id: true,
-          user_id: true,
-          name: true,
-          house_number: true,
-          street: true,
-          brgy: true,
-          city: true,
-          latitude: true,
-          longtitude: true,
-          description: true,
-          rating: true,
-          status: true,
-          picture: true
-        },
-        orderBy: [{ rating: 'desc' }],
-        take: maxLimit
-      })
-    );
+    // Use Redis-backed cache with in-memory fallback
+    const { data: enriched, fromCache, cacheBackend } = await cacheResult({
+      key: buildCacheKey('business', 'travel_spots', { search: search || '', city: city || '', limit: maxLimit }),
+      ttl: CACHE_TTL.TRAVEL_SPOTS,
+      fetchFn: async () => {
+        const businesses = await executeWithRetry(() =>
+          prisma.business.findMany({
+            where,
+            select: {
+              business_id: true,
+              user_id: true,
+              name: true,
+              house_number: true,
+              street: true,
+              brgy: true,
+              city: true,
+              latitude: true,
+              longtitude: true,
+              description: true,
+              rating: true,
+              status: true,
+              picture: true
+            },
+            orderBy: [{ rating: 'desc' }],
+            take: maxLimit
+          })
+        );
 
-    // Fetch review counts in a single query
-    const businessIds = businesses.map(b => b.business_id);
-    let reviewCounts: Record<number, number> = {};
-    if (businessIds.length > 0) {
-      const counts = await executeWithRetry(() =>
-        prisma.businessReview.groupBy({
-          by: ['business_id'],
-          where: { business_id: { in: businessIds } },
-          _count: { review_id: true }
-        })
-      );
-      reviewCounts = counts.reduce((acc, r) => {
-        acc[r.business_id] = r._count.review_id;
-        return acc;
-      }, {} as Record<number, number>);
-    }
+        // Fetch review counts in a single query
+        const businessIds = businesses.map(b => b.business_id);
+        let reviewCounts: Record<number, number> = {};
+        if (businessIds.length > 0) {
+          const counts = await executeWithRetry(() =>
+            prisma.businessReview.groupBy({
+              by: ['business_id'],
+              where: { business_id: { in: businessIds } },
+              _count: { review_id: true }
+            })
+          );
+          reviewCounts = counts.reduce((acc, r) => {
+            acc[r.business_id] = r._count.review_id;
+            return acc;
+          }, {} as Record<number, number>);
+        }
 
-    // Attach reviewCount to each business
-    const enriched = businesses.map(b => ({
-      ...b,
-      reviewCount: reviewCounts[b.business_id] || 0
-    }));
+        // Attach reviewCount to each business
+        return businesses.map(b => ({
+          ...b,
+          reviewCount: reviewCounts[b.business_id] || 0
+        }));
+      }
+    });
 
-    // Cache for 30 seconds
-    travelSpotsCache.set(cacheKey, enriched, 30);
-
+    // Set cache header for debugging
+    res.set('X-Cache', fromCache ? `HIT:${cacheBackend}` : 'MISS');
     res.json({
       message: 'Success',
       data: enriched,
-      fromCache: false
+      fromCache
     });
   } catch (error) {
     console.error('Error fetching travel spots:', error);

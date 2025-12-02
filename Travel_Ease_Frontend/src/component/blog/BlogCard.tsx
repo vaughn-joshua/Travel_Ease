@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { Blog } from "../../types/blog";
+import OptimizedImage from "../../components/OptimizedImage";
 
 interface BlogCardProps {
   blog: Blog;
@@ -45,19 +46,18 @@ const BlogCard: React.FC<BlogCardProps> = ({
     >
       <article className={`${cardBase} ${cardStyles}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
-          <img
+          <OptimizedImage
             src={blog.coverImageUrl}
             alt={blog.title}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-            loading="lazy"
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-70 transition duration-500 group-hover:opacity-80"
+            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-70 transition duration-500 group-hover:opacity-80 pointer-events-none"
             aria-hidden="true"
           />
           <span
-            className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+            className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] z-10 ${
               isDark
                 ? "bg-primary-red text-white"
                 : "bg-primary-red/10 text-primary-red"

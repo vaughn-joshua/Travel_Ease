@@ -3,12 +3,16 @@ import { z } from 'zod';
 import { prisma, executeWithRetry, executeWithTimeout, handlePrismaError, parsePagination, buildPaginationMeta } from '../lib/prismaHelpers.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { createBlogSchema, updateBlogSchema, blogQuerySchema } from '../schemas/blogSchemas.js';
-import { getCache, createCacheKey } from '../../services/cache.js';
+import { cacheResult, buildCacheKey, invalidateCachePattern } from '../lib/cache.js';
 
 export const blogRoutes = Router();
 
-// In-memory cache for blog overview (short TTL)
-const overviewCache = getCache('search');
+// Cache TTLs (in seconds)
+const CACHE_TTL = {
+  OVERVIEW: 60,      // 1 minute for blog overview
+  FEATURED: 120,     // 2 minutes for featured blogs
+  LIST: 30,          // 30 seconds for paginated lists
+};
 
 /**
  * Middleware to require Google OAuth authentication for blog operations
@@ -68,16 +72,26 @@ blogRoutes.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/blogs/featured - Get featured blogs (public)
+// GET /api/blogs/featured - Get featured blogs (public, cached)
+// Cache key: blogs:featured
+// TTL: 2 minutes
+// Clear cache: Use invalidateCachePattern('blogs:') after blog create/update/delete
 blogRoutes.get('/featured', async (req: Request, res: Response) => {
   try {
-    const blogs = await executeWithRetry(() =>
-      prisma.blog.findMany({
-        where: { isFeatured: true },
-        orderBy: { publishedAt: 'desc' },
-        take: 5
-      })
-    );
+    const { data: blogs, fromCache, cacheBackend } = await cacheResult({
+      key: buildCacheKey('blogs', 'featured'),
+      ttl: CACHE_TTL.FEATURED,
+      fetchFn: () => executeWithRetry(() =>
+        prisma.blog.findMany({
+          where: { isFeatured: true },
+          orderBy: { publishedAt: 'desc' },
+          take: 5
+        })
+      )
+    });
+
+    // Set cache header for debugging
+    res.set('X-Cache', fromCache ? `HIT:${cacheBackend}` : 'MISS');
     res.json(blogs);
   } catch (error) {
     return handlePrismaError(error, res, 'Fetching featured blogs');
@@ -85,7 +99,9 @@ blogRoutes.get('/featured', async (req: Request, res: Response) => {
 });
 
 // GET /api/blogs/overview - Aggregated endpoint for Blogs page (public, cached)
-// Optimized with timeout wrapper and better error handling
+// Cache key: blogs:overview
+// TTL: 1 minute
+// Clear cache: Use invalidateCachePattern('blogs:') after blog create/update/delete
 blogRoutes.get('/overview', async (req: Request, res: Response) => {
   const startTime = Date.now();
   const REQUEST_TIMEOUT = 8000; // 8 second timeout
@@ -105,15 +121,6 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
   }, REQUEST_TIMEOUT);
   
   try {
-    // Check cache first (fast path)
-    const cacheKey = createCacheKey('blogs_overview', {});
-    const cached = overviewCache.get(cacheKey);
-    if (cached && typeof cached === 'object') {
-      clearTimeout(timeoutId);
-      responded = true;
-      return res.json({ ...(cached as object), fromCache: true });
-    }
-
     // Slim attributes for list views
     const listSelect = {
       id: true,
@@ -129,35 +136,44 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
       updatedAt: true
     };
 
-    // Fetch all data concurrently with retry
-    const [featured, destinations, tips, clientEducation] = await executeWithRetry(() =>
-      Promise.all([
-        prisma.blog.findMany({
-          where: { isFeatured: true },
-          select: listSelect,
-          orderBy: { publishedAt: 'desc' },
-          take: 5
-        }),
-        prisma.blog.findMany({
-          where: { category: 'Destinations' },
-          select: listSelect,
-          orderBy: { publishedAt: 'desc' },
-          take: 3
-        }),
-        prisma.blog.findMany({
-          where: { category: 'Tips' },
-          select: listSelect,
-          orderBy: { publishedAt: 'desc' },
-          take: 3
-        }),
-        prisma.blog.findMany({
-          where: { category: 'Client Education' },
-          select: listSelect,
-          orderBy: { publishedAt: 'desc' },
-          take: 3
-        })
-      ])
-    );
+    // Use Redis-backed cache with in-memory fallback
+    const { data: payload, fromCache, cacheBackend } = await cacheResult({
+      key: buildCacheKey('blogs', 'overview'),
+      ttl: CACHE_TTL.OVERVIEW,
+      fetchFn: async () => {
+        // Fetch all data concurrently with retry
+        const [featured, destinations, tips, clientEducation] = await executeWithRetry(() =>
+          Promise.all([
+            prisma.blog.findMany({
+              where: { isFeatured: true },
+              select: listSelect,
+              orderBy: { publishedAt: 'desc' },
+              take: 5
+            }),
+            prisma.blog.findMany({
+              where: { category: 'Destinations' },
+              select: listSelect,
+              orderBy: { publishedAt: 'desc' },
+              take: 3
+            }),
+            prisma.blog.findMany({
+              where: { category: 'Tips' },
+              select: listSelect,
+              orderBy: { publishedAt: 'desc' },
+              take: 3
+            }),
+            prisma.blog.findMany({
+              where: { category: 'Client Education' },
+              select: listSelect,
+              orderBy: { publishedAt: 'desc' },
+              take: 3
+            })
+          ])
+        );
+
+        return { featured, destinations, tips, clientEducation };
+      }
+    });
 
     // Check if we already timed out
     if (responded) return;
@@ -165,23 +181,15 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
     clearTimeout(timeoutId);
     responded = true;
 
-    const payload = {
-      featured,
-      destinations,
-      tips,
-      clientEducation
-    };
-
-    // Cache for 60 seconds
-    overviewCache.set(cacheKey, payload, 60);
-
     // Log slow queries in development
     const duration = Date.now() - startTime;
-    if (duration > 1000) {
-      console.warn(`[SLOW] /blogs/overview took ${duration}ms`);
+    if (duration > 1000 && !fromCache) {
+      console.warn(`[SLOW] /blogs/overview took ${duration}ms (cache miss)`);
     }
 
-    res.json({ ...payload, fromCache: false });
+    // Set cache header for debugging
+    res.set('X-Cache', fromCache ? `HIT:${cacheBackend}` : 'MISS');
+    res.json({ ...payload, fromCache });
   } catch (error) {
     // Check if we already timed out
     if (responded) return;
@@ -237,6 +245,10 @@ blogRoutes.post('/', authenticateToken, requireGoogleAuth, async (req: Request, 
         }
       })
     );
+
+    // Invalidate blog caches after create
+    await invalidateCachePattern('blogs:');
+
     res.status(201).json(blog);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -282,6 +294,10 @@ blogRoutes.put('/:id', authenticateToken, requireGoogleAuth, async (req: Request
         data: updateData
       })
     );
+
+    // Invalidate blog caches after update
+    await invalidateCachePattern('blogs:');
+
     res.json(updatedBlog);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -318,6 +334,10 @@ blogRoutes.delete('/:id', authenticateToken, requireGoogleAuth, async (req: Requ
     await executeWithRetry(() =>
       prisma.blog.delete({ where: { id } })
     );
+
+    // Invalidate blog caches after delete
+    await invalidateCachePattern('blogs:');
+
     res.status(204).send();
   } catch (error) {
     return handlePrismaError(error, res, 'Deleting blog');

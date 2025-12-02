@@ -19,7 +19,7 @@ const sampleBlogs = [
     <p>While not exactly hidden, the views from the Sky Eye Ferris wheel at sunset are absolutely breathtaking.</p>
     <h2>3. Picnic Grove</h2>
     <p>A perfect spot for family outings with ziplines, horseback riding, and stunning viewpoints.</p>`,
-    coverImageUrl: "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1920&q=80",
+    coverImageUrl: "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=800&q=75",
     category: "Destinations",
     isFeatured: true,
     readingMinutes: 8,
@@ -42,7 +42,7 @@ const sampleBlogs = [
       <li>Quick-dry clothing</li>
       <li>Portable water filter</li>
     </ul>`,
-    coverImageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=1920&q=80",
+    coverImageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=75",
     category: "Travel Tips",
     isFeatured: true,
     readingMinutes: 6,
@@ -60,7 +60,7 @@ const sampleBlogs = [
     <p>This freshwater sardine is endemic to Taal Lake and is best enjoyed fried to crispy perfection.</p>
     <h3>Kapeng Barako</h3>
     <p>Strong, aromatic coffee grown in the nearby Batangas province – perfect for coffee lovers.</p>`,
-    coverImageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1920&q=80",
+    coverImageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=75",
     category: "Destinations",
     isFeatured: false,
     readingMinutes: 5,
@@ -77,7 +77,7 @@ const sampleBlogs = [
     <p>TravelEase makes it easy to plan together with shared itineraries and real-time updates.</p>
     <h2>Step 3: Assign Responsibilities</h2>
     <p>Divide tasks like booking accommodations, researching activities, and managing the budget.</p>`,
-    coverImageUrl: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=1920&q=80",
+    coverImageUrl: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=800&q=75",
     category: "Client Education",
     isFeatured: true,
     readingMinutes: 7,
@@ -94,7 +94,7 @@ const sampleBlogs = [
     <p>Still cooler than Manila but expect more crowds during Holy Week.</p>
     <h2>Rainy Season (June - November)</h2>
     <p>Fewer tourists and lush green landscapes, but pack rain gear!</p>`,
-    coverImageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1920&q=80",
+    coverImageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=75",
     category: "Travel Tips",
     isFeatured: false,
     readingMinutes: 4,
@@ -111,7 +111,7 @@ const sampleBlogs = [
     <p>Use our curated business directory to find restaurants, activities, and accommodations.</p>
     <h2>Interactive Maps</h2>
     <p>Visualize your itinerary on our interactive map and optimize your route.</p>`,
-    coverImageUrl: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1920&q=80",
+    coverImageUrl: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=75",
     category: "Client Education",
     isFeatured: false,
     readingMinutes: 5,

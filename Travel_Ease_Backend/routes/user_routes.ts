@@ -15,6 +15,7 @@ put profile (update profile)
 import { Router } from 'express';
 import { authenticateToken } from '../src/middleware/auth.js';
 import { validate, registerSchema, loginSchema, createFavoriteSchema, updateProfileSchema } from '../src/schemas/validation.js';
+import { loginRateLimiter, registerRateLimiter } from '../src/middleware/redisRateLimit.js';
 import {
   register,
   login,
@@ -31,8 +32,10 @@ import {
 const router = Router();
 
 // Public routes (no auth required)
-router.post('/register', validate(registerSchema), register);
-router.post('/login', validate(loginSchema), login);
+// Rate limited: 3 registrations per hour per IP
+router.post('/register', registerRateLimiter, validate(registerSchema), register);
+// Rate limited: 5 login attempts per minute per IP
+router.post('/login', loginRateLimiter, validate(loginSchema), login);
 
 // OAuth sync route (called after Supabase OAuth callback)
 router.post('/oauth', authenticateToken, oauth_sync);

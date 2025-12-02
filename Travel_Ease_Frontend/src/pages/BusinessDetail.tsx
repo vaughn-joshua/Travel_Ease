@@ -137,7 +137,7 @@ export default function BusinessDetail() {
   }
 
   const coverImage = business.media?.cover ||
-    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80";
+    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=75";
 
   return (
     <div className="min-h-screen bg-white">

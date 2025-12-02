@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import OptimizedImage from "../../components/OptimizedImage";
 
 export interface Business {
   id: number;
@@ -71,20 +72,19 @@ const BusinessCard: React.FC<BusinessCardProps> = ({
     >
       <article className={`${cardBase} ${cardStyles}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
-          <img
+          <OptimizedImage
             src={coverImage}
             alt={business.name}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-            loading="lazy"
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-70 transition duration-500 group-hover:opacity-80"
+            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-70 transition duration-500 group-hover:opacity-80 pointer-events-none"
             aria-hidden="true"
           />
           {business.categories.length > 0 && (
             <span
-              className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+              className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] z-10 ${
                 isDark
                   ? "bg-primary-red text-white"
                   : "bg-primary-red/10 text-primary-red"
@@ -94,7 +94,7 @@ const BusinessCard: React.FC<BusinessCardProps> = ({
             </span>
           )}
           {business.rating !== null && (
-            <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-sm font-medium text-gray-900 backdrop-blur">
+            <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-sm font-medium text-gray-900 backdrop-blur z-10">
               <svg
                 className="h-4 w-4 text-yellow-500"
                 fill="currentColor"
