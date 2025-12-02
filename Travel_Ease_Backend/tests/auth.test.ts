@@ -8,13 +8,14 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import user_routes from '../routes/user_routes.js';
 import { createTestUser } from './setup.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
+import type { User } from '@prisma/client';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/user', user_routes);
 app.use(errorHandler);
@@ -88,9 +89,9 @@ describe('Authentication', () => {
   });
 
   describe('Protected Routes', () => {
-    let authToken;
-    let userId;
-    let testEmail;
+    let authToken: string;
+    let userId: number;
+    let testEmail: string;
 
     beforeEach(async () => {
       // Create test user with local JWT for testing (unique email per test)
@@ -128,10 +129,10 @@ describe('Authentication', () => {
   });
 
   describe('Favorites', () => {
-    let authToken;
-    let userId;
-    let businessId;
-    let testEmail;
+    let authToken: string;
+    let userId: number;
+    let businessId: number;
+    let testEmail: string;
 
     beforeEach(async () => {
       // Unique email per test
@@ -203,3 +204,4 @@ describe('Authentication', () => {
     });
   });
 });
+

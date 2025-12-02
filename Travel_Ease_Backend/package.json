@@ -6,7 +6,7 @@
     "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx watch server.ts",
     "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 node dist/server.js",
     "build": "tsc",
-    "db:seed": "tsx src/seed.ts",
+    "db:seed": "tsx scripts/seed.ts",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",

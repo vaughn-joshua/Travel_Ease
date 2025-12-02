@@ -5,9 +5,71 @@
  */
 
 import { prisma } from '../src/lib/prisma.js';
+import type { User, Business, BusinessCategory, TravelPlan, Blog, category, status_enum } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+
+// Type definitions for seed data
+interface UserSeedData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  contact_no: string;
+  auth_provider: string;
+  profile_completed: boolean;
+}
+
+interface BusinessSeedData {
+  name: string;
+  house_number: string;
+  street: string;
+  brgy: string;
+  city: string;
+  latitude: number;
+  longtitude: number;
+  description: string;
+  rating: number;
+  status: boolean;
+  picture: string;
+}
+
+interface BusinessCategorySeedData {
+  business_index: number;
+  category_name: category;
+}
+
+interface BlogSeedData {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl: string;
+  category: string;
+  isFeatured: boolean;
+  readingMinutes: number;
+  author: string;
+}
+
+interface TravelPlanSeedData {
+  name: string;
+  start_date: Date;
+  end_date: Date;
+  description: string;
+  visibility: boolean;
+  status: status_enum;
+  max_slots: number;
+  location: string;
+}
+
+interface MenuItemSeedData {
+  business_index: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
 
 // Sample data
-const users = [
+const users: UserSeedData[] = [
   {
     first_name: 'Juan',
     last_name: 'Dela Cruz',
@@ -50,7 +112,7 @@ const users = [
   }
 ];
 
-const businesses = [
+const businesses: BusinessSeedData[] = [
   {
     name: 'Bag of Beans Cafe',
     house_number: '123',
@@ -183,26 +245,26 @@ const businesses = [
   }
 ];
 
-const businessCategories = [
-  { business_index: 0, category_name: 'food' },
-  { business_index: 0, category_name: 'drinks' },
-  { business_index: 1, category_name: 'food' },
-  { business_index: 2, category_name: 'accomodation' },
-  { business_index: 2, category_name: 'food' },
-  { business_index: 3, category_name: 'nature' },
-  { business_index: 3, category_name: 'activities' },
-  { business_index: 4, category_name: 'leisure' },
-  { business_index: 5, category_name: 'drinks' },
-  { business_index: 6, category_name: 'food' },
-  { business_index: 7, category_name: 'accomodation' },
-  { business_index: 7, category_name: 'leisure' },
-  { business_index: 8, category_name: 'souvenir_shop' },
-  { business_index: 8, category_name: 'local_offers' },
-  { business_index: 9, category_name: 'activities' },
-  { business_index: 9, category_name: 'leisure' }
+const businessCategories: BusinessCategorySeedData[] = [
+  { business_index: 0, category_name: 'food' as category },
+  { business_index: 0, category_name: 'drinks' as category },
+  { business_index: 1, category_name: 'food' as category },
+  { business_index: 2, category_name: 'accomodation' as category },
+  { business_index: 2, category_name: 'food' as category },
+  { business_index: 3, category_name: 'nature' as category },
+  { business_index: 3, category_name: 'activities' as category },
+  { business_index: 4, category_name: 'leisure' as category },
+  { business_index: 5, category_name: 'drinks' as category },
+  { business_index: 6, category_name: 'food' as category },
+  { business_index: 7, category_name: 'accomodation' as category },
+  { business_index: 7, category_name: 'leisure' as category },
+  { business_index: 8, category_name: 'souvenir_shop' as category },
+  { business_index: 8, category_name: 'local_offers' as category },
+  { business_index: 9, category_name: 'activities' as category },
+  { business_index: 9, category_name: 'leisure' as category }
 ];
 
-const blogs = [
+const blogs: BlogSeedData[] = [
   {
     title: 'Top 10 Must-Visit Spots in Tagaytay',
     slug: 'top-10-must-visit-spots-tagaytay',
@@ -343,14 +405,14 @@ const blogs = [
   }
 ];
 
-const travelPlans = [
+const travelPlans: TravelPlanSeedData[] = [
   {
     name: 'Tagaytay Food Adventure',
     start_date: new Date('2025-01-15'),
     end_date: new Date('2025-01-17'),
     description: 'A 3-day food trip exploring the best restaurants and cafes in Tagaytay.',
     visibility: true,
-    status: 'Active',
+    status: 'Active' as status_enum,
     max_slots: 8,
     location: 'Tagaytay City'
   },
@@ -360,7 +422,7 @@ const travelPlans = [
     end_date: new Date('2025-02-02'),
     description: 'A peaceful weekend getaway focused on relaxation and scenic views.',
     visibility: true,
-    status: 'Active',
+    status: 'Active' as status_enum,
     max_slots: 4,
     location: 'Tagaytay City'
   },
@@ -370,7 +432,7 @@ const travelPlans = [
     end_date: new Date('2025-02-14'),
     description: 'One-day trip with activities for the whole family.',
     visibility: true,
-    status: 'Draft',
+    status: 'Draft' as status_enum,
     max_slots: 10,
     location: 'Tagaytay City'
   },
@@ -380,13 +442,13 @@ const travelPlans = [
     end_date: new Date('2025-03-02'),
     description: 'Capture the beauty of Tagaytay with fellow photography enthusiasts.',
     visibility: false,
-    status: 'Draft',
+    status: 'Draft' as status_enum,
     max_slots: 6,
     location: 'Tagaytay City'
   }
 ];
 
-const menuItems = [
+const menuItems: MenuItemSeedData[] = [
   // Bag of Beans Cafe
   { business_index: 0, name: 'Longsilog', description: 'Longganisa with garlic rice and egg', price: 295, category: 'Breakfast' },
   { business_index: 0, name: 'Tapsilog', description: 'Beef tapa with garlic rice and egg', price: 325, category: 'Breakfast' },
@@ -405,7 +467,7 @@ const menuItems = [
   { business_index: 6, name: 'Halo-Halo', description: 'Filipino shaved ice dessert', price: 195, category: 'Dessert' }
 ];
 
-async function seed() {
+async function seed(): Promise<void> {
   try {
     console.log('Starting database seed...\n');
     
@@ -417,7 +479,7 @@ async function seed() {
     await prisma.$transaction(async (tx) => {
       // Create Users
       console.log('Creating users...');
-      const createdUsers = [];
+      const createdUsers: User[] = [];
       for (const user of users) {
         const created = await tx.user.create({ data: user });
         createdUsers.push(created);
@@ -426,7 +488,7 @@ async function seed() {
 
       // Create Businesses (assign to users)
       console.log('Creating businesses...');
-      const createdBusinesses = [];
+      const createdBusinesses: Business[] = [];
       for (let i = 0; i < businesses.length; i++) {
         const b = businesses[i];
         const created = await tx.business.create({
@@ -441,7 +503,7 @@ async function seed() {
 
       // Create Business Categories
       console.log('Creating business categories...');
-      const createdCategories = [];
+      const createdCategories: BusinessCategory[] = [];
       for (const c of businessCategories) {
         const created = await tx.businessCategory.create({
           data: {
@@ -474,7 +536,7 @@ async function seed() {
 
       // Create Price Ranges
       console.log('Creating price ranges...');
-      const createdPriceRanges = [];
+      const createdPriceRanges: Array<{ id: number }> = [];
       for (const cat of createdCategories) {
         const created = await tx.priceRange.create({
           data: {
@@ -489,7 +551,7 @@ async function seed() {
 
       // Create Menu Items
       console.log('Creating menu items...');
-      const createdMenuItems = [];
+      const createdMenuItems: Array<{ menu_item_id: number }> = [];
       for (const m of menuItems) {
         const created = await tx.menuItem.create({
           data: {
@@ -506,7 +568,7 @@ async function seed() {
 
       // Create Blogs
       console.log('Creating blogs...');
-      const createdBlogs = [];
+      const createdBlogs: Blog[] = [];
       for (let i = 0; i < blogs.length; i++) {
         const b = blogs[i];
         const created = await tx.blog.create({
@@ -521,13 +583,22 @@ async function seed() {
 
       // Create Travel Plans
       console.log('Creating travel plans...');
-      const createdPlans = [];
+      const createdPlans: TravelPlan[] = [];
       for (let i = 0; i < travelPlans.length; i++) {
         const p = travelPlans[i];
         const created = await tx.travelPlan.create({
           data: {
-            ...p,
-            user_id: createdUsers[i % createdUsers.length].user_id
+            name: p.name,
+            start_date: p.start_date,
+            end_date: p.end_date,
+            description: p.description,
+            visibility: p.visibility,
+            status: p.status,
+            max_slots: p.max_slots,
+            location: p.location,
+            user: {
+              connect: { user_id: createdUsers[i % createdUsers.length].user_id }
+            }
           }
         });
         createdPlans.push(created);
@@ -693,3 +764,4 @@ async function seed() {
 }
 
 seed();
+

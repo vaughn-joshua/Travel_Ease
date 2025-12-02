@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import express from "express";
+import express, { type Express } from "express";
 import request from "supertest";
 import { randomUUID } from "crypto";
 import { prisma } from "../src/lib/prisma.js";
@@ -24,12 +24,12 @@ vi.mock("../src/lib/supabase.js", () => ({
 
 import { isSupabaseConfigured } from "../src/lib/supabase.js";
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use("/api/user", user_routes);
 app.use(errorHandler);
 
-const uniqueEmail = (prefix) =>
+const uniqueEmail = (prefix: string): string =>
   `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
 
 describe("Auth routes (login & signup)", () => {
@@ -38,7 +38,7 @@ describe("Auth routes (login & signup)", () => {
     await prisma.user.deleteMany({
       where: { email: { contains: "auth-flow" } },
     });
-    isSupabaseConfigured.mockReturnValue(true);
+    (isSupabaseConfigured as ReturnType<typeof vi.fn>).mockReturnValue(true);
   });
 
   afterAll(async () => {
@@ -130,7 +130,7 @@ describe("Auth routes (login & signup)", () => {
   });
 
   it("returns 503 when Supabase is not configured", async () => {
-    isSupabaseConfigured.mockReturnValue(false);
+    (isSupabaseConfigured as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
     const response = await request(app).post("/api/user/login").send({
       email: "missing@example.com",
@@ -141,3 +141,4 @@ describe("Auth routes (login & signup)", () => {
     expect(supabaseAuthMocks.signInWithPassword).not.toHaveBeenCalled();
   });
 });
+

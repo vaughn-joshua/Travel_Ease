@@ -3,6 +3,7 @@
  */
 
 import { beforeAll, afterAll } from 'vitest';
+import type { User } from '@prisma/client';
 
 // ============================================
 // SSL / TLS configuration for test environment
@@ -31,8 +32,21 @@ afterAll(async () => {
   console.log('Tests completed');
 });
 
+interface CreateTestUserData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  contact_no?: string;
+  password?: string;
+}
+
+interface TestUserResult {
+  user: User;
+  token: string;
+}
+
 // Helper function to create a test user and get token
-export async function createTestUser(userData = {}) {
+export async function createTestUser(userData: CreateTestUserData = {}): Promise<TestUserResult> {
   const bcrypt = await import('bcryptjs');
   const jwt = await import('jsonwebtoken');
   
@@ -52,7 +66,7 @@ export async function createTestUser(userData = {}) {
 
   const token = jwt.default.sign(
     { id: user.user_id, email: user.email },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET as string,
     { expiresIn: '24h' }
   );
 
@@ -60,7 +74,7 @@ export async function createTestUser(userData = {}) {
 }
 
 // Helper to clean up test data
-export async function cleanupTestData() {
+export async function cleanupTestData(): Promise<void> {
   // Delete in reverse order of dependencies
   await prisma.participant.deleteMany();
   await prisma.activity.deleteMany();
@@ -72,6 +86,8 @@ export async function cleanupTestData() {
   await prisma.priceRange.deleteMany();
   await prisma.businessCategory.deleteMany();
   await prisma.businessHours.deleteMany();
+  await prisma.menuItem.deleteMany();
   await prisma.business.deleteMany();
   // Don't delete users in case they're needed across tests
 }
+

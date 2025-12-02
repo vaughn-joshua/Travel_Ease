@@ -4,17 +4,18 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import business_routes from '../routes/business_routes.js';
 import { createTestUser, cleanupTestData } from './setup.js';
+import type { User } from '@prisma/client';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/business', business_routes);
 
 describe('Business', () => {
-  let user1, token1, user2, token2;
+  let user1: User, token1: string, user2: User, token2: string;
 
   beforeEach(async () => {
     await cleanupTestData();
@@ -52,8 +53,8 @@ describe('Business', () => {
         where: { business_id: response.body.business_id }
       });
 
-      expect(business.user_id).toBe(user1.user_id);
-      expect(business.name).toBe('Test Restaurant');
+      expect(business?.user_id).toBe(user1.user_id);
+      expect(business?.name).toBe('Test Restaurant');
     });
 
     it('should reject creation without authentication', async () => {
@@ -82,7 +83,7 @@ describe('Business', () => {
   });
 
   describe('PUT /api/business/edit_business/:id', () => {
-    let businessId;
+    let businessId: number;
 
     beforeEach(async () => {
       // Create business for user1
@@ -191,3 +192,4 @@ describe('Business', () => {
     });
   });
 });
+

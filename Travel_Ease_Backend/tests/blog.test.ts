@@ -4,20 +4,21 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import { blogRoutes } from '../src/routes/blogRoutes.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
 import { createTestUser } from './setup.js';
+import type { User } from '@prisma/client';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/blogs', blogRoutes);
 app.use(errorHandler);
 
 describe('Blog Authentication', () => {
-  let user1, token1, user2, token2;
-  let testBlogId;
+  let user1: User, token1: string, user2: User, token2: string;
+  let testBlogId: number | null;
 
   const validBlogData = {
     title: 'Test Blog Post',
@@ -178,7 +179,7 @@ describe('Blog Authentication', () => {
 
       // Verify deletion
       const blog = await prisma.blog.findUnique({
-        where: { id: testBlogId }
+        where: { id: testBlogId as number }
       });
       expect(blog).toBeNull();
       testBlogId = null;
@@ -206,7 +207,7 @@ describe('Blog Authentication', () => {
   });
 
   describe('GET /api/blogs/featured (public)', () => {
-    let featuredBlogId;
+    let featuredBlogId: number | null;
 
     afterEach(async () => {
       // Clean up featured test blog
@@ -252,7 +253,7 @@ describe('Blog Authentication', () => {
       expect(response.body.length).toBeGreaterThanOrEqual(1);
       
       // Verify our featured blog is in the response
-      const found = response.body.find(blog => blog.id === featuredBlogId);
+      const found = response.body.find((blog: { id: number }) => blog.id === featuredBlogId);
       expect(found).toBeDefined();
       expect(found.isFeatured).toBe(true);
     });

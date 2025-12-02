@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import mapRoutes from '../routes/map_routes.js';
 
 // Mock axios for external API calls
@@ -17,8 +17,10 @@ vi.mock('axios', () => ({
 
 import axios from 'axios';
 
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
 // Create test app
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/map', mapRoutes);
 
@@ -35,7 +37,7 @@ describe('Map API', () => {
     });
 
     it('should return normalized places on success', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: [
           {
             place_id: 123,
@@ -61,7 +63,7 @@ describe('Map API', () => {
     });
 
     it('should include cache header', async () => {
-      axios.get.mockResolvedValueOnce({ data: [] });
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: [] });
 
       const response = await request(app)
         .get('/api/map/search')
@@ -73,7 +75,7 @@ describe('Map API', () => {
 
   describe('POST /api/map/search', () => {
     it('should search with POST body', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: [
           {
             place_id: 456,
@@ -104,7 +106,7 @@ describe('Map API', () => {
     });
 
     it('should return suggestions for valid query', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: [
           { place_id: 1, display_name: 'Place 1', lat: '14.1', lon: '120.9' },
           { place_id: 2, display_name: 'Place 2', lat: '14.2', lon: '120.8' },
@@ -127,7 +129,7 @@ describe('Map API', () => {
     });
 
     it('should return 404 when address not found', async () => {
-      axios.get.mockResolvedValueOnce({ data: [] });
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: [] });
 
       const response = await request(app)
         .get('/api/map/geocode')
@@ -138,7 +140,7 @@ describe('Map API', () => {
     });
 
     it('should return geocoded place', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: [
           {
             place_id: 789,
@@ -172,7 +174,7 @@ describe('Map API', () => {
     });
 
     it('should return 404 when location not found', async () => {
-      axios.get.mockResolvedValueOnce({ data: { error: 'Not found' } });
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { error: 'Not found' } });
 
       const response = await request(app)
         .get('/api/map/reverse')
@@ -182,7 +184,7 @@ describe('Map API', () => {
     });
 
     it('should return reverse geocoded address', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: {
           place_id: 999,
           display_name: 'Tagaytay Highlands',
@@ -210,7 +212,7 @@ describe('Map API', () => {
     });
 
     it('should return route with ETA and distance', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: {
           code: 'Ok',
           routes: [
@@ -252,7 +254,7 @@ describe('Map API', () => {
     });
 
     it('should return 404 when no route found', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: { code: 'NoRoute' },
       });
 
@@ -269,7 +271,7 @@ describe('Map API', () => {
 
   describe('GET /api/map/route', () => {
     it('should accept query parameters', async () => {
-      axios.get.mockResolvedValueOnce({
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         data: {
           code: 'Ok',
           routes: [
@@ -299,7 +301,7 @@ describe('Map API', () => {
 
   describe('Rate Limiting', () => {
     it('should include rate limit headers', async () => {
-      axios.get.mockResolvedValue({ data: [] });
+      (mockedAxios.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
 
       const response = await request(app)
         .get('/api/map/search')

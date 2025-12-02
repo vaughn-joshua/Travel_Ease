@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import express from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import { randomUUID } from 'crypto';
 import request from 'supertest';
+import type { PrismaClient } from '@prisma/client';
 
-let app;
-let prisma;
-let supabaseAdmin;
-let authenticateToken;
+let app: Express;
+let prisma: PrismaClient;
+let supabaseAdmin: { auth: { getUser: ReturnType<typeof vi.fn> } };
+let authenticateToken: (req: Request, res: Response, next: () => void) => void;
 
 const originalEnv = { ...process.env };
 
@@ -24,8 +25,8 @@ describe('Supabase Auth Middleware', () => {
 
     app = express();
     app.use(express.json());
-    app.get('/protected', authenticateToken, (req, res) => {
-      res.json({ user: req.user });
+    app.get('/protected', authenticateToken, (req: Request, res: Response) => {
+      res.json({ user: (req as Request & { user: unknown }).user });
     });
   });
 
@@ -95,3 +96,4 @@ describe('Supabase Auth Middleware', () => {
     expect(response.status).toBe(403);
   });
 });
+

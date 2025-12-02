@@ -4,17 +4,18 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import travel_plan_routes from '../routes/travel_plan_routes.js';
 import { createTestUser, cleanupTestData } from './setup.js';
+import type { User } from '@prisma/client';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/travel_plan', travel_plan_routes);
 
 describe('Travel Plans', () => {
-  let user1, token1, user2, token2;
+  let user1: User, token1: string, user2: User, token2: string;
 
   beforeEach(async () => {
     await cleanupTestData();
@@ -94,7 +95,7 @@ describe('Travel Plans', () => {
   });
 
   describe('PUT /api/travel_plan/edit_plan/:id', () => {
-    let planId;
+    let planId: number;
 
     beforeEach(async () => {
       // Create a plan for user1
@@ -157,7 +158,7 @@ describe('Travel Plans', () => {
   });
 
   describe('Participant Management', () => {
-    let planId;
+    let planId: number;
 
     beforeEach(async () => {
       const response = await request(app)
@@ -212,3 +213,4 @@ describe('Travel Plans', () => {
     });
   });
 });
+

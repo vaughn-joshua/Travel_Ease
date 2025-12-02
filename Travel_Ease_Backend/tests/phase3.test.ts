@@ -5,17 +5,20 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import travel_plan_routes from '../routes/travel_plan_routes.js';
 import { createTestUser, cleanupTestData } from './setup.js';
+import type { User } from '@prisma/client';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/travel_plan', travel_plan_routes);
 
 describe('Phase 3 - Travel Plan Domain', () => {
-  let user1, token1, user2, token2, user3, token3;
+  let user1: User, token1: string;
+  let user2: User, token2: string;
+  let user3: User, token3: string;
 
   beforeEach(async () => {
     await cleanupTestData();
@@ -34,7 +37,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
   });
 
   describe('Pagination & Filtering', () => {
-    let planId1, planId2;
+    let planId1: number, planId2: number;
 
     beforeEach(async () => {
       // Create two plans with different properties
@@ -93,7 +96,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.data.length).toBeGreaterThanOrEqual(1);
-      expect(response.body.data.every(p => p.location.includes('Manila'))).toBe(true);
+      expect(response.body.data.every((p: { location: string }) => p.location.includes('Manila'))).toBe(true);
     });
 
     it('should filter plans by search term', async () => {
@@ -103,12 +106,12 @@ describe('Phase 3 - Travel Plan Domain', () => {
 
       expect(response.status).toBe(200);
       // Can search by either name or title (both are present in normalized DTO)
-      expect(response.body.data.some(p => p.title.includes('Beach') || p.name.includes('Beach'))).toBe(true);
+      expect(response.body.data.some((p: { title: string; name: string }) => p.title.includes('Beach') || p.name.includes('Beach'))).toBe(true);
     });
   });
 
   describe('Status Transitions', () => {
-    let planId;
+    let planId: number;
 
     beforeEach(async () => {
       const res = await request(app)
@@ -190,7 +193,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
   });
 
   describe('Quick Join Queue', () => {
-    let planId;
+    let planId: number;
 
     beforeEach(async () => {
       const res = await request(app)
@@ -317,7 +320,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
   });
 
   describe('Collaborator Safeguards', () => {
-    let planId;
+    let planId: number;
 
     beforeEach(async () => {
       const res = await request(app)
@@ -383,7 +386,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
   });
 
   describe('Activity Date Shift', () => {
-    let planId;
+    let planId: number;
 
     beforeEach(async () => {
       const res = await request(app)
@@ -539,18 +542,18 @@ describe('Phase 3 - Travel Plan Domain', () => {
       
       // Verify creator is Admin with status true
       const creator = participants.find(p => p.user_id === user1.user_id);
-      expect(creator.role).toBe('Admin');
-      expect(creator.status).toBe(true);
+      expect(creator?.role).toBe('Admin');
+      expect(creator?.status).toBe(true);
 
       // Verify user2 is Editor with status true
-      const editor = participants.find(p => p.user_id === user2.user_id);
-      expect(editor.role).toBe('Editor');
-      expect(editor.status).toBe(true);
+      const editorParticipant = participants.find(p => p.user_id === user2.user_id);
+      expect(editorParticipant?.role).toBe('Editor');
+      expect(editorParticipant?.status).toBe(true);
 
       // Verify user3 is Viewer with status false (pending)
-      const viewer = participants.find(p => p.user_id === user3.user_id);
-      expect(viewer.role).toBe('Viewer');
-      expect(viewer.status).toBe(false);
+      const viewerParticipant = participants.find(p => p.user_id === user3.user_id);
+      expect(viewerParticipant?.role).toBe('Viewer');
+      expect(viewerParticipant?.status).toBe(false);
     });
 
     it('should reject invalid slots value', async () => {

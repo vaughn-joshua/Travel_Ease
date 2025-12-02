@@ -4,22 +4,23 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import express from 'express';
+import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import user_routes from '../routes/user_routes.js';
 import business_routes from '../routes/business_routes.js';
 import travel_plan_routes from '../routes/travel_plan_routes.js';
 import { createTestUser, cleanupTestData } from './setup.js';
+import type { User } from '@prisma/client';
 
-const app = express();
+const app: Express = express();
 app.use(express.json());
 app.use('/api/user', user_routes);
 app.use('/api/business', business_routes);
 app.use('/api/travel_plan', travel_plan_routes);
 
 describe('Favorites', () => {
-  let user1, token1;
-  let businessId, planId;
+  let user1: User, token1: string;
+  let businessId: number, planId: number;
 
   beforeEach(async () => {
     await cleanupTestData();
@@ -143,5 +144,4 @@ describe('Favorites', () => {
     });
   });
 });
-
 
