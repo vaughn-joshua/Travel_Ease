@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { blogApi } from "../services/api";
+import { useCreateBlog } from "../features/blogs/mutations";
 import { generateSlug } from "../utils/slug";
 import { sanitizeHtml } from "../utils/sanitize";
 import { useAuth } from "../context/AuthContext";
@@ -41,9 +41,11 @@ export default function NewBlog(): React.ReactElement {
   const [slugAuto, setSlugAuto] = useState<boolean>(true);
   const [saveDraft, setSaveDraft] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
+  
+  // Use TanStack Query mutation for creating blogs
+  const createBlogMutation = useCreateBlog();
 
   useEffect(() => {
     if (slugAuto && formData.title) {
@@ -114,38 +116,35 @@ export default function NewBlog(): React.ReactElement {
 
     if (!validate()) return;
 
-    setSubmitting(true);
+    const payload: Partial<Blog> = {
+      title: formData.title.trim(),
+      slug: formData.slug.trim(),
+      excerpt: formData.excerpt.trim(),
+      content: formData.content.trim(),
+      coverImageUrl: formData.coverImageUrl.trim(),
+      category: formData.category,
+      isFeatured: formData.isFeatured,
+      readingMinutes: parseInt(formData.readingMinutes, 10),
+      author: formData.author.trim(),
+    };
 
-    try {
-      const payload: Partial<Blog> = {
-        title: formData.title.trim(),
-        slug: formData.slug.trim(),
-        excerpt: formData.excerpt.trim(),
-        content: formData.content.trim(),
-        coverImageUrl: formData.coverImageUrl.trim(),
-        category: formData.category,
-        isFeatured: formData.isFeatured,
-        readingMinutes: parseInt(formData.readingMinutes, 10),
-        author: formData.author.trim(),
-      };
-
-      if (!saveDraft) {
-        payload.publishedAt = formData.publishedAt
-          ? new Date(formData.publishedAt).toISOString()
-          : new Date().toISOString();
-      }
-
-      const created = await blogApi.createBlog(payload);
-      setSuccessMessage("Blog post created successfully! Redirecting...");
-
-      setTimeout(() => {
-        navigate(`/blogs/${created.slug}`);
-      }, 1500);
-    } catch (err: unknown) {
-      setSubmitError("Failed to create blog post. Please try again.");
-    } finally {
-      setSubmitting(false);
+    if (!saveDraft) {
+      payload.publishedAt = formData.publishedAt
+        ? new Date(formData.publishedAt).toISOString()
+        : new Date().toISOString();
     }
+
+    createBlogMutation.mutate(payload, {
+      onSuccess: (created) => {
+        setSuccessMessage("Blog post created successfully! Redirecting...");
+        setTimeout(() => {
+          navigate(`/blogs/${created.slug}`);
+        }, 1500);
+      },
+      onError: () => {
+        setSubmitError("Failed to create blog post. Please try again.");
+      },
+    });
   };
 
   const sanitizedContent = sanitizeHtml(formData.content);
@@ -413,10 +412,10 @@ export default function NewBlog(): React.ReactElement {
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={createBlogMutation.isPending}
               className="btn-primary flex-1 disabled:opacity-50"
             >
-              {submitting ? "Publishing..." : "Publish Blog Post"}
+              {createBlogMutation.isPending ? "Publishing..." : "Publish Blog Post"}
             </button>
             <Link to="/blogs" className="btn-secondary">
               Cancel

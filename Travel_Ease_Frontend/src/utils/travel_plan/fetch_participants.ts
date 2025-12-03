@@ -50,6 +50,10 @@ export async function fetch_participants(planId: number | string): Promise<Parti
   }
 }
 
+/**
+ * @deprecated Use `useRemoveParticipant` mutation hook from features/travelPlans/mutations.ts instead.
+ * This utility will be removed in a future version.
+ */
 export async function remove_participant(planId: number | string, userId: number): Promise<boolean> {
   try {
     const token = localStorage.getItem("token");
@@ -77,6 +81,10 @@ export async function remove_participant(planId: number | string, userId: number
   }
 }
 
+/**
+ * @deprecated Use `useUpdateParticipantRole` mutation hook from features/travelPlans/mutations.ts instead.
+ * This utility will be removed in a future version.
+ */
 export async function update_participant_role(
   planId: number | string,
   userId: number,
@@ -110,6 +118,10 @@ export async function update_participant_role(
   }
 }
 
+/**
+ * @deprecated Use `useApproveParticipant` mutation hook from features/travelPlans/mutations.ts instead.
+ * This utility will be removed in a future version.
+ */
 export async function approve_participant(
   planId: number | string,
   userId: number

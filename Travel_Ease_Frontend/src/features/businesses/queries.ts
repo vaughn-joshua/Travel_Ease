@@ -142,3 +142,47 @@ export function useBusinessMenu(businessId: string | number | undefined) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// useBusinessCategoriesById
+// Fetches categories for a specific business by ID.
+// ─────────────────────────────────────────────────────────────────────────────
+interface BusinessCategory {
+  category_id: number;
+  category_name: string;
+}
+
+export function useBusinessCategoriesById(businessId: string | number | undefined) {
+  return useQuery<BusinessCategory[], Error>({
+    queryKey: [...businessKeys.detail(businessId ?? ""), "categories"],
+    queryFn: () => businessApi.getCategoriesById(businessId!),
+    enabled: businessId !== undefined && businessId !== "",
+    staleTime: 1000 * 60,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useMyBusinesses
+// Fetches the current user's own businesses (requires auth).
+// ─────────────────────────────────────────────────────────────────────────────
+interface MyBusiness {
+  business_id: number;
+  name: string;
+  description: string;
+  city: string;
+  rating: number | null;
+  status: boolean;
+  picture: string | null;
+  categories?: { category_name: string }[];
+}
+
+export function useMyBusinesses() {
+  const hasToken = !!localStorage.getItem("token");
+  
+  return useQuery<{ data: MyBusiness[] }, Error>({
+    queryKey: [...businessKeys.lists(), "my"],
+    queryFn: () => businessApi.getMyBusinesses(),
+    enabled: hasToken,
+    staleTime: 1000 * 30,
+  });
+}
+

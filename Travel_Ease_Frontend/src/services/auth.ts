@@ -19,7 +19,7 @@ export interface UpdateProfilePayload {
   contact_no?: string;
 }
 
-export type AuthProvider = 'password' | 'google';
+export type AuthProvider = "password" | "google";
 
 export interface AuthUser {
   user_id: number;
@@ -68,7 +68,9 @@ export const authApi = {
   },
 
   /**
-   * Get current user's profile
+   * Get current user's profile.
+   * @deprecated Not currently used. Could be implemented for session validation on app load.
+   * Profile is currently loaded during login/OAuth sync and stored in localStorage.
    */
   async getMe() {
     const { data } = await api.get<AuthUser>("/user/me");
@@ -79,7 +81,10 @@ export const authApi = {
    * Update user profile
    */
   async updateProfile(payload: UpdateProfilePayload) {
-    const { data } = await api.put<{ message: string; user: AuthUser }>("/user/profile", payload);
+    const { data } = await api.put<{ message: string; user: AuthUser }>(
+      "/user/profile",
+      payload
+    );
     return data;
   },
 

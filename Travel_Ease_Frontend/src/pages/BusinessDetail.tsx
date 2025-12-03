@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { endpoints } from "../config/api.js";
+import { useBusinessDetail } from "../features/businesses/queries";
+import { useDeleteBusiness } from "../features/businesses/mutations";
 
 interface MenuItem {
   id: number;
@@ -45,38 +46,36 @@ interface BusinessData {
   owner: { id: number; name: string; email: string } | null;
 }
 
-const DAYS_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const DAYS_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
 
 export default function BusinessDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [business, setBusiness] = useState<BusinessData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"menu" | "gallery" | "reviews">("menu");
-  const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"menu" | "gallery" | "reviews">(
+    "menu"
+  );
 
-  useEffect(() => {
-    const fetchBusiness = async () => {
-      if (!id) return;
+  // Use TanStack Query for fetching business
+  const {
+    data: business,
+    isLoading: loading,
+    isError,
+    error: queryError,
+  } = useBusinessDetail(id);
 
-      try {
-        setLoading(true);
-        const response = await fetch(endpoints.business.byId(id));
-        if (!response.ok) throw new Error("Business not found");
-        const data = await response.json();
-        setBusiness(data);
-      } catch (err) {
-        setError("Business not found");
-        console.error("Error fetching business:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const error = isError ? queryError?.message || "Business not found" : null;
 
-    fetchBusiness();
-  }, [id]);
+  // Use TanStack Query mutation for deletion
+  const deleteBusinessMutation = useDeleteBusiness();
 
   const formatTime = (time: string | null) => {
     if (!time) return "Closed";
@@ -90,21 +89,15 @@ export default function BusinessDetail() {
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this business?")) return;
 
-    setDeleting(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(endpoints.business.edit(id!), {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Failed to delete");
-      navigate("/businesses");
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("Failed to delete business");
-    } finally {
-      setDeleting(false);
-    }
+    deleteBusinessMutation.mutate(id!, {
+      onSuccess: () => {
+        navigate("/businesses");
+      },
+      onError: (err) => {
+        console.error("Delete error:", err);
+        alert("Failed to delete business");
+      },
+    });
   };
 
   const formatCategoryName = (name: string) => {
@@ -126,8 +119,12 @@ export default function BusinessDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Business Not Found</h1>
-          <p className="text-gray-600 mb-8">The business you're looking for doesn't exist.</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Business Not Found
+          </h1>
+          <p className="text-gray-600 mb-8">
+            The business you're looking for doesn't exist.
+          </p>
           <Link to="/businesses" className="btn-primary">
             Back to Businesses
           </Link>
@@ -136,7 +133,8 @@ export default function BusinessDetail() {
     );
   }
 
-  const coverImage = business.media?.cover ||
+  const coverImage =
+    business.media?.cover ||
     "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=75";
 
   return (
@@ -171,11 +169,19 @@ export default function BusinessDetail() {
             <div className="flex flex-wrap items-center gap-4 text-white/90">
               {business.rating !== null && (
                 <div className="flex items-center gap-1">
-                  <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="h-5 w-5 text-yellow-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  <span className="font-semibold">{business.rating.toFixed(1)}</span>
-                  <span className="text-white/70">({business.reviewCount} reviews)</span>
+                  <span className="font-semibold">
+                    {business.rating.toFixed(1)}
+                  </span>
+                  <span className="text-white/70">
+                    ({business.reviewCount} reviews)
+                  </span>
                 </div>
               )}
               {business.priceRange && (
@@ -185,8 +191,18 @@ export default function BusinessDetail() {
               )}
               {business.location.address && (
                 <span className="flex items-center gap-1">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
                   </svg>
                   {business.location.address}
                 </span>
@@ -204,8 +220,18 @@ export default function BusinessDetail() {
               to="/businesses"
               className="inline-flex items-center text-primary-red hover:text-primary-red-dark transition-colors"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Back to Businesses
             </Link>
@@ -215,21 +241,41 @@ export default function BusinessDetail() {
                 to={`/businesses/${id}/edit`}
                 className="inline-flex items-center px-4 py-2 bg-primary-red text-white rounded-lg hover:bg-primary-red-dark transition-colors text-sm font-medium"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
                 </svg>
                 Edit
               </Link>
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={deleting}
+                disabled={deleteBusinessMutation.isPending}
                 className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
-                {deleting ? "Deleting..." : "Delete"}
+                {deleteBusinessMutation.isPending ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
@@ -244,8 +290,12 @@ export default function BusinessDetail() {
             {/* Description */}
             {business.description && (
               <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
-                <p className="text-gray-600 leading-relaxed">{business.description}</p>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  About
+                </h2>
+                <p className="text-gray-600 leading-relaxed">
+                  {business.description}
+                </p>
               </div>
             )}
 
@@ -292,7 +342,9 @@ export default function BusinessDetail() {
                 {activeTab === "menu" && (
                   <div>
                     {business.menuItems.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No menu items available</p>
+                      <p className="text-gray-500 text-center py-8">
+                        No menu items available
+                      </p>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {business.menuItems.map((item) => (
@@ -309,7 +361,9 @@ export default function BusinessDetail() {
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-medium text-gray-900">{item.name}</h4>
+                                <h4 className="font-medium text-gray-900">
+                                  {item.name}
+                                </h4>
                                 <span className="text-primary-red font-semibold whitespace-nowrap">
                                   ₱{item.price.toFixed(2)}
                                 </span>
@@ -336,7 +390,9 @@ export default function BusinessDetail() {
                 {activeTab === "gallery" && (
                   <div>
                     {business.media.gallery.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No photos available</p>
+                      <p className="text-gray-500 text-center py-8">
+                        No photos available
+                      </p>
                     ) : (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {business.media.gallery.map((url, index) => (
@@ -362,11 +418,16 @@ export default function BusinessDetail() {
                 {activeTab === "reviews" && (
                   <div>
                     {business.reviews.length === 0 ? (
-                      <p className="text-gray-500 text-center py-8">No reviews yet</p>
+                      <p className="text-gray-500 text-center py-8">
+                        No reviews yet
+                      </p>
                     ) : (
                       <div className="space-y-4">
                         {business.reviews.map((review) => (
-                          <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0">
+                          <div
+                            key={review.id}
+                            className="border-b border-gray-100 pb-4 last:border-0"
+                          >
                             <div className="flex items-center gap-3 mb-2">
                               <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                                 <span className="text-sm font-medium text-gray-600">
@@ -380,18 +441,26 @@ export default function BusinessDetail() {
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                   {review.rating && (
                                     <span className="flex items-center gap-1">
-                                      <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <svg
+                                        className="h-4 w-4 text-yellow-400"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
                                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                       </svg>
                                       {review.rating}
                                     </span>
                                   )}
-                                  <span>{new Date(review.date).toLocaleDateString()}</span>
+                                  <span>
+                                    {new Date(review.date).toLocaleDateString()}
+                                  </span>
                                 </div>
                               </div>
                             </div>
                             {review.content && (
-                              <p className="text-gray-600 ml-13">{review.content}</p>
+                              <p className="text-gray-600 ml-13">
+                                {review.content}
+                              </p>
                             )}
                           </div>
                         ))}
@@ -407,25 +476,33 @@ export default function BusinessDetail() {
           <div className="space-y-6">
             {/* Hours */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Operating Hours</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Operating Hours
+              </h3>
               <div className="space-y-2">
                 {DAYS_ORDER.map((day) => {
                   const hours = business.hours[day];
                   const isOpen = hours?.open && hours?.close;
-                  const today = new Date().toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+                  const today = new Date()
+                    .toLocaleDateString("en-US", { weekday: "long" })
+                    .toLowerCase();
                   const isToday = day === today;
 
                   return (
                     <div
                       key={day}
                       className={`flex justify-between text-sm ${
-                        isToday ? "font-medium text-primary-red" : "text-gray-600"
+                        isToday
+                          ? "font-medium text-primary-red"
+                          : "text-gray-600"
                       }`}
                     >
                       <span className="capitalize">{day}</span>
                       <span>
                         {isOpen
-                          ? `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+                          ? `${formatTime(hours.open)} - ${formatTime(
+                              hours.close
+                            )}`
                           : "Closed"}
                       </span>
                     </div>
@@ -436,8 +513,12 @@ export default function BusinessDetail() {
 
             {/* Location */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Location</h3>
-              <p className="text-gray-600 text-sm">{business.location.address}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Location
+              </h3>
+              <p className="text-gray-600 text-sm">
+                {business.location.address}
+              </p>
               {business.location.lat && business.location.lng && (
                 <a
                   href={`https://www.google.com/maps?q=${business.location.lat},${business.location.lng}`}
@@ -445,8 +526,18 @@ export default function BusinessDetail() {
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex items-center text-primary-red hover:text-primary-red-dark text-sm font-medium"
                 >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
                   </svg>
                   Open in Google Maps
                 </a>
@@ -456,7 +547,9 @@ export default function BusinessDetail() {
             {/* Owner Info */}
             {business.owner && (
               <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Owner</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Owner
+                </h3>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-primary-red/10 rounded-full flex items-center justify-center">
                     <span className="text-primary-red font-semibold">
@@ -464,8 +557,12 @@ export default function BusinessDetail() {
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{business.owner.name}</p>
-                    <p className="text-sm text-gray-500">{business.owner.email}</p>
+                    <p className="font-medium text-gray-900">
+                      {business.owner.name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {business.owner.email}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -485,8 +582,18 @@ export default function BusinessDetail() {
             className="absolute top-4 right-4 text-white hover:text-gray-300"
             onClick={() => setLightboxImage(null)}
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <img

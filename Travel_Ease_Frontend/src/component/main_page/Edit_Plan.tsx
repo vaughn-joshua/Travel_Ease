@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { edit_plan } from "../../utils/travel_plan/edit_plan";
+import { useUpdatePlan } from "../../features/travelPlans/mutations";
 import type { TravelPlan, UpdatePlanPayload, PlanStatus } from "../../types/travelPlan";
 
 interface EditPlanProps {
@@ -43,7 +43,9 @@ export default function Edit_Plan({
 }: EditPlanProps): React.ReactElement {
   const plan = data[0];
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Use TanStack Query mutation for updating plans
+  const updatePlanMutation = useUpdatePlan();
 
   const {
     register,
@@ -69,34 +71,30 @@ export default function Edit_Plan({
 
   const on_submit = async (formData: FormData): Promise<void> => {
     setSubmitError(null);
-    setIsSubmitting(true);
 
-    try {
-      const payload: UpdatePlanPayload = {
-        title: formData.title,
-        description: formData.description,
-        location: formData.location,
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
-        slots: formData.max_slots ? parseInt(formData.max_slots, 10) : undefined,
-        is_public: formData.visibility,
-        status: formData.status,
-      };
+    const payload: UpdatePlanPayload = {
+      title: formData.title,
+      description: formData.description,
+      location: formData.location,
+      start_date: formData.start_date || undefined,
+      end_date: formData.end_date || undefined,
+      slots: formData.max_slots ? parseInt(formData.max_slots, 10) : undefined,
+      is_public: formData.visibility,
+      status: formData.status,
+    };
 
-      const result = await edit_plan(travel_plan, payload);
-      
-      if (result && typeof result === 'object' && 'error' in result) {
-        setSubmitError((result as { error: string }).error);
-        return;
+    updatePlanMutation.mutate(
+      { id: travel_plan, data: payload },
+      {
+        onSuccess: () => {
+          on_close();
+        },
+        onError: (error) => {
+          console.error("Error updating plan:", error);
+          setSubmitError(error instanceof Error ? error.message : "Failed to update plan");
+        },
       }
-
-      on_close();
-    } catch (e) {
-      console.error("Error updating plan:", e);
-      setSubmitError(e instanceof Error ? e.message : "Failed to update plan");
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   return (
@@ -229,17 +227,17 @@ export default function Edit_Plan({
             <button
               type="button"
               onClick={on_close}
-              disabled={isSubmitting}
+              disabled={updatePlanMutation.isPending}
               className="soft_btn"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={updatePlanMutation.isPending}
               className="hard_btn"
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {updatePlanMutation.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

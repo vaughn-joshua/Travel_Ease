@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
+import { useState, useEffect, useMemo } from "react";
 import Edit_Activity from "./Edit_Activity";
-import { delete_activity } from "../../utils/travel_plan/delete_activity";
+import { useDeleteActivity } from "../../features/travelPlans/mutations";
+import { useTravelPlanActivities } from "../../features/travelPlans/queries";
 import type { Activity, TravelPlanDates } from "../../types/travelPlan";
 
 interface ActivitiesProps {
@@ -29,47 +29,61 @@ export default function Activities({
   status,
   onSendData,
 }: ActivitiesProps): React.ReactElement {
-  const [plans, setPlans] = useState<Activity[] | undefined>();
   const [clicked, setClicked] = useState<boolean>(false);
   const [data, setData] = useState<Activity | undefined>();
-  const [refresh, setRefresh] = useState<boolean>(false);
   const [confirmDelete, setConfirmDelete] = useState<string>("");
   const [toDelete, setToDelete] = useState<number | string>("");
+  
+  // Use TanStack Query for fetching activities
+  const {
+    data: allActivities = [],
+    isLoading,
+    refetch,
+  } = useTravelPlanActivities(reference_id);
 
+  // Use TanStack Query mutation for deleting activities
+  const deleteActivityMutation = useDeleteActivity();
+
+  // Filter activities by selected day (memoized for performance)
+  const plans = useMemo(() => {
+    if (!allActivities.length) return [];
+
+    const starting_date = new Date(dates.start);
+    let current_day: Date;
+
+    if (day_selected === 1) {
+      current_day = starting_date;
+    } else {
+      const selected_day_ms = 1000 * 60 * 60 * 24 * (day_selected - 1);
+      current_day = new Date(starting_date.getTime() + selected_day_ms);
+    }
+
+    return allActivities.filter((item) => {
+      if (!item.target_date) return false;
+      const activity_date = new Date(item.target_date);
+      return activity_date.toDateString() === current_day.toDateString();
+    });
+  }, [allActivities, dates.start, day_selected]);
+
+  // Refetch when load_state changes (parent triggers refresh)
   useEffect(() => {
-    const load_plans = async (): Promise<void> => {
-      const activityData = await fetch_activities(reference_id);
-
-      const starting_date = new Date(dates.start);
-      let current_day: Date;
-
-      if (day_selected === 1) {
-        current_day = starting_date;
-      } else {
-        const selected_day_ms = 1000 * 60 * 60 * 24 * (day_selected - 1);
-        current_day = new Date(starting_date.getTime() + selected_day_ms);
-      }
-
-      const filtered_data = activityData.filter((item) => {
-        if (!item.target_date) return false;
-        const activity_date = new Date(item.target_date);
-        return activity_date.toDateString() === current_day.toDateString();
-      });
-
-      setPlans(filtered_data);
-    };
-
-    load_plans();
-  }, [load_state, refresh, reference_id, dates.start, day_selected]);
+    refetch();
+  }, [load_state, refetch]);
 
   useEffect(() => {
     if (confirmDelete === "confirmed" && toDelete) {
-      delete_activity(toDelete);
+      deleteActivityMutation.mutate(
+        { activityId: toDelete, planId: reference_id },
+        {
+          onSuccess: () => {
+            refetch();
+          },
+        }
+      );
       setConfirmDelete("");
       setToDelete("");
-      setRefresh((prev) => !prev);
     }
-  }, [confirmDelete, toDelete]);
+  }, [confirmDelete, toDelete, reference_id, deleteActivityMutation, refetch]);
 
   const handle_click = (activityData: Activity): void => {
     setClicked(true);
@@ -78,7 +92,7 @@ export default function Activities({
 
   const handle_close = (): void => {
     setClicked(false);
-    setRefresh((prev) => !prev);
+    refetch();
   };
 
   const handle_delete = (plan: Activity): void => {
@@ -95,9 +109,9 @@ export default function Activities({
   return (
     <>
       <div className="mt-3">
-        {!plans && <p>loading...</p>}
+        {isLoading && <p>loading...</p>}
 
-        {plans &&
+        {!isLoading && plans.length > 0 &&
           plans.map((plan) => (
             <div
               key={plan.activity_id}
@@ -156,7 +170,7 @@ export default function Activities({
       </div>
 
       {clicked && data && (
-        <Edit_Activity on_close={handle_close} data={data} dates={dates} />
+        <Edit_Activity on_close={handle_close} data={data} dates={dates} planId={reference_id} />
       )}
 
       {confirmDelete === "verify" && (

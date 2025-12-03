@@ -1,54 +1,28 @@
-import { useState, useEffect, useRef } from "react";
-import { fetch_businesses } from "../../utils/travel_plan/fetch_businesses";
+import { useState } from "react";
 import Business_box from "../../components/Travel_Spots/Business_box";
 import Search_Box from "../../components/Travel_Spots/Search_Box";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import type { Business } from "../../types/business";
+import { useTravelSpots } from "../../features/businesses/queries";
 
 export default function Main_Travel_Spots(): React.ReactElement {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Debounce search input to avoid excessive API calls
   const debouncedSearch = useDebouncedValue(searchQuery, 350);
-  const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    // Abort any in-flight request when search changes or component unmounts
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+  // Use TanStack Query for fetching travel spots
+  const {
+    data: travelSpotsData,
+    isLoading: loading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useTravelSpots({ search: debouncedSearch || undefined });
 
-    const loadData = async (): Promise<void> => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetch_businesses({
-          search: debouncedSearch || undefined,
-          signal: controller.signal,
-        });
-        setBusinesses(data);
-      } catch (e: any) {
-        // Ignore aborted requests
-        if (e.name === "CanceledError" || e.code === "ERR_CANCELED") {
-          return;
-        }
-        if (import.meta.env.DEV) {
-          console.error("Error loading businesses:", e);
-        }
-        setError("Failed to load travel spots. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-
-    return () => {
-      controller.abort();
-    };
-  }, [debouncedSearch]);
+  const businesses = travelSpotsData?.data || [];
+  const error = isError
+    ? queryError?.message || "Failed to load travel spots. Please try again."
+    : null;
 
   const handleSearch = (query: string): void => {
     setSearchQuery(query);
@@ -73,10 +47,7 @@ export default function Main_Travel_Spots(): React.ReactElement {
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => setSearchQuery(searchQuery)} // triggers refetch via effect
-              className="btn-primary"
-            >
+            <button onClick={() => refetch()} className="btn-primary">
               Retry
             </button>
           </div>
@@ -88,7 +59,7 @@ export default function Main_Travel_Spots(): React.ReactElement {
               </p>
             ) : (
               businesses.map((business) => (
-                <Business_box key={business.id} business={business} />
+                <Business_box key={business.business_id} business={business} />
               ))
             )}
           </div>
@@ -97,4 +68,3 @@ export default function Main_Travel_Spots(): React.ReactElement {
     </div>
   );
 }
-

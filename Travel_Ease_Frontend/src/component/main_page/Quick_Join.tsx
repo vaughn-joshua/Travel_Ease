@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
+import { useQuickJoinSearch } from "../../features/travelPlans/mutations";
 import type { TravelPlan, QuickJoinPayload } from "../../types/travelPlan";
-import { endpoints } from "../../config/api";
 
 interface QuickJoinProps {
   on_close: (results: TravelPlan[]) => void;
@@ -26,8 +26,10 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
   } = useForm<FormData>();
 
   const [dateRange, setDateRange] = useState<Date[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  
+  // Use TanStack Query mutation for quick join search
+  const quickJoinMutation = useQuickJoinSearch();
 
   const handle_change = (
     selectedDates: Date[],
@@ -65,41 +67,27 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
       return;
     }
 
-    setIsSearching(true);
     setSearchError(null);
 
-    try {
-      const payload: QuickJoinPayload = {
-        location: data.location,
-        start_date: data.start_date,
-        end_date: data.end_date,
-      };
+    const payload: QuickJoinPayload = {
+      location: data.location,
+      start_date: data.start_date,
+      end_date: data.end_date,
+    };
 
-      const response = await fetch(endpoints.travelPlan.quickJoin, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to find plans");
-      }
-
-      const results: TravelPlan[] = await response.json();
-      
-      if (results.length === 0) {
-        setSearchError("No matching plans found. Try different dates or location.");
-        return;
-      }
-      
-      on_close(results);
-    } catch (e) {
-      console.error("Quick join error:", e);
-      setSearchError(e instanceof Error ? e.message : "Failed to search for plans");
-    } finally {
-      setIsSearching(false);
-    }
+    quickJoinMutation.mutate(payload, {
+      onSuccess: (results) => {
+        if (results.length === 0) {
+          setSearchError("No matching plans found. Try different dates or location.");
+          return;
+        }
+        on_close(results);
+      },
+      onError: (error) => {
+        console.error("Quick join error:", error);
+        setSearchError(error instanceof Error ? error.message : "Failed to search for plans");
+      },
+    });
   };
 
   return (
@@ -157,17 +145,17 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
             <button
               type="button"
               onClick={() => on_close([])}
-              disabled={isSearching}
+              disabled={quickJoinMutation.isPending}
               className="soft_btn"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSearching}
+              disabled={quickJoinMutation.isPending}
               className="hard_btn"
             >
-              {isSearching ? "Searching..." : "Find Plans"}
+              {quickJoinMutation.isPending ? "Searching..." : "Find Plans"}
             </button>
           </div>
         </form>

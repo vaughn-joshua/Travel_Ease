@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTravelPlanDetail } from "../features/travelPlans/queries";
-import { fetch_businesses } from "../utils/travel_plan/fetch_businesses";
-import { edit_plan } from "../utils/travel_plan/edit_plan";
+import { useUpdatePlan } from "../features/travelPlans/mutations";
+import { useTravelSpots } from "../features/businesses/queries";
 import Activities from "../component/main_page/Activities";
 import Edit_Plan from "../component/main_page/Edit_Plan";
 import Create_Activity from "../component/main_page/Create_Activity";
@@ -11,7 +11,6 @@ import Collaborators from "../component/main_page/Collaborators";
 import React from "react";
 import Landing_Page from "./Landing_Page";
 import type { TravelPlanDates } from "../types/travelPlan";
-import type { Business } from "../types/business";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
 
@@ -72,10 +71,13 @@ export default function Planner(): React.ReactElement {
   } = useTravelPlanDetail(tokenReady && tokenChecked ? id : undefined);
 
   const [days, setDays] = useState<number>(0);
-  const [businesses, setBusinesses] = useState<Business[] | undefined>();
   const [loadActivity, setLoadActivity] = useState<boolean>(false);
   const [daySelected, setDaySelected] = useState<number>(1);
   const [activeModal, setActiveModal] = useState<ModalType>("");
+
+  // Use TanStack Query for businesses (travel spots)
+  const { data: travelSpotsData } = useTravelSpots();
+  const businesses = travelSpotsData?.data;
 
   const [dates, setDates] = useState<TravelPlanDates>({
     start: "",
@@ -98,19 +100,6 @@ export default function Planner(): React.ReactElement {
     setClickActivity({ start: null, end: [lat, long] });
   };
 
-  // Load businesses separately (they don't need auth)
-  useEffect(() => {
-    const loadBusinesses = async (): Promise<void> => {
-      try {
-        const business_data = await fetch_businesses();
-        setBusinesses(business_data);
-      } catch (e) {
-        console.error("Error loading businesses:", e);
-      }
-    };
-
-    loadBusinesses();
-  }, []);
 
   // Refetch plan when modal closes (for edit updates)
   useEffect(() => {
@@ -152,24 +141,26 @@ export default function Planner(): React.ReactElement {
     setDaySelected(i);
   };
 
-  const [isStarting, setIsStarting] = useState<boolean>(false);
+  // Use TanStack Query mutation for updating plan status
+  const updatePlanMutation = useUpdatePlan();
 
-  const handle_start = async (): Promise<void> => {
+  const handle_start = (): void => {
     if (!id) return;
     
-    setIsStarting(true);
-    try {
-      // Update the plan status from Draft to Active
-      await edit_plan(id, { status: "Active" });
-      
-      // Navigate to view mode after successfully starting the plan
-      navigate(`/planner/view/${id}`);
-    } catch (error) {
-      console.error("Error starting plan:", error);
-      alert("Failed to start the plan. Please try again.");
-    } finally {
-      setIsStarting(false);
-    }
+    // Update the plan status from Draft to Active
+    updatePlanMutation.mutate(
+      { id, data: { status: "Active" } },
+      {
+        onSuccess: () => {
+          // Navigate to view mode after successfully starting the plan
+          navigate(`/planner/view/${id}`);
+        },
+        onError: (error) => {
+          console.error("Error starting plan:", error);
+          alert("Failed to start the plan. Please try again.");
+        },
+      }
+    );
   };
 
   // Show loading state - wait for auth to complete and token to be checked
@@ -300,16 +291,16 @@ export default function Planner(): React.ReactElement {
                 <button
                   onClick={() => setActiveModal("plan")}
                   className="soft_btn"
-                  disabled={isStarting}
+                  disabled={updatePlanMutation.isPending}
                 >
                   edit
                 </button>
                 <button 
                   className="hard_btn" 
                   onClick={handle_start}
-                  disabled={isStarting}
+                  disabled={updatePlanMutation.isPending}
                 >
-                  {isStarting ? "Starting..." : "start now"}
+                  {updatePlanMutation.isPending ? "Starting..." : "start now"}
                 </button>
               </>
             )}

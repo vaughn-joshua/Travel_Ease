@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { useForm, FieldErrors } from "react-hook-form";
-import { create_plan } from "../../utils/travel_plan/create_plan";
+import { useCreatePlan } from "../../features/travelPlans/mutations";
 import type { CreatePlanPayload } from "../../types/travelPlan";
 import React from "react";
 
@@ -38,7 +38,9 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
 
   const [counter, setCounter] = useState<number>(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  
+  // Use TanStack Query mutation for creating plans
+  const createPlanMutation = useCreatePlan();
 
   // Watch values for validation and display
   const startDate = watch("start_date");
@@ -76,37 +78,35 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
   // Final submission
   const on_submit = async (d: FormData): Promise<void> => {
     setSubmitError(null);
-    setIsSubmitting(true);
 
-    try {
-      // Check if user is logged in
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setSubmitError("Please log in to create a travel plan.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const payload: CreatePlanPayload = {
-        title: d.title,
-        description: d.description,
-        location: d.location,
-        start_date: d.start_date,
-        end_date: d.end_date,
-        slots: d.slots ? parseInt(d.slots, 10) : undefined, // Backend accepts both slots and max_slots
-      };
-      
-      console.log("Creating plan with payload:", payload);
-      await create_plan(payload);
-      setCounter(0);
-      on_close();
-      window.location.reload();
-    } catch (e) {
-      console.error("Error creating plan:", e);
-      setSubmitError(e instanceof Error ? e.message : "Failed to create plan. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    // Check if user is logged in
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSubmitError("Please log in to create a travel plan.");
+      return;
     }
+
+    const payload: CreatePlanPayload = {
+      title: d.title,
+      description: d.description,
+      location: d.location,
+      start_date: d.start_date,
+      end_date: d.end_date,
+      slots: d.slots ? parseInt(d.slots, 10) : undefined, // Backend accepts both slots and max_slots
+    };
+    
+    console.log("Creating plan with payload:", payload);
+    
+    createPlanMutation.mutate(payload, {
+      onSuccess: () => {
+        setCounter(0);
+        on_close();
+      },
+      onError: (error) => {
+        console.error("Error creating plan:", error);
+        setSubmitError(error instanceof Error ? error.message : "Failed to create plan. Please try again.");
+      },
+    });
   };
 
   const typedErrors = errors as FieldErrors<FormData>;
@@ -362,7 +362,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
               <button
                 type="button"
                 onClick={on_close}
-                disabled={isSubmitting}
+                disabled={createPlanMutation.isPending}
                 className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
               >
                 Cancel
@@ -372,7 +372,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                 <button
                   type="button"
                   onClick={handle_back}
-                  disabled={isSubmitting}
+                  disabled={createPlanMutation.isPending}
                   className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
                 >
                   Back
@@ -383,7 +383,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                 <button
                   type="button"
                   onClick={handleNext}
-                  disabled={isSubmitting}
+                  disabled={createPlanMutation.isPending}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -391,10 +391,10 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
               ) : (
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={createPlanMutation.isPending}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
+                  {createPlanMutation.isPending ? (
                     <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />

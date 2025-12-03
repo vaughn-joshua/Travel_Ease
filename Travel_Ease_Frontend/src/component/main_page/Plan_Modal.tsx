@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { useRequestJoin } from "../../features/travelPlans/mutations";
 import type { TravelPlan } from "../../types/travelPlan";
-import { endpoints } from "../../config/api";
 
 interface PlanModalProps {
   results: TravelPlan[];
@@ -19,6 +19,9 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
   const [joiningPlanId, setJoiningPlanId] = useState<number | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState<number | null>(null);
+  
+  // Use TanStack Query mutation for requesting to join
+  const requestJoinMutation = useRequestJoin();
 
   const handle_join = async (planId: number): Promise<void> => {
     const token = localStorage.getItem("token");
@@ -31,29 +34,20 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
     setJoiningPlanId(planId);
     setJoinError(null);
 
-    try {
-      const response = await fetch(endpoints.travelPlan.requestJoin, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+    requestJoinMutation.mutate(
+      { travel_plan_id: planId },
+      {
+        onSuccess: () => {
+          setJoinSuccess(planId);
+          setJoiningPlanId(null);
         },
-        body: JSON.stringify({ travel_plan_id: planId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send join request");
+        onError: (error) => {
+          console.error("Join error:", error);
+          setJoinError(error instanceof Error ? error.message : "Failed to send join request");
+          setJoiningPlanId(null);
+        },
       }
-
-      setJoinSuccess(planId);
-    } catch (e) {
-      console.error("Join error:", e);
-      setJoinError(e instanceof Error ? e.message : "Failed to send join request");
-    } finally {
-      setJoiningPlanId(null);
-    }
+    );
   };
 
   const getSlotInfo = (plan: TravelPlan): { text: string; color: string } => {

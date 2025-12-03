@@ -1,13 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm, FieldValues } from "react-hook-form";
-import { fetch_categories } from "../../utils/business/fetch_categories";
-import { create_range } from "../../utils/business/create_range";
+import { useBusinessCategoriesById } from "../../features/businesses/queries";
+import { useCreatePriceRange } from "../../features/businesses/mutations";
 import { upload_images } from "../../utils/business/upload_images";
-
-interface Category {
-  category_id: number;
-  category_name: string;
-}
 
 interface AddProductProps {
   on_close: () => void;
@@ -20,46 +15,78 @@ function Add_Product({ on_close, id }: AddProductProps) {
     handleSubmit,
     formState: { errors },
   } = useForm();
-  const [categroies, setCategories] = useState<Category[]>([]);
 
-  useEffect(() => {
-    const load_data = async () => {
-      try {
-        const get_categories = await fetch_categories(String(id));
-        console.log(get_categories);
-        setCategories(get_categories || []);
-      } catch (error) {
-        console.log(error);
-      }
-    };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    load_data();
-  }, [id]);
+  // Fetch categories for this business using TanStack Query
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useBusinessCategoriesById(id);
+
+  // Mutation for creating price ranges
+  const createPriceRangeMutation = useCreatePriceRange();
 
   const handle_close = () => {
     on_close();
   };
 
   const on_submit = async (data: FieldValues) => {
-    const form_data = new FormData();
-    const menuFiles = data.menu as FileList;
+    setIsSubmitting(true);
+    try {
+      const form_data = new FormData();
+      const menuFiles = data.menu as FileList;
 
-    for (let i = 0; i < menuFiles.length; i++) {
-      form_data.append("images", menuFiles[i]);
-      form_data.append("names", `${id}_${i}`);
-      form_data.append("folders", `Travel_Ease/Business/Menu`);
+      for (let i = 0; i < menuFiles.length; i++) {
+        form_data.append("images", menuFiles[i]);
+        form_data.append("names", `${id}_${i}`);
+        form_data.append("folders", `Travel_Ease/Business/Menu`);
+      }
+
+      const upload = await upload_images(form_data);
+
+      const payload = {
+        ...data,
+        pictures: upload,
+        id: id,
+        business_id: id,
+      };
+
+      console.log({ payload });
+
+      // Use mutation to create price ranges
+      await createPriceRangeMutation.mutateAsync(payload);
+      on_close();
+    } catch (error) {
+      console.error("Failed to submit:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const upload = await upload_images(form_data);
-
-    data.pictures = upload;
-    data.id = id;
-
-    console.log({ data });
-
-    await create_range(data);
-    on_close();
   };
+
+  if (categoriesLoading) {
+    return (
+      <div className="modal">
+        <div className="modal_body w-[60vw]">
+          <p>Loading categories...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (categoriesError) {
+    return (
+      <div className="modal">
+        <div className="modal_body w-[60vw]">
+          <p className="text-red-500">Failed to load categories: {categoriesError.message}</p>
+          <button className="soft_btn" onClick={handle_close}>
+            close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal">
@@ -85,7 +112,7 @@ function Add_Product({ on_close, id }: AddProductProps) {
           </label>
           {errors.menu && <p>{errors.menu.message as string}</p>}
 
-          {categroies.map((category, index) => (
+          {categories.map((category, index) => (
             <div key={index}>
               <label className="label">
                 {category.category_name} Price Range:
@@ -122,7 +149,12 @@ function Add_Product({ on_close, id }: AddProductProps) {
             </div>
           ))}
 
-          <input type="submit" value="Submit" className="hard_btn mt-3" />
+          <input
+            type="submit"
+            value={isSubmitting || createPriceRangeMutation.isPending ? "Submitting..." : "Submit"}
+            className="hard_btn mt-3"
+            disabled={isSubmitting || createPriceRangeMutation.isPending}
+          />
         </form>
       </div>
     </div>

@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useBlogDetail } from "../features/blogs/queries";
-import { blogApi } from "../services/api";
+import { useDeleteBlog } from "../features/blogs/mutations";
 
 export default function BlogDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Use TanStack Query hook for fetching blog detail
   const { data: blog, isLoading, isError } = useBlogDetail(slug);
+
+  // Use TanStack Query mutation for deleting
+  const deleteBlogMutation = useDeleteBlog();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -20,31 +22,28 @@ export default function BlogDetail() {
     });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!blog || !blog.id) {
       console.error("Blog or blog.id is missing:", blog);
       alert("Cannot delete: Blog information is missing.");
       return;
     }
 
-    setDeleting(true);
-
-    try {
-      console.log("Deleting blog with ID:", blog.id);
-      await blogApi.deleteBlog(blog.id);
-      console.log("Blog deleted successfully");
-      navigate("/blogs");
-    } catch (err: any) {
-      console.error("Error deleting blog:", err);
-      const errorMessage =
-        err.response?.data?.error ||
-        err.message ||
-        "Failed to delete blog post. Please try again.";
-      alert(errorMessage);
-    } finally {
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-    }
+    deleteBlogMutation.mutate(blog.id, {
+      onSuccess: () => {
+        console.log("Blog deleted successfully");
+        navigate("/blogs");
+      },
+      onError: (err: any) => {
+        console.error("Error deleting blog:", err);
+        const errorMessage =
+          err.response?.data?.error ||
+          err.message ||
+          "Failed to delete blog post. Please try again.";
+        alert(errorMessage);
+        setShowDeleteConfirm(false);
+      },
+    });
   };
 
   if (isLoading) {
@@ -133,7 +132,7 @@ export default function BlogDetail() {
                   }
                   setShowDeleteConfirm(true);
                 }}
-                disabled={deleting}
+                disabled={deleteBlogMutation.isPending}
                 className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg
@@ -149,7 +148,7 @@ export default function BlogDetail() {
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   />
                 </svg>
-                {deleting ? "Deleting..." : "Delete"}
+                {deleteBlogMutation.isPending ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
@@ -167,15 +166,15 @@ export default function BlogDetail() {
                 <button
                   type="button"
                   onClick={handleDelete}
-                  disabled={deleting}
+                  disabled={deleteBlogMutation.isPending}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {deleting ? "Deleting..." : "Yes, Delete"}
+                  {deleteBlogMutation.isPending ? "Deleting..." : "Yes, Delete"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deleting}
+                  disabled={deleteBlogMutation.isPending}
                   className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
                 >
                   Cancel

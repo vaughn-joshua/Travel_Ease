@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
-import { edit_activity } from "../../utils/travel_plan/edit_activity";
+import { useUpdateActivity } from "../../features/travelPlans/mutations";
 import type { Activity, TravelPlanDates, BudgetRange, UpdateActivityPayload } from "../../types/travelPlan";
 import { BUDGET_RANGES } from "../../types/travelPlan";
 
@@ -10,6 +10,7 @@ interface EditActivityProps {
   on_close: () => void;
   data: Activity;
   dates: TravelPlanDates;
+  planId?: number | string;
 }
 
 interface FormData {
@@ -22,6 +23,7 @@ export default function Edit_Activity({
   on_close,
   data,
   dates,
+  planId,
 }: EditActivityProps): React.ReactElement {
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -33,6 +35,9 @@ export default function Edit_Activity({
   };
 
   const [value, setValue] = useState<Date>(new Date(data.target_date || new Date()));
+  
+  // Use TanStack Query mutation for updating activities
+  const updateActivityMutation = useUpdateActivity();
 
   const {
     register,
@@ -58,18 +63,27 @@ export default function Edit_Activity({
   };
 
   const on_submit = async (formData: FormData): Promise<void> => {
-    try {
-      const payload: UpdateActivityPayload = {
-        target_date: value.toISOString(),
-        budget_range: formData.budget_range || undefined,
-        notes: formData.notes || undefined,
-      };
+    const payload: UpdateActivityPayload = {
+      target_date: value.toISOString(),
+      budget_range: formData.budget_range || undefined,
+      notes: formData.notes || undefined,
+    };
 
-      await edit_activity(data.activity_id, payload);
-      on_close();
-    } catch (e) {
-      console.error("Error updating activity:", e);
-    }
+    updateActivityMutation.mutate(
+      {
+        activityId: data.activity_id,
+        planId: planId || data.travel_plan_id,
+        data: payload,
+      },
+      {
+        onSuccess: () => {
+          on_close();
+        },
+        onError: (error) => {
+          console.error("Error updating activity:", error);
+        },
+      }
+    );
   };
 
   return (
@@ -135,11 +149,20 @@ export default function Edit_Activity({
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <button type="button" onClick={on_close} className="soft_btn">
+            <button 
+              type="button" 
+              onClick={on_close} 
+              disabled={updateActivityMutation.isPending}
+              className="soft_btn"
+            >
               Cancel
             </button>
-            <button type="submit" className="hard_btn">
-              Save Changes
+            <button 
+              type="submit" 
+              disabled={updateActivityMutation.isPending}
+              className="hard_btn"
+            >
+              {updateActivityMutation.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

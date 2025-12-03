@@ -288,6 +288,22 @@ export const businessApi = {
     return response.data;
   },
 
+  // Get categories for a specific business by ID
+  getCategoriesById: async (businessId: string | number): Promise<Array<{ category_id: number; category_name: string }>> => {
+    const response = await api.get(`/business/fetch_categories/${businessId}`);
+    return response.data;
+  },
+
+  // Create price range for business categories
+  createPriceRange: async (data: {
+    id?: number;
+    business_id?: string | number;
+    categories?: Array<{ category_id: number; min_price: number; max_price: number }>;
+  }): Promise<any> => {
+    const response = await api.post("/business/price_range", data);
+    return response.data;
+  },
+
   // Menu Items
   getMenuItems: async (businessId: string | number): Promise<{ items: MenuItem[]; total: number }> => {
     const response = await api.get(`/business/${businessId}/menu`);
@@ -306,6 +322,28 @@ export const businessApi = {
 
   deleteMenuItem: async (businessId: string | number, itemId: number): Promise<void> => {
     await api.delete(`/business/${businessId}/menu/${itemId}`);
+  },
+
+  // Delete business
+  deleteBusiness: async (id: string | number): Promise<void> => {
+    await api.delete(`/business/edit_business/${id}`);
+  },
+
+  // Get current user's businesses
+  getMyBusinesses: async (): Promise<{
+    data: Array<{
+      business_id: number;
+      name: string;
+      description: string;
+      city: string;
+      rating: number | null;
+      status: boolean;
+      picture: string | null;
+      categories?: { category_name: string }[];
+    }>;
+  }> => {
+    const response = await api.get("/business/my-businesses");
+    return response.data;
   },
 };
 
@@ -375,18 +413,6 @@ export const userApi = {
   // Login user
   login: async (data: LoginPayload): Promise<AuthResponse> => {
     const response = await api.post("/user/login", data);
-    return response.data;
-  },
-
-  // Get user profile
-  getProfile: async (id: string | number): Promise<AuthUser> => {
-    const response = await api.get(`/user/user/${id}`);
-    return response.data;
-  },
-
-  // Update user profile
-  updateProfile: async (id: string | number, data: Partial<AuthUser>): Promise<AuthUser> => {
-    const response = await api.put(`/user/user/${id}`, data);
     return response.data;
   },
 

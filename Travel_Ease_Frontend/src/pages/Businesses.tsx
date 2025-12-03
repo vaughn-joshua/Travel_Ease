@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { endpoints } from "../config/api.js";
 import BusinessCard, { Business } from "../component/business/BusinessCard";
 import BusinessFilterBar from "../component/business/BusinessFilterBar";
+import {
+  useBusinessList,
+  useBusinessCategories,
+} from "../features/businesses/queries";
 
 const PRICE_RANGES: Record<string, { min: number; max: number }> = {
   budget: { min: 0, max: 200 },
@@ -17,76 +20,47 @@ interface FilterState {
 }
 
 export default function Businesses() {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     category: null,
     priceRange: null,
     search: "",
   });
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
 
-  // Fetch categories on mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(`${endpoints.business.base}/categories`);
-        if (response.ok) {
-          const data = await response.json();
-          setCategories(data.categories || []);
+  // Use TanStack Query for categories
+  const { data: categoriesData } = useBusinessCategories();
+  const categories = categoriesData?.categories || [];
+
+  // Build query params for business list
+  const queryParams = {
+    page,
+    pageSize: 12,
+    category: filters.category || undefined,
+    search: filters.search || undefined,
+    ...(filters.priceRange && PRICE_RANGES[filters.priceRange]
+      ? {
+          minPrice: PRICE_RANGES[filters.priceRange].min,
+          maxPrice: PRICE_RANGES[filters.priceRange].max,
         }
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-      }
-    };
-    fetchCategories();
-  }, []);
+      : {}),
+  };
 
-  // Fetch businesses
-  const fetchBusinesses = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Use TanStack Query for business list
+  const {
+    data: businessData,
+    isLoading: loading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useBusinessList(queryParams);
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: "12",
-      });
-
-      if (filters.category) {
-        params.append("category", filters.category);
-      }
-      if (filters.priceRange && PRICE_RANGES[filters.priceRange]) {
-        const range = PRICE_RANGES[filters.priceRange];
-        params.append("minPrice", range.min.toString());
-        params.append("maxPrice", range.max.toString());
-      }
-      if (filters.search) {
-        params.append("search", filters.search);
-      }
-
-      const response = await fetch(`${endpoints.business.businesses}?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch businesses");
-
-      const data = await response.json();
-      setBusinesses(data.items || []);
-      setTotalPages(data.totalPages || 1);
-      setTotal(data.total || 0);
-    } catch (err) {
-      console.error("Error fetching businesses:", err);
-      setError("Failed to load businesses. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, page]);
-
-  useEffect(() => {
-    fetchBusinesses();
-  }, [fetchBusinesses]);
+  const businesses: Business[] = businessData?.items || [];
+  const totalPages = businessData?.totalPages || 1;
+  const total = businessData?.total || 0;
+  const error = isError
+    ? queryError?.message ||
+      "Failed to load businesses. Please try again later."
+    : null;
 
   // Reset page when filters change
   useEffect(() => {
@@ -102,7 +76,7 @@ export default function Businesses() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md text-center">
           <p className="mb-4 font-medium text-red-600">{error}</p>
-          <button onClick={fetchBusinesses} className="btn-primary">
+          <button onClick={() => refetch()} className="btn-primary">
             Try Again
           </button>
         </div>
@@ -169,19 +143,25 @@ export default function Businesses() {
               <dt className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
                 Businesses Listed
               </dt>
-              <dd className="text-2xl font-semibold text-white">{total}+ Spots</dd>
+              <dd className="text-2xl font-semibold text-white">
+                {total}+ Spots
+              </dd>
             </div>
             <div className="flex flex-col gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
                 Categories
               </dt>
-              <dd className="text-2xl font-semibold text-white">{categories.length} Types</dd>
+              <dd className="text-2xl font-semibold text-white">
+                {categories.length} Types
+              </dd>
             </div>
             <div className="flex flex-col gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-4">
               <dt className="text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
                 Location
               </dt>
-              <dd className="text-2xl font-semibold text-white">Tagaytay, PH</dd>
+              <dd className="text-2xl font-semibold text-white">
+                Tagaytay, PH
+              </dd>
             </div>
           </dl>
         </div>
@@ -207,7 +187,8 @@ export default function Businesses() {
                 "Loading..."
               ) : (
                 <>
-                  Showing <span className="font-semibold">{businesses.length}</span> of{" "}
+                  Showing{" "}
+                  <span className="font-semibold">{businesses.length}</span> of{" "}
                   <span className="font-semibold">{total}</span> businesses
                 </>
               )}
@@ -216,8 +197,18 @@ export default function Businesses() {
               to="/businesses/new"
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-primary-red border border-primary-red rounded-lg hover:bg-primary-red hover:text-white transition-colors"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
               </svg>
               Add Business
             </Link>
@@ -249,12 +240,16 @@ export default function Businesses() {
                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                 />
               </svg>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No businesses found</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No businesses found
+              </h3>
               <p className="text-gray-600 mb-6">
                 Try adjusting your filters or search terms.
               </p>
               <button
-                onClick={() => setFilters({ category: null, priceRange: null, search: "" })}
+                onClick={() =>
+                  setFilters({ category: null, priceRange: null, search: "" })
+                }
                 className="btn-secondary"
               >
                 Clear Filters

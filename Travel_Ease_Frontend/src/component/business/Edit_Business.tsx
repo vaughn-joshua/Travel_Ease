@@ -1,7 +1,7 @@
 import { useForm, FieldValues } from "react-hook-form";
 import Register_Map from "./Register_Map";
 import { useEffect, useState, ChangeEvent } from "react";
-import { business_edit } from "../../utils/business/business_edit";
+import { useUpdateBusiness } from "../../features/businesses/mutations";
 
 // Predefined category list selection
 const category = [
@@ -82,6 +82,9 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
 
   const selectedCategories = watch("category") || [];
 
+  // TanStack Query mutation for updating business
+  const updateBusinessMutation = useUpdateBusiness();
+
   // Multi-step form counter (0, 1, 2)
   const [counter, setCounter] = useState(0);
 
@@ -119,10 +122,12 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
         const result = await response.json();
 
         // Convert API results to map-friendly format
-        const cleanPins = result?.map((loc: { lat: string | number; lon: string | number }) => ({
-          lat: Number(loc.lat),
-          lon: Number(loc.lon),
-        }));
+        const cleanPins = result?.map(
+          (loc: { lat: string | number; lon: string | number }) => ({
+            lat: Number(loc.lat),
+            lon: Number(loc.lon),
+          })
+        );
 
         console.log({ cleanPins });
         setPins(cleanPins);
@@ -141,7 +146,7 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
       const street = getValues("street");
       const brgy = getValues("brgy");
 
-      const response = await fetch("http://localhost:3000/api/search", {
+      const response = await fetch("/api/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -152,10 +157,12 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
       const result = await response.json();
 
       // Convert API results to map-friendly format
-      const cleanPins = result.map((loc: { lat: string | number; lon: string | number }) => ({
-        lat: Number(loc.lat),
-        lon: Number(loc.lon),
-      }));
+      const cleanPins = result.map(
+        (loc: { lat: string | number; lon: string | number }) => ({
+          lat: Number(loc.lat),
+          lon: Number(loc.lon),
+        })
+      );
 
       console.log({ cleanPins });
       setPins(cleanPins);
@@ -182,15 +189,23 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
       data.secure_url = "upload";
 
       // Store pin coordinates
-      data.lat = pin[0].lat;
-      data.lng = pin[0].lon;
+      data.lat = pin[0]?.lat;
+      data.lng = pin[0]?.lon;
 
       console.log({ data });
 
-      // Submit business to backend
-      await business_edit(data as any, String(business.id));
-
-      on_close();
+      // Submit business to backend using TanStack Query mutation
+      updateBusinessMutation.mutate(
+        { id: String(business.id), data: data as any },
+        {
+          onSuccess: () => {
+            on_close();
+          },
+          onError: (error) => {
+            console.error("Failed to update business:", error);
+          },
+        }
+      );
     } else {
       // Move to next step
       setCounter((prev) => prev + 1);
@@ -323,7 +338,9 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
                       ))}
                     </div>
                   </label>
-                  {errors.category && <p>{errors.category.message as string}</p>}
+                  {errors.category && (
+                    <p>{errors.category.message as string}</p>
+                  )}
 
                   <label className="label">
                     Description:
@@ -335,7 +352,9 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
                       defaultValue={business.description}
                     />
                   </label>
-                  {errors.description && <p>{errors.description.message as string}</p>}
+                  {errors.description && (
+                    <p>{errors.description.message as string}</p>
+                  )}
                 </>
               )}
 
@@ -352,7 +371,9 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
                       defaultValue={business.house_number}
                     />
                   </label>
-                  {errors.house_no && <p>{errors.house_no.message as string}</p>}
+                  {errors.house_no && (
+                    <p>{errors.house_no.message as string}</p>
+                  )}
 
                   <label className="label">
                     Street:
@@ -436,70 +457,89 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
 
               {counter === 3 && (
                 <>
-                  {(selectedCategories as string[]).map((cat: string, index: number) => {
-                    // Find matching existing category
-                    const existing = business.categories.find(
-                      (c) => c.category_name === cat
-                    );
+                  {(selectedCategories as string[]).map(
+                    (cat: string, index: number) => {
+                      // Find matching existing category
+                      const existing = business.categories.find(
+                        (c) => c.category_name === cat
+                      );
 
-                    return (
-                      <div key={index}>
-                        <label className="label">
-                          {cat} Price Range:
-                          <div className="flex gap-3">
-                            <input
-                              {...register(`categories.${index}.min_price`, {
-                                min: 1,
-                              })}
-                              className="text_box"
-                              type="number"
-                              defaultValue={
-                                business.categories[index]?.price_range?.min_price
-                              }
-                            />
-                            <input
-                              {...register(`categories.${index}.max_price`, {
-                                min: 1,
-                              })}
-                              className="text_box"
-                              type="number"
-                              defaultValue={
-                                business.categories[index]?.price_range?.max_price
-                              }
-                            />
-                            <input
-                              type="hidden"
-                              {...register(`categories.${index}.category_name`)}
-                              value={cat}
-                            />
+                      return (
+                        <div key={index}>
+                          <label className="label">
+                            {cat} Price Range:
+                            <div className="flex gap-3">
+                              <input
+                                {...register(`categories.${index}.min_price`, {
+                                  min: 1,
+                                })}
+                                className="text_box"
+                                type="number"
+                                defaultValue={
+                                  business.categories[index]?.price_range
+                                    ?.min_price
+                                }
+                              />
+                              <input
+                                {...register(`categories.${index}.max_price`, {
+                                  min: 1,
+                                })}
+                                className="text_box"
+                                type="number"
+                                defaultValue={
+                                  business.categories[index]?.price_range
+                                    ?.max_price
+                                }
+                              />
+                              <input
+                                type="hidden"
+                                {...register(
+                                  `categories.${index}.category_name`
+                                )}
+                                value={cat}
+                              />
 
-                            {/* existing category? give its id, else null */}
-                            <input
-                              type="hidden"
-                              {...register(`categories.${index}.category_id`)}
-                              value={existing?.category_id || ""}
-                            />
-                          </div>
-                        </label>
-                        {errors.category && <p>{(errors.category as any).message}</p>}
-                      </div>
-                    );
-                  })}
+                              {/* existing category? give its id, else null */}
+                              <input
+                                type="hidden"
+                                {...register(`categories.${index}.category_id`)}
+                                value={existing?.category_id || ""}
+                              />
+                            </div>
+                          </label>
+                          {errors.category && (
+                            <p>{(errors.category as any).message}</p>
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
                 </>
               )}
 
               {/* Navigation Buttons */}
               <div className="w-full flex justify-between mt-auto">
                 {counter > 0 && (
-                  <button className="soft_btn" type="button" onClick={handle_back}>
+                  <button
+                    className="soft_btn"
+                    type="button"
+                    onClick={handle_back}
+                  >
                     back
                   </button>
                 )}
 
                 <input
                   type="submit"
-                  value={counter == 3 ? "submit" : "next"}
+                  value={
+                    counter == 3
+                      ? updateBusinessMutation.isPending
+                        ? "Saving..."
+                        : "submit"
+                      : "next"
+                  }
                   className="hard_btn"
+                  disabled={updateBusinessMutation.isPending}
                 />
               </div>
             </form>

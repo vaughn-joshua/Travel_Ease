@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { authApi } from "../services/auth";
+import { useDeleteAccount } from "../features/user/mutations";
 
 interface FormData {
   first_name: string;
@@ -24,7 +24,9 @@ export default function Profile() {
   const [submitError, setSubmitError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+
+  // TanStack Query mutation for account deletion
+  const deleteAccountMutation = useDeleteAccount();
 
   // Pre-fill form with user data
   useEffect(() => {
@@ -94,19 +96,18 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    setDeleting(true);
-    try {
-      await authApi.deleteAccount();
-      await signOut();
-      navigate("/", { replace: true });
-    } catch (err: unknown) {
-      console.error("Delete account error:", err);
-      setSubmitError("Failed to delete account. Please try again.");
-      setShowDeleteConfirm(false);
-    } finally {
-      setDeleting(false);
-    }
+  const handleDeleteAccount = () => {
+    deleteAccountMutation.mutate(undefined, {
+      onSuccess: async () => {
+        await signOut();
+        navigate("/", { replace: true });
+      },
+      onError: (err: unknown) => {
+        console.error("Delete account error:", err);
+        setSubmitError("Failed to delete account. Please try again.");
+        setShowDeleteConfirm(false);
+      },
+    });
   };
 
   const handleCancel = () => {
@@ -383,17 +384,17 @@ export default function Profile() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deleting}
+                  disabled={deleteAccountMutation.isPending}
                   className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteAccount}
-                  disabled={deleting}
+                  disabled={deleteAccountMutation.isPending}
                   className="flex-1 py-2 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
-                  {deleting ? "Deleting..." : "Delete Account"}
+                  {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
                 </button>
               </div>
             </div>

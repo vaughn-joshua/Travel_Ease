@@ -1,9 +1,9 @@
-import { create_activity } from "../../utils/travel_plan/create_activity";
 import { useForm } from "react-hook-form";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
 import Search_Box from "../map_components/Search_Box";
+import { useCreateActivity } from "../../features/travelPlans/mutations";
 import type { TravelPlanDates, BudgetRange, CreateActivityPayload } from "../../types/travelPlan";
 import { BUDGET_RANGES } from "../../types/travelPlan";
 import type { Business } from "../../types/business";
@@ -38,6 +38,9 @@ export default function Create_Activity({
 
   const [value, setValue] = useState<Date | string>(dates.start);
   const [search_result, set_search_result] = useState<SearchResult | null>(null);
+  
+  // Use TanStack Query mutation for creating activities
+  const createActivityMutation = useCreateActivity();
 
   const {
     register,
@@ -58,32 +61,34 @@ export default function Create_Activity({
   };
 
   const on_submit = async (data: FormData): Promise<void> => {
-    try {
-      if (!search_result) {
-        alert("Please select a location");
-        return;
-      }
-
-      const payload: CreateActivityPayload = {
-        travel_plan_id: typeof id === "string" ? parseInt(id) : id,
-        lat: search_result.lat,
-        lng: search_result.lng,
-        location: search_result.name,
-        name: search_result.name,
-        brgy: search_result.address?.barangay || "",
-        province: search_result.address?.province || "",
-        city: search_result.address?.city || "",
-        target_date: typeof value === "string" ? value : value.toISOString(),
-        budget_range: data.budget_range || undefined,
-        notes: data.notes || undefined,
-      };
-
-      await create_activity(payload);
-      reset();
-      on_close();
-    } catch (e) {
-      console.error(e);
+    if (!search_result) {
+      alert("Please select a location");
+      return;
     }
+
+    const payload: CreateActivityPayload = {
+      travel_plan_id: typeof id === "string" ? parseInt(id) : id,
+      lat: search_result.lat,
+      lng: search_result.lng,
+      location: search_result.name,
+      name: search_result.name,
+      brgy: search_result.address?.barangay || "",
+      province: search_result.address?.province || "",
+      city: search_result.address?.city || "",
+      target_date: typeof value === "string" ? value : value.toISOString(),
+      budget_range: data.budget_range || undefined,
+      notes: data.notes || undefined,
+    };
+
+    createActivityMutation.mutate(payload, {
+      onSuccess: () => {
+        reset();
+        on_close();
+      },
+      onError: (error) => {
+        console.error("Error creating activity:", error);
+      },
+    });
   };
 
   const handleSearch = (result: SearchResult): void => {
@@ -166,11 +171,20 @@ export default function Create_Activity({
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <button type="button" onClick={on_close} className="soft_btn">
+            <button 
+              type="button" 
+              onClick={on_close} 
+              disabled={createActivityMutation.isPending}
+              className="soft_btn"
+            >
               Exit
             </button>
-            <button type="submit" className="hard_btn">
-              Submit
+            <button 
+              type="submit" 
+              disabled={createActivityMutation.isPending}
+              className="hard_btn"
+            >
+              {createActivityMutation.isPending ? "Creating..." : "Submit"}
             </button>
           </div>
         </form>

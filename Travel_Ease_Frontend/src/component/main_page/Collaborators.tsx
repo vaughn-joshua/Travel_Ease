@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useTravelPlanParticipants } from "../../features/travelPlans/queries";
 import {
-  fetch_participants,
-  remove_participant,
-  update_participant_role,
-  approve_participant,
-  type Participant,
-} from "../../utils/travel_plan/fetch_participants";
+  useRemoveParticipant,
+  useUpdateParticipantRole,
+  useApproveParticipant,
+} from "../../features/travelPlans/mutations";
+import type { Participant } from "../../utils/travel_plan/fetch_participants";
 
 interface CollaboratorsProps {
   planId: string;
@@ -18,72 +18,78 @@ export default function Collaborators({
   isOwner,
   on_close,
 }: CollaboratorsProps): React.ReactElement {
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadParticipants();
-  }, [planId]);
+  // Use TanStack Query for fetching participants
+  const {
+    data: participants = [],
+    isLoading: loading,
+    isError,
+    error: queryError,
+    refetch,
+  } = useTravelPlanParticipants(planId);
 
-  const loadParticipants = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetch_participants(planId);
-      setParticipants(data);
-    } catch (e) {
-      setError("Failed to load collaborators");
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const error = isError ? (queryError?.message || "Failed to load collaborators") : null;
+
+  // Use TanStack Query mutations for participant management
+  const removeParticipantMutation = useRemoveParticipant();
+  const updateRoleMutation = useUpdateParticipantRole();
+  const approveParticipantMutation = useApproveParticipant();
 
   const handleRemove = async (userId: number): Promise<void> => {
     if (!confirm("Are you sure you want to remove this collaborator?")) return;
 
-    try {
-      setActionLoading(userId);
-      await remove_participant(planId, userId);
-      setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to remove collaborator");
-    } finally {
-      setActionLoading(null);
-    }
+    setActionLoading(userId);
+    removeParticipantMutation.mutate(
+      { planId, userId },
+      {
+        onSuccess: () => {
+          refetch();
+          setActionLoading(null);
+        },
+        onError: (err) => {
+          alert(err instanceof Error ? err.message : "Failed to remove collaborator");
+          setActionLoading(null);
+        },
+      }
+    );
   };
 
   const handleRoleChange = async (
     userId: number,
     newRole: "Admin" | "Editor" | "Viewer"
   ): Promise<void> => {
-    try {
-      setActionLoading(userId);
-      await update_participant_role(planId, userId, newRole);
-      setParticipants((prev) =>
-        prev.map((p) => (p.user_id === userId ? { ...p, role: newRole } : p))
-      );
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to update role");
-    } finally {
-      setActionLoading(null);
-    }
+    setActionLoading(userId);
+    updateRoleMutation.mutate(
+      { planId, userId, role: newRole },
+      {
+        onSuccess: () => {
+          refetch();
+          setActionLoading(null);
+        },
+        onError: (err) => {
+          alert(err instanceof Error ? err.message : "Failed to update role");
+          setActionLoading(null);
+        },
+      }
+    );
   };
 
   const handleApprove = async (userId: number): Promise<void> => {
-    try {
-      setActionLoading(userId);
-      await approve_participant(planId, userId);
-      setParticipants((prev) =>
-        prev.map((p) => (p.user_id === userId ? { ...p, status: true } : p))
-      );
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to approve participant");
-    } finally {
-      setActionLoading(null);
-    }
+    setActionLoading(userId);
+    approveParticipantMutation.mutate(
+      { planId, userId },
+      {
+        onSuccess: () => {
+          refetch();
+          setActionLoading(null);
+        },
+        onError: (err) => {
+          alert(err instanceof Error ? err.message : "Failed to approve participant");
+          setActionLoading(null);
+        },
+      }
+    );
   };
 
   const getRoleBadgeColor = (role: string): string => {
@@ -150,7 +156,7 @@ export default function Collaborators({
         ) : error ? (
           <div className="text-center py-8">
             <p className="text-red-500">{error}</p>
-            <button onClick={loadParticipants} className="soft_btn mt-2">
+            <button onClick={() => refetch()} className="soft_btn mt-2">
               Retry
             </button>
           </div>

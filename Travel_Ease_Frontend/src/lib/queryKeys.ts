@@ -93,3 +93,13 @@ export const userKeys = {
   favorites: () => [...userKeys.all, "favorites"] as const,
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Map / Geocoding keys (for external Nominatim API caching)
+// ─────────────────────────────────────────────────────────────────────────────
+export const mapKeys = {
+  all: ["map"] as const,
+  search: (query: string) => [...mapKeys.all, "search", query] as const,
+  geocode: (address: string) => [...mapKeys.all, "geocode", address] as const,
+  reverse: (lat: number, lng: number) =>
+    [...mapKeys.all, "reverse", lat, lng] as const,
+};
