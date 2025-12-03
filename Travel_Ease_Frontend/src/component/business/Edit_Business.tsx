@@ -111,23 +111,22 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
         const street = business.street;
         const brgy = business.brgy;
 
-        const response = await fetch("/api/search", {
+        const response = await fetch("/api/map/search", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ street, brgy }),
+          body: JSON.stringify({ query: `${street}, ${brgy}, Tagaytay` }),
         });
 
         const result = await response.json();
 
         // Convert API results to map-friendly format
-        const cleanPins = result?.map(
-          (loc: { lat: string | number; lon: string | number }) => ({
+        const cleanPins =
+          result?.places?.map((loc: { lat: number; lng: number }) => ({
             lat: Number(loc.lat),
-            lon: Number(loc.lon),
-          })
-        );
+            lon: Number(loc.lng),
+          })) || [];
 
         console.log({ cleanPins });
         setPins(cleanPins);
@@ -146,23 +145,22 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
       const street = getValues("street");
       const brgy = getValues("brgy");
 
-      const response = await fetch("/api/search", {
+      const response = await fetch("/api/map/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ street, brgy }),
+        body: JSON.stringify({ query: `${street}, ${brgy}, Tagaytay` }),
       });
 
       const result = await response.json();
 
       // Convert API results to map-friendly format
-      const cleanPins = result.map(
-        (loc: { lat: string | number; lon: string | number }) => ({
+      const cleanPins =
+        result?.places?.map((loc: { lat: number; lng: number }) => ({
           lat: Number(loc.lat),
-          lon: Number(loc.lon),
-        })
-      );
+          lon: Number(loc.lng),
+        })) || [];
 
       console.log({ cleanPins });
       setPins(cleanPins);
@@ -220,9 +218,12 @@ function Edit_Business({ on_close, business }: EditBusinessProps) {
 
     if (value.length >= 3) {
       try {
-        const response = await fetch("/api/suggestions", {
-          method: "GET",
-        });
+        const response = await fetch(
+          `/api/map/suggestions?query=${encodeURIComponent(value)}`,
+          {
+            method: "GET",
+          }
+        );
 
         await response.json();
         // No handling yet — planned feature

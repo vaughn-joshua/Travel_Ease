@@ -78,21 +78,22 @@ function Register({ on_close }: RegisterProps) {
       const street = getValues("street");
       const brgy = getValues("brgy");
 
-      const response = await fetch("/api/search", {
+      const response = await fetch("/api/map/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ street, brgy }),
+        body: JSON.stringify({ query: `${street}, ${brgy}, Tagaytay` }),
       });
 
       const result = await response.json();
 
       // Convert API results to map-friendly format
-      const cleanPins = result.map((loc: { lat: string | number; lon: string | number }) => ({
-        lat: Number(loc.lat),
-        lon: Number(loc.lon),
-      }));
+      const cleanPins =
+        result?.places?.map((loc: { lat: number; lng: number }) => ({
+          lat: Number(loc.lat),
+          lon: Number(loc.lng),
+        })) || [];
 
       console.log({ cleanPins });
       setPins(cleanPins);
@@ -143,9 +144,12 @@ function Register({ on_close }: RegisterProps) {
 
     if (value.length >= 3) {
       try {
-        const response = await fetch("/api/suggestions", {
-          method: "GET",
-        });
+        const response = await fetch(
+          `/api/map/suggestions?query=${encodeURIComponent(value)}`,
+          {
+            method: "GET",
+          }
+        );
 
         await response.json();
         // No handling yet — planned feature
@@ -253,7 +257,9 @@ function Register({ on_close }: RegisterProps) {
                       ))}
                     </div>
                   </label>
-                  {errors.category && <p>{errors.category.message as string}</p>}
+                  {errors.category && (
+                    <p>{errors.category.message as string}</p>
+                  )}
 
                   <label className="label">
                     Description:
@@ -264,7 +270,9 @@ function Register({ on_close }: RegisterProps) {
                       className="text_box"
                     />
                   </label>
-                  {errors.description && <p>{errors.description.message as string}</p>}
+                  {errors.description && (
+                    <p>{errors.description.message as string}</p>
+                  )}
                 </>
               )}
 
@@ -280,7 +288,9 @@ function Register({ on_close }: RegisterProps) {
                       className="text_box"
                     />
                   </label>
-                  {errors.house_no && <p>{errors.house_no.message as string}</p>}
+                  {errors.house_no && (
+                    <p>{errors.house_no.message as string}</p>
+                  )}
 
                   <label className="label">
                     Street:
@@ -369,7 +379,9 @@ function Register({ on_close }: RegisterProps) {
                   {errors.starting_time && (
                     <p>{errors.starting_time.message as string}</p>
                   )}
-                  {errors.ending_time && <p>{errors.ending_time.message as string}</p>}
+                  {errors.ending_time && (
+                    <p>{errors.ending_time.message as string}</p>
+                  )}
 
                   {/* Business Picture */}
                   <label className="label">
@@ -389,7 +401,11 @@ function Register({ on_close }: RegisterProps) {
               {/* Navigation Buttons */}
               <div className="w-full flex justify-between mt-auto">
                 {counter > 0 && (
-                  <button className="soft_btn" type="button" onClick={handle_back}>
+                  <button
+                    className="soft_btn"
+                    type="button"
+                    onClick={handle_back}
+                  >
                     back
                   </button>
                 )}

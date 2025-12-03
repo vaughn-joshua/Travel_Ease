@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { fetch_business } from "../utils/business/fetch_business";
+import { useBusinessDetail } from "../features/businesses/queries";
 import Add_Product from "../component/business/Add_Product";
 import Edit_Business from "../component/business/Edit_Business";
-import type { Business, BusinessCategory } from "../types/business";
+import type { Business } from "../types/business";
 
 interface BusinessHour {
   day_of_week: string;
@@ -26,33 +26,39 @@ interface PictureData {
 
 export default function Business_Page(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
-  const [businessData, setBusinessData] = useState<ExtendedBusiness | null>(null);
   const [product, setProduct] = useState<boolean>(false);
-  const [pictures, setPictures] = useState<PictureData>({});
   const [clicked, setClicked] = useState<string | null>(null);
   const [edit, setEdit] = useState<boolean>(false);
 
-  useEffect(() => {
-    const load_data = async (): Promise<void> => {
-      try {
-        if (!id) return;
-        const data = await fetch_business(id);
-        if (data) {
-          const extendedData = data as unknown as ExtendedBusiness;
-          if (extendedData.picture) {
-            const image_urls = JSON.parse(extendedData.picture) as PictureData;
-            setPictures(image_urls);
-          }
-          console.log(data);
-          setBusinessData({ ...extendedData, id: parseInt(id) });
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    };
+  // Use TanStack Query hook for data fetching
+  const { data: rawData, isLoading, isError, error } = useBusinessDetail(id);
 
-    load_data();
-  }, [id]);
+  // Transform API response to extended business format
+  const businessData = useMemo<ExtendedBusiness | null>(() => {
+    if (!rawData || !id) return null;
+    return {
+      ...rawData,
+      id: parseInt(id),
+      house_number: (rawData as any).house_number,
+      street: (rawData as any).street,
+      brgy: (rawData as any).brgy,
+      city:
+        (rawData as any).city ||
+        rawData.location?.address?.split(",").pop()?.trim(),
+      picture: (rawData as any).picture,
+      business_hours: (rawData as any).business_hours,
+    } as ExtendedBusiness;
+  }, [rawData, id]);
+
+  // Parse pictures from business data
+  const pictures = useMemo<PictureData>(() => {
+    if (!businessData?.picture) return {};
+    try {
+      return JSON.parse(businessData.picture) as PictureData;
+    } catch {
+      return {};
+    }
+  }, [businessData?.picture]);
 
   const product_clicked = (): void => {
     setProduct(true);
@@ -80,8 +86,39 @@ export default function Business_Page(): React.ReactElement {
     setEdit(true);
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading business...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">Failed to load business</p>
+          <p className="text-gray-500 text-sm">
+            {error?.message || "Unknown error"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
   if (!businessData) {
-    return <p>not found bossing</p>;
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-gray-100">
+        <p className="text-gray-500">Business not found</p>
+      </div>
+    );
   }
 
   return (
@@ -181,7 +218,10 @@ export default function Business_Page(): React.ReactElement {
 
       {clicked && (
         <div className="modal" onClick={() => setClicked(null)}>
-          <div className="modal_body relative" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal_body relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               className="absolute top-2 right-2 text-white bg-black/50 px-2 py-1 rounded"
               onClick={() => setClicked(null)}
@@ -204,4 +244,3 @@ export default function Business_Page(): React.ReactElement {
     </>
   );
 }
-

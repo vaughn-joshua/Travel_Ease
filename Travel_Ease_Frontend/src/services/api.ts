@@ -1,5 +1,10 @@
 import axios from "axios";
-import type { Blog, BlogListResponse, BlogQueryParams, BlogOverviewResponse } from "../types/blog";
+import type {
+  Blog,
+  BlogListResponse,
+  BlogQueryParams,
+  BlogOverviewResponse,
+} from "../types/blog";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -60,7 +65,9 @@ api.interceptors.response.use(
   (response) => {
     // Only log in development
     if (import.meta.env.DEV) {
-      console.log(`Response received: ${response.status} ${response.config.url}`);
+      console.log(
+        `Response received: ${response.status} ${response.config.url}`
+      );
     }
     // Handle 204 No Content responses (empty body)
     if (response.status === 204) {
@@ -94,14 +101,18 @@ api.interceptors.response.use(
         console.error("Internal server error - check backend logs");
       } else if (error.response?.status === 503) {
         console.error("Service unavailable - database may be down");
-      } else if (error.response?.data?.code === 'CONNECTION_ERROR') {
-        console.error("Database connection error - Supabase may be paused or unreachable");
+      } else if (error.response?.data?.code === "CONNECTION_ERROR") {
+        console.error(
+          "Database connection error - Supabase may be paused or unreachable"
+        );
       } else if (error.code === "ECONNREFUSED") {
         console.error("Connection refused - is the backend server running?");
       } else if (error.code === "ERR_NETWORK") {
         console.error("Network error - check your internet connection");
       } else if (error.code === "ECONNABORTED") {
-        console.error("Request timeout - backend may be slow or database unreachable");
+        console.error(
+          "Request timeout - backend may be slow or database unreachable"
+        );
       }
     }
 
@@ -141,10 +152,7 @@ export const blogApi = {
   },
 
   // Update blog
-  updateBlog: async (
-    id: string,
-    blogData: Partial<Blog>
-  ): Promise<Blog> => {
+  updateBlog: async (id: string, blogData: Partial<Blog>): Promise<Blog> => {
     const response = await api.put(`/blogs/${id}`, blogData);
     return response.data;
   },
@@ -253,14 +261,22 @@ interface TravelSpotsResponse {
 
 export const businessApi = {
   // Get paginated list of businesses
-  getBusinesses: async (params?: BusinessQueryParams): Promise<BusinessListResponse> => {
+  getBusinesses: async (
+    params?: BusinessQueryParams
+  ): Promise<BusinessListResponse> => {
     const response = await api.get("/business/businesses", { params });
     return response.data;
   },
 
   // Get travel spots with optional search/city/limit (public, cached on backend)
-  getTravelSpots: async (params?: TravelSpotsParams, signal?: AbortSignal): Promise<TravelSpotsResponse> => {
-    const response = await api.get("/business/travel_spots", { params, signal });
+  getTravelSpots: async (
+    params?: TravelSpotsParams,
+    signal?: AbortSignal
+  ): Promise<TravelSpotsResponse> => {
+    const response = await api.get("/business/travel_spots", {
+      params,
+      signal,
+    });
     return response.data;
   },
 
@@ -271,7 +287,9 @@ export const businessApi = {
   },
 
   // Create new business
-  createBusiness: async (data: any): Promise<{ message: string; business_id: number }> => {
+  createBusiness: async (
+    data: any
+  ): Promise<{ message: string; business_id: number }> => {
     const response = await api.post("/business/create_business", data);
     return response.data;
   },
@@ -289,7 +307,9 @@ export const businessApi = {
   },
 
   // Get categories for a specific business by ID
-  getCategoriesById: async (businessId: string | number): Promise<Array<{ category_id: number; category_name: string }>> => {
+  getCategoriesById: async (
+    businessId: string | number
+  ): Promise<Array<{ category_id: number; category_name: string }>> => {
     const response = await api.get(`/business/fetch_categories/${businessId}`);
     return response.data;
   },
@@ -298,35 +318,54 @@ export const businessApi = {
   createPriceRange: async (data: {
     id?: number;
     business_id?: string | number;
-    categories?: Array<{ category_id: number; min_price: number; max_price: number }>;
+    categories?: Array<{
+      category_id: number;
+      min_price: number;
+      max_price: number;
+    }>;
   }): Promise<any> => {
     const response = await api.post("/business/price_range", data);
     return response.data;
   },
 
   // Menu Items
-  getMenuItems: async (businessId: string | number): Promise<{ items: MenuItem[]; total: number }> => {
+  getMenuItems: async (
+    businessId: string | number
+  ): Promise<{ items: MenuItem[]; total: number }> => {
     const response = await api.get(`/business/${businessId}/menu`);
     return response.data;
   },
 
-  createMenuItem: async (businessId: string | number, data: Partial<MenuItem>): Promise<{ message: string; item: MenuItem }> => {
+  createMenuItem: async (
+    businessId: string | number,
+    data: Partial<MenuItem>
+  ): Promise<{ message: string; item: MenuItem }> => {
     const response = await api.post(`/business/${businessId}/menu`, data);
     return response.data;
   },
 
-  updateMenuItem: async (businessId: string | number, itemId: number, data: Partial<MenuItem>): Promise<{ message: string; item: MenuItem }> => {
-    const response = await api.put(`/business/${businessId}/menu/${itemId}`, data);
+  updateMenuItem: async (
+    businessId: string | number,
+    itemId: number,
+    data: Partial<MenuItem>
+  ): Promise<{ message: string; item: MenuItem }> => {
+    const response = await api.put(
+      `/business/${businessId}/menu/${itemId}`,
+      data
+    );
     return response.data;
   },
 
-  deleteMenuItem: async (businessId: string | number, itemId: number): Promise<void> => {
+  deleteMenuItem: async (
+    businessId: string | number,
+    itemId: number
+  ): Promise<void> => {
     await api.delete(`/business/${businessId}/menu/${itemId}`);
   },
 
   // Delete business
   deleteBusiness: async (id: string | number): Promise<void> => {
-    await api.delete(`/business/edit_business/${id}`);
+    await api.delete(`/business/delete_business/${id}`);
   },
 
   // Get current user's businesses
@@ -423,14 +462,96 @@ export const userApi = {
   },
 
   // Add favorite
-  addFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<any> => {
+  addFavorite: async (data: {
+    business_id?: number;
+    travel_plan_id?: number;
+  }): Promise<any> => {
     const response = await api.post("/user/favorite", data);
     return response.data;
   },
 
   // Remove favorite
-  removeFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<any> => {
+  removeFavorite: async (data: {
+    business_id?: number;
+    travel_plan_id?: number;
+  }): Promise<any> => {
     const response = await api.delete("/user/favorite", { data });
+    return response.data;
+  },
+};
+
+// Review types
+interface ReviewUser {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+}
+
+interface BusinessReview {
+  review_id: number;
+  user_id: number;
+  business_id: number;
+  rating: number | null;
+  content: string | null;
+  review_date: string;
+  user?: ReviewUser;
+}
+
+interface TravelPlanReview {
+  review_id: number;
+  user_id: number;
+  travel_plan_id: number;
+  rating: number | null;
+  content: string | null;
+  review_date: string;
+  user?: ReviewUser;
+}
+
+interface CreateReviewPayload {
+  rating?: number;
+  content?: string;
+}
+
+export const reviewApi = {
+  // Create a business review
+  createBusinessReview: async (
+    businessId: number,
+    data: CreateReviewPayload
+  ): Promise<{ message: string; review: BusinessReview }> => {
+    const response = await api.post("/reviews/business", {
+      business_id: businessId,
+      ...data,
+    });
+    return response.data;
+  },
+
+  // Create a travel plan review
+  createTravelPlanReview: async (
+    travelPlanId: number,
+    data: CreateReviewPayload
+  ): Promise<{ message: string; review: TravelPlanReview }> => {
+    const response = await api.post("/reviews/travel_plan", {
+      travel_plan_id: travelPlanId,
+      ...data,
+    });
+    return response.data;
+  },
+
+  // Get reviews for a travel plan
+  getTravelPlanReviews: async (
+    travelPlanId: number | string
+  ): Promise<{ message: string; data: TravelPlanReview[] }> => {
+    const response = await api.get(`/reviews/travel_plan/${travelPlanId}`);
+    return response.data;
+  },
+
+  // Get reviews for a business (using existing endpoint)
+  getBusinessReviews: async (
+    businessId: number | string
+  ): Promise<{ message: string; data: BusinessReview[] }> => {
+    const response = await api.get(
+      `/business/travel_spots/reviews/${businessId}`
+    );
     return response.data;
   },
 };

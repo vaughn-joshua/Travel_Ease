@@ -1,4 +1,4 @@
-import { endpoints } from "../../config/api";
+import api from "../../services/api";
 
 export interface ParticipantUser {
   user_id: number;
@@ -22,7 +22,9 @@ export interface ParticipantsResponse {
   data: Participant[];
 }
 
-export async function fetch_participants(planId: number | string): Promise<Participant[]> {
+export async function fetch_participants(
+  planId: number | string
+): Promise<Participant[]> {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -30,20 +32,10 @@ export async function fetch_participants(planId: number | string): Promise<Parti
       return [];
     }
 
-    const result = await fetch(endpoints.travelPlan.participants(planId), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!result.ok) {
-      throw new Error(`Failed to fetch participants: ${result.status}`);
-    }
-
-    const response: ParticipantsResponse = await result.json();
-    return response.data || [];
+    const response = await api.get<ParticipantsResponse>(
+      `/travel_plan/${planId}/participants`
+    );
+    return response.data.data || [];
   } catch (e) {
     console.error("Error fetching participants:", e);
     return [];
@@ -54,30 +46,24 @@ export async function fetch_participants(planId: number | string): Promise<Parti
  * @deprecated Use `useRemoveParticipant` mutation hook from features/travelPlans/mutations.ts instead.
  * This utility will be removed in a future version.
  */
-export async function remove_participant(planId: number | string, userId: number): Promise<boolean> {
+export async function remove_participant(
+  planId: number | string,
+  userId: number
+): Promise<boolean> {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
       throw new Error("Authentication required");
     }
 
-    const result = await fetch(endpoints.travelPlan.participantById(planId, userId), {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!result.ok) {
-      const error = await result.json();
-      throw new Error(error.error || `Failed to remove participant: ${result.status}`);
-    }
-
+    await api.delete(`/travel_plan/${planId}/participants/${userId}`);
     return true;
-  } catch (e) {
+  } catch (e: any) {
     console.error("Error removing participant:", e);
-    throw e;
+    throw new Error(
+      e.response?.data?.error ||
+        `Failed to remove participant: ${e.response?.status}`
+    );
   }
 }
 
@@ -96,25 +82,17 @@ export async function update_participant_role(
       throw new Error("Authentication required");
     }
 
-    const result = await fetch(endpoints.travelPlan.participantById(planId, userId), {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({ role }),
-    });
-
-    if (!result.ok) {
-      const error = await result.json();
-      throw new Error(error.error || `Failed to update participant: ${result.status}`);
-    }
-
-    const response = await result.json();
-    return response.participant;
-  } catch (e) {
+    const response = await api.put<{ participant: Participant }>(
+      `/travel_plan/${planId}/participants/${userId}`,
+      { role }
+    );
+    return response.data.participant;
+  } catch (e: any) {
     console.error("Error updating participant:", e);
-    throw e;
+    throw new Error(
+      e.response?.data?.error ||
+        `Failed to update participant: ${e.response?.status}`
+    );
   }
 }
 
@@ -132,25 +110,16 @@ export async function approve_participant(
       throw new Error("Authentication required");
     }
 
-    const result = await fetch(endpoints.travelPlan.participantById(planId, userId), {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status: true }),
-    });
-
-    if (!result.ok) {
-      const error = await result.json();
-      throw new Error(error.error || `Failed to approve participant: ${result.status}`);
-    }
-
-    const response = await result.json();
-    return response.participant;
-  } catch (e) {
+    const response = await api.put<{ participant: Participant }>(
+      `/travel_plan/${planId}/participants/${userId}`,
+      { status: true }
+    );
+    return response.data.participant;
+  } catch (e: any) {
     console.error("Error approving participant:", e);
-    throw e;
+    throw new Error(
+      e.response?.data?.error ||
+        `Failed to approve participant: ${e.response?.status}`
+    );
   }
 }
-

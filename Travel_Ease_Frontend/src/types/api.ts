@@ -53,7 +53,10 @@ export interface TravelPlanEndpoints {
   requestJoin: string;
   joinPlan: string;
   pendingRequests: (id: number | string) => string;
-  approveJoin: (planId: number | string, participantId: number | string) => string;
+  approveJoin: (
+    planId: number | string,
+    participantId: number | string
+  ) => string;
   denyJoin: (planId: number | string, participantId: number | string) => string;
   byId: (id: number | string) => string;
   activities: (id: number | string) => string;
@@ -114,6 +117,12 @@ export interface BlogEndpoints {
   byId: (id: string) => string;
 }
 
+export interface ReviewEndpoints {
+  business: string;
+  travelPlan: string;
+  travelPlanById: (id: number | string) => string;
+}
+
 export interface Endpoints {
   travelPlan: TravelPlanEndpoints;
   business: BusinessEndpoints;
@@ -121,5 +130,5 @@ export interface Endpoints {
   utils: UtilsEndpoints;
   map: MapEndpoints;
   blogs: BlogEndpoints;
+  reviews: ReviewEndpoints;
 }
-

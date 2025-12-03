@@ -103,3 +103,14 @@ export const mapKeys = {
   reverse: (lat: number, lng: number) =>
     [...mapKeys.all, "reverse", lat, lng] as const,
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Review keys
+// ─────────────────────────────────────────────────────────────────────────────
+export const reviewKeys = {
+  all: ["reviews"] as const,
+  business: (businessId: number | string) =>
+    [...reviewKeys.all, "business", businessId] as const,
+  travelPlan: (travelPlanId: number | string) =>
+    [...reviewKeys.all, "travel-plan", travelPlanId] as const,
+};

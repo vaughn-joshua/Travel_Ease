@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { endpoints } from "../config/api.js";
 import { useAuth } from "../context/AuthContext";
+import api, { businessApi } from "../services/api";
 
 interface BusinessHours {
   day: string;
@@ -27,7 +27,15 @@ interface FormData {
   lng: number | null;
 }
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 const CATEGORIES = [
   "food",
@@ -93,9 +101,7 @@ export default function BusinessForm() {
 
   const fetchBusiness = async (businessId: string) => {
     try {
-      const response = await fetch(endpoints.business.byId(businessId));
-      if (!response.ok) throw new Error("Business not found");
-      const data = await response.json();
+      const data = await businessApi.getBusiness(businessId);
 
       // Map API data to form data
       setFormData({
@@ -115,10 +121,10 @@ export default function BusinessForm() {
         priceMax: data.priceRange?.max?.toString() || "",
         coverImage: data.media?.cover || "",
         gallery: data.media?.gallery || [],
-        houseNumber: data.location?.houseNumber || "",
-        street: data.location?.street || "",
-        brgy: data.location?.brgy || "",
-        city: data.location?.city || "Tagaytay",
+        houseNumber: data.location?.address?.split(",")[0] || "",
+        street: data.location?.address?.split(",")[1] || "",
+        brgy: data.location?.address?.split(",")[2] || "",
+        city: data.location?.address?.split(",")[3] || "Tagaytay",
         lat: data.location?.lat || null,
         lng: data.location?.lng || null,
       });
@@ -129,7 +135,9 @@ export default function BusinessForm() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -146,7 +154,11 @@ export default function BusinessForm() {
     }));
   };
 
-  const updateHours = (index: number, field: keyof BusinessHours, value: string | boolean) => {
+  const updateHours = (
+    index: number,
+    field: keyof BusinessHours,
+    value: string | boolean
+  ) => {
     setFormData((prev) => ({
       ...prev,
       hours: prev.hours.map((h, i) =>
@@ -155,7 +167,10 @@ export default function BusinessForm() {
     }));
   };
 
-  const handleImageUpload = async (files: FileList, type: "cover" | "gallery") => {
+  const handleImageUpload = async (
+    files: FileList,
+    type: "cover" | "gallery"
+  ) => {
     if (!files.length) return;
 
     setUploading(true);
@@ -168,15 +183,12 @@ export default function BusinessForm() {
     });
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(endpoints.utils.uploadImages, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formDataUpload,
+      const response = await api.post("/utils/upload_images", formDataUpload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
-
-      if (!response.ok) throw new Error("Upload failed");
-      const data = await response.json();
+      const data = response.data;
 
       if (type === "cover" && data.secure_url?.[0]) {
         setFormData((prev) => ({ ...prev, coverImage: data.secure_url[0] }));
@@ -205,7 +217,8 @@ export default function BusinessForm() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) newErrors.name = "Business name is required";
-    if (formData.categories.length === 0) newErrors.categories = "Select at least one category";
+    if (formData.categories.length === 0)
+      newErrors.categories = "Select at least one category";
     if (!formData.city.trim()) newErrors.city = "City is required";
 
     setErrors(newErrors);
@@ -240,7 +253,9 @@ export default function BusinessForm() {
         lat: formData.lat,
         lng: formData.lng,
         secure_url: JSON.stringify({
-          secure_url: [formData.coverImage, ...formData.gallery].filter(Boolean),
+          secure_url: [formData.coverImage, ...formData.gallery].filter(
+            Boolean
+          ),
         }),
         category: formData.categories,
         business_hrs: formData.hours
@@ -250,39 +265,38 @@ export default function BusinessForm() {
         max_price: formData.priceMax ? parseInt(formData.priceMax) : 0,
       };
 
-      const url = isEdit ? endpoints.business.edit(id!) : endpoints.business.create;
-      const method = isEdit ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        // Build a more detailed error message
-        let errorMessage = errData.error || "Failed to save business";
-        if (errData.details && Array.isArray(errData.details)) {
-          errorMessage = errData.details.map((d: { field: string; message: string }) => 
-            `${d.field}: ${d.message}`
-          ).join(", ");
-        }
-        throw new Error(errorMessage);
+      let result;
+      if (isEdit) {
+        result = await businessApi.updateBusiness(id!, payload);
+      } else {
+        result = await businessApi.createBusiness(payload);
       }
 
-      const result = await response.json();
       setSuccessMessage(isEdit ? "Business updated!" : "Business created!");
 
       setTimeout(() => {
         navigate(`/businesses/${result.business_id || id}`);
       }, 1500);
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Submit error:", err);
-      setSubmitError(err instanceof Error ? err.message : "Failed to save business");
+      // Handle axios error response
+      let errorMessage = "Failed to save business";
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (
+        err.response?.data?.details &&
+        Array.isArray(err.response.data.details)
+      ) {
+        errorMessage = err.response.data.details
+          .map(
+            (d: { field: string; message: string }) =>
+              `${d.field}: ${d.message}`
+          )
+          .join(", ");
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setSubmitError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -313,8 +327,18 @@ export default function BusinessForm() {
             to="/businesses"
             className="inline-flex items-center text-primary-red hover:text-primary-red-dark transition-colors duration-200 mb-4"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Businesses
           </Link>
@@ -332,8 +356,16 @@ export default function BusinessForm() {
         {submitError && (
           <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-red-500 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
               <p className="text-red-800 font-medium">{submitError}</p>
             </div>
@@ -343,23 +375,39 @@ export default function BusinessForm() {
         {successMessage && (
           <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg shadow-sm">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              <svg
+                className="w-5 h-5 text-green-500 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
               </svg>
               <p className="text-green-800 font-medium">{successMessage}</p>
             </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+        >
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Info */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Basic Information
+              </h2>
               <div className="space-y-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Business Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -369,7 +417,9 @@ export default function BusinessForm() {
                     value={formData.name}
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors ${
-                      errors.name ? "border-red-500 bg-red-50" : "border-gray-300"
+                      errors.name
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
                     }`}
                     placeholder="Enter your business name"
                   />
@@ -379,7 +429,10 @@ export default function BusinessForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="description"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Description
                   </label>
                   <textarea
@@ -423,16 +476,25 @@ export default function BusinessForm() {
 
             {/* Operating Hours */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Operating Hours</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Operating Hours
+              </h2>
               <div className="space-y-3">
                 {formData.hours.map((h, index) => (
-                  <div key={h.day} className="flex items-center gap-4 flex-wrap">
-                    <span className="w-24 text-sm font-medium text-gray-700">{h.day}</span>
+                  <div
+                    key={h.day}
+                    className="flex items-center gap-4 flex-wrap"
+                  >
+                    <span className="w-24 text-sm font-medium text-gray-700">
+                      {h.day}
+                    </span>
                     <label className="flex items-center">
                       <input
                         type="checkbox"
                         checked={h.closed}
-                        onChange={(e) => updateHours(index, "closed", e.target.checked)}
+                        onChange={(e) =>
+                          updateHours(index, "closed", e.target.checked)
+                        }
                         className="w-4 h-4 text-primary-red border-gray-300 rounded focus:ring-primary-red"
                       />
                       <span className="ml-2 text-sm text-gray-600">Closed</span>
@@ -442,14 +504,18 @@ export default function BusinessForm() {
                         <input
                           type="time"
                           value={h.start}
-                          onChange={(e) => updateHours(index, "start", e.target.value)}
+                          onChange={(e) =>
+                            updateHours(index, "start", e.target.value)
+                          }
                           className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
                         />
                         <span className="text-gray-500">to</span>
                         <input
                           type="time"
                           value={h.end}
-                          onChange={(e) => updateHours(index, "end", e.target.value)}
+                          onChange={(e) =>
+                            updateHours(index, "end", e.target.value)
+                          }
                           className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
                         />
                       </>
@@ -461,10 +527,15 @@ export default function BusinessForm() {
 
             {/* Price Range */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Price Range</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Price Range
+              </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="priceMin" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="priceMin"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Minimum (₱)
                   </label>
                   <input
@@ -479,7 +550,10 @@ export default function BusinessForm() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="priceMax" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="priceMax"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Maximum (₱)
                   </label>
                   <input
@@ -498,11 +572,15 @@ export default function BusinessForm() {
 
             {/* Media */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Photos</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Photos
+              </h2>
 
               {/* Cover Image */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cover Image</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cover Image
+                </label>
                 <div className="flex items-start gap-4">
                   {formData.coverImage ? (
                     <div className="relative w-40 h-28">
@@ -513,25 +591,50 @@ export default function BusinessForm() {
                       />
                       <button
                         type="button"
-                        onClick={() => setFormData((prev) => ({ ...prev, coverImage: "" }))}
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, coverImage: "" }))
+                        }
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-40 h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-red transition-colors">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      <svg
+                        className="w-8 h-8 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
                       </svg>
                       <span className="text-sm text-gray-500 mt-1">Upload</span>
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => e.target.files && handleImageUpload(e.target.files, "cover")}
+                        onChange={(e) =>
+                          e.target.files &&
+                          handleImageUpload(e.target.files, "cover")
+                        }
                         disabled={uploading}
                       />
                     </label>
@@ -541,32 +644,61 @@ export default function BusinessForm() {
 
               {/* Gallery */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gallery</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gallery
+                </label>
                 <div className="flex flex-wrap gap-3">
                   {formData.gallery.map((url, index) => (
                     <div key={index} className="relative w-24 h-24">
-                      <img src={url} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
+                      <img
+                        src={url}
+                        alt={`Gallery ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
                       <button
                         type="button"
                         onClick={() => removeGalleryImage(index)}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
                   ))}
                   <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-red transition-colors">
-                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
                     </svg>
                     <input
                       type="file"
                       accept="image/*"
                       multiple
                       className="hidden"
-                      onChange={(e) => e.target.files && handleImageUpload(e.target.files, "gallery")}
+                      onChange={(e) =>
+                        e.target.files &&
+                        handleImageUpload(e.target.files, "gallery")
+                      }
                       disabled={uploading}
                     />
                   </label>
@@ -579,7 +711,9 @@ export default function BusinessForm() {
 
             {/* Location */}
             <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Location</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Location
+              </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -595,7 +729,9 @@ export default function BusinessForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Street</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Street
+                  </label>
                   <input
                     type="text"
                     name="street"
@@ -606,7 +742,9 @@ export default function BusinessForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Barangay
+                  </label>
                   <input
                     type="text"
                     name="brgy"
@@ -626,11 +764,15 @@ export default function BusinessForm() {
                     value={formData.city}
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red ${
-                      errors.city ? "border-red-500 bg-red-50" : "border-gray-300"
+                      errors.city
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-300"
                     }`}
                     placeholder="Tagaytay"
                   />
-                  {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
+                  {errors.city && (
+                    <p className="mt-1 text-sm text-red-600">{errors.city}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -644,9 +786,24 @@ export default function BusinessForm() {
               >
                 {submitting ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
                     </svg>
                     Saving...
                   </>
@@ -664,9 +821,24 @@ export default function BusinessForm() {
           <div className="lg:sticky lg:top-8 lg:h-fit">
             <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <svg
+                  className="w-5 h-5 mr-2 text-primary-red"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
                 </svg>
                 Preview
               </h2>
@@ -701,21 +873,39 @@ export default function BusinessForm() {
                   </h3>
 
                   {formData.description && (
-                    <p className="text-gray-600 text-sm">{formData.description}</p>
+                    <p className="text-gray-600 text-sm">
+                      {formData.description}
+                    </p>
                   )}
 
                   {(formData.priceMin || formData.priceMax) && (
                     <p className="text-sm text-gray-500">
-                      Price Range: ₱{formData.priceMin || "0"} - ₱{formData.priceMax || "..."}
+                      Price Range: ₱{formData.priceMin || "0"} - ₱
+                      {formData.priceMax || "..."}
                     </p>
                   )}
 
                   {formData.city && (
                     <p className="text-sm text-gray-500 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
                       </svg>
-                      {[formData.houseNumber, formData.street, formData.brgy, formData.city]
+                      {[
+                        formData.houseNumber,
+                        formData.street,
+                        formData.brgy,
+                        formData.city,
+                      ]
                         .filter(Boolean)
                         .join(", ")}
                     </p>
@@ -723,8 +913,18 @@ export default function BusinessForm() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  <svg
+                    className="w-16 h-16 mx-auto text-gray-300 mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
                   </svg>
                   <p className="text-gray-500 text-sm">
                     Preview will appear as you fill in the form
@@ -738,4 +938,3 @@ export default function BusinessForm() {
     </div>
   );
 }
-

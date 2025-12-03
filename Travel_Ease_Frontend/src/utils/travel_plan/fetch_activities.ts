@@ -1,25 +1,32 @@
-import { endpoints } from '../../config/api';
-import type { Activity } from '../../types/travelPlan';
+import api from "../../services/api";
+import type { Activity } from "../../types/travelPlan";
 
-export async function fetch_activities(planId: number | string): Promise<Activity[]> {
+interface ActivitiesResponse {
+  data?: Activity[];
+}
+
+export async function fetch_activities(
+  planId: number | string
+): Promise<Activity[]> {
   try {
-    const token = localStorage.getItem('token');
-    const result = await fetch(endpoints.travelPlan.activities(planId), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    const response = await api.get<ActivitiesResponse | Activity[]>(
+      `/travel_plan/activities/${planId}`
+    );
 
-    if (!result.ok) {
-      throw new Error(`Failed to fetch activities: ${result.status}`);
+    // Handle different response shapes
+    if (
+      response.data &&
+      typeof response.data === "object" &&
+      "data" in response.data
+    ) {
+      return response.data.data || [];
     }
-
-    const response = await result.json();
-    return response.data || response || [];
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return [];
   } catch (e) {
-    console.error(e);
+    console.error("Error fetching activities:", e);
     return [];
   }
 }

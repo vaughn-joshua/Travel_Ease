@@ -7,8 +7,7 @@ import type { Endpoints } from "../types/api";
 
 // Use the proxy in development (Vite will forward /api to http://localhost:3001)
 // In production, this would be the actual API URL
-export const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL || "/api";
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || "/api";
 
 // Export specific endpoint builders
 export const endpoints: Endpoints = {
@@ -22,9 +21,12 @@ export const endpoints: Endpoints = {
     quickJoin: `${API_BASE_URL}/travel_plan/quick_join`,
     requestJoin: `${API_BASE_URL}/travel_plan/request_join`,
     joinPlan: `${API_BASE_URL}/travel_plan/join_plan`,
-    pendingRequests: (id: string | number) => `${API_BASE_URL}/travel_plan/${id}/pending_requests`,
-    approveJoin: (planId: string | number, participantId: string | number) => `${API_BASE_URL}/travel_plan/${planId}/approve/${participantId}`,
-    denyJoin: (planId: string | number, participantId: string | number) => `${API_BASE_URL}/travel_plan/${planId}/deny/${participantId}`,
+    pendingRequests: (id: string | number) =>
+      `${API_BASE_URL}/travel_plan/${id}/pending_requests`,
+    approveJoin: (planId: string | number, participantId: string | number) =>
+      `${API_BASE_URL}/travel_plan/${planId}/approve/${participantId}`,
+    denyJoin: (planId: string | number, participantId: string | number) =>
+      `${API_BASE_URL}/travel_plan/${planId}/deny/${participantId}`,
     byId: (id) => `${API_BASE_URL}/travel_plan/plans/${id}`,
     activities: (id) => `${API_BASE_URL}/travel_plan/activities/${id}`,
     createActivity: `${API_BASE_URL}/travel_plan/create_activity`,
@@ -35,7 +37,8 @@ export const endpoints: Endpoints = {
     deleteActivity: (id) => `${API_BASE_URL}/travel_plan/delete_activity/${id}`,
     // Participant/Collaborator endpoints
     participants: (id) => `${API_BASE_URL}/travel_plan/${id}/participants`,
-    participantById: (planId, userId) => `${API_BASE_URL}/travel_plan/${planId}/participants/${userId}`,
+    participantById: (planId, userId) =>
+      `${API_BASE_URL}/travel_plan/${planId}/participants/${userId}`,
   },
 
   // Business endpoints
@@ -88,7 +91,14 @@ export const endpoints: Endpoints = {
     bySlug: (slug) => `${API_BASE_URL}/blogs/${slug}`,
     byId: (id) => `${API_BASE_URL}/blogs/${id}`,
   },
+
+  // Review endpoints
+  reviews: {
+    business: `${API_BASE_URL}/reviews/business`,
+    travelPlan: `${API_BASE_URL}/reviews/travel_plan`,
+    travelPlanById: (id: string | number) =>
+      `${API_BASE_URL}/reviews/travel_plan/${id}`,
+  },
 };
 
 export default API_BASE_URL;
-

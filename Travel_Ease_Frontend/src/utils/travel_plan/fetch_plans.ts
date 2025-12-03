@@ -1,4 +1,4 @@
-import { endpoints } from "../../config/api";
+import api from "../../services/api";
 import type { TravelPlan } from "../../types/travelPlan";
 
 interface PaginatedResponse {
@@ -21,37 +21,18 @@ export async function fetch_plans(): Promise<TravelPlan[]> {
   }
 
   try {
-    const result = await fetch(endpoints.travelPlan.plans, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    // 401/403 means token is missing or invalid - clear it and return empty (silently)
-    if (result.status === 401 || result.status === 403) {
-      localStorage.removeItem("token");
-      return [];
-    }
-
-    if (!result.ok) {
-      // Only log non-auth errors in development
-      if (import.meta.env.DEV) {
-        console.error(`Failed to fetch plans: ${result.status}`);
-      }
-      return [];
-    }
-
-    const response: PaginatedResponse = await result.json();
+    const response = await api.get<PaginatedResponse>("/travel_plan/plans");
     // Backend returns normalized DTOs in data array
-    return response.data;
-  } catch (e) {
-    // Only log non-network errors in development
-    if (import.meta.env.DEV && !(e instanceof TypeError && e.message.includes('fetch'))) {
+    return response.data.data;
+  } catch (e: any) {
+    // 401/403 means token is invalid - axios interceptor will handle clearing auth
+    if (e.response?.status === 401 || e.response?.status === 403) {
+      return [];
+    }
+    // Only log non-auth errors in development
+    if (import.meta.env.DEV) {
       console.error("Error fetching plans:", e);
     }
     return [];
   }
 }
-
