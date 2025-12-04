@@ -25,7 +25,9 @@ interface FormData {
   collaborators?: string;
 }
 
-export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactElement {
+export default function Create_Plan({
+  on_close,
+}: CreatePlanProps): React.ReactElement {
   const {
     register,
     handleSubmit,
@@ -38,7 +40,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
 
   const [counter, setCounter] = useState<number>(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  
+
   // Use TanStack Query mutation for creating plans
   const createPlanMutation = useCreatePlan();
 
@@ -56,7 +58,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
   // Handle step navigation with validation
   const handleNext = async (): Promise<void> => {
     let fieldsToValidate: (keyof FormData)[] = [];
-    
+
     if (counter === 0) {
       fieldsToValidate = ["title", "description"];
     } else if (counter === 1) {
@@ -67,7 +69,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
 
     // Validate only the current step's fields
     const isValid = await trigger(fieldsToValidate);
-    
+
     if (isValid) {
       if (counter < 2) {
         setCounter((prev) => prev + 1);
@@ -94,9 +96,9 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
       end_date: d.end_date,
       slots: d.slots ? parseInt(d.slots, 10) : undefined, // Backend accepts both slots and max_slots
     };
-    
+
     console.log("Creating plan with payload:", payload);
-    
+
     createPlanMutation.mutate(payload, {
       onSuccess: () => {
         setCounter(0);
@@ -104,7 +106,11 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
       },
       onError: (error) => {
         console.error("Error creating plan:", error);
-        setSubmitError(error instanceof Error ? error.message : "Failed to create plan. Please try again.");
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : "Failed to create plan. Please try again."
+        );
       },
     });
   };
@@ -120,10 +126,11 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
             className={`
               w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
               transition-all duration-200
-              ${step === counter 
-                ? "bg-red-500 text-white shadow-lg scale-110" 
-                : step < counter 
-                  ? "bg-green-500 text-white" 
+              ${
+                step === counter
+                  ? "bg-red-500 text-white shadow-lg scale-110"
+                  : step < counter
+                  ? "bg-green-500 text-white"
                   : "bg-gray-200 text-gray-500"
               }
             `}
@@ -131,10 +138,10 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
             {step < counter ? "✓" : step + 1}
           </div>
           {step < 2 && (
-            <div 
+            <div
               className={`w-12 h-1 mx-1 rounded ${
                 step < counter ? "bg-green-500" : "bg-gray-200"
-              }`} 
+              }`}
             />
           )}
         </div>
@@ -171,7 +178,9 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                   />
                   {typedErrors.title && (
-                    <p className="text-red-500 text-xs mt-1">{typedErrors.title.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {typedErrors.title.message}
+                    </p>
                   )}
                 </div>
 
@@ -180,13 +189,17 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                     Description
                   </label>
                   <textarea
-                    {...register("description", { required: "Description is required" })}
+                    {...register("description", {
+                      required: "Description is required",
+                    })}
                     placeholder="Describe your travel plan..."
                     rows={3}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none resize-none"
                   />
                   {typedErrors.description && (
-                    <p className="text-red-500 text-xs mt-1">{typedErrors.description.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {typedErrors.description.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -196,22 +209,26 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
             {counter === 1 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Destination
+                  <label className="label">
+                    Location <span className="font-light">(fixed)</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                       📍
                     </span>
                     <input
-                      {...register("location", { required: "Location is required" })}
+                      {...register("location", {
+                        required: "Location is required",
+                      })}
                       value="Tagaytay Cavite"
                       readOnly
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
                   </div>
                   {typedErrors.location && (
-                    <p className="text-red-500 text-xs mt-1">{typedErrors.location.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {typedErrors.location.message}
+                    </p>
                   )}
                 </div>
 
@@ -226,13 +243,17 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                       </span>
                       <input
                         type="date"
-                        {...register("start_date", { required: "Start date is required" })}
+                        {...register("start_date", {
+                          required: "Start date is required",
+                        })}
                         min={today}
                         className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none cursor-pointer"
                       />
                     </div>
                     {typedErrors.start_date && (
-                      <p className="text-red-500 text-xs mt-1">{typedErrors.start_date.message}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {typedErrors.start_date.message}
+                      </p>
                     )}
                   </div>
 
@@ -246,21 +267,23 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                       </span>
                       <input
                         type="date"
-                        {...register("end_date", { 
+                        {...register("end_date", {
                           required: "End date is required",
                           validate: (value) => {
                             if (startDate && value < startDate) {
                               return "End date must be after start date";
                             }
                             return true;
-                          }
+                          },
                         })}
                         min={startDate || today}
                         className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none cursor-pointer"
                       />
                     </div>
                     {typedErrors.end_date && (
-                      <p className="text-red-500 text-xs mt-1">{typedErrors.end_date.message}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {typedErrors.end_date.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -271,7 +294,8 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                     <p className="text-sm text-gray-600">
                       <span className="font-medium">Trip Duration:</span>{" "}
                       {Math.ceil(
-                        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                        (new Date(endDate).getTime() -
+                          new Date(startDate).getTime()) /
                           (1000 * 60 * 60 * 24)
                       ) + 1}{" "}
                       days
@@ -296,7 +320,7 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      {...register("slots", { 
+                      {...register("slots", {
                         required: "Number of slots is required",
                         validate: (value) => {
                           const num = parseInt(value || "", 10);
@@ -304,14 +328,16 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                           if (num < 1) return "At least 1 slot required";
                           if (num > 50) return "Maximum 50 slots allowed";
                           return true;
-                        }
+                        },
                       })}
                       placeholder="e.g., 5"
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
                   </div>
                   {typedErrors.slots && (
-                    <p className="text-red-500 text-xs mt-1">{typedErrors.slots.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {typedErrors.slots.message}
+                    </p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">
                     How many people can join this trip?
@@ -333,17 +359,23 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    You can invite collaborators later from the plan details page
+                    You can invite collaborators later from the plan details
+                    page
                   </p>
                 </div>
 
                 {/* Summary Card */}
                 <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border border-red-100">
-                  <h3 className="font-medium text-gray-800 mb-2">Plan Summary</h3>
+                  <h3 className="font-medium text-gray-800 mb-2">
+                    Plan Summary
+                  </h3>
                   <div className="space-y-1 text-sm text-gray-600">
                     <p>📝 {watch("title") || "Untitled Plan"}</p>
                     <p>📍 {watch("location") || "No location set"}</p>
-                    <p>📅 {watch("start_date") || "?"} → {watch("end_date") || "?"}</p>
+                    <p>
+                      📅 {watch("start_date") || "?"} →{" "}
+                      {watch("end_date") || "?"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -398,8 +430,20 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                   {createPlanMutation.isPending ? (
                     <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
                       </svg>
                       Creating...
                     </span>

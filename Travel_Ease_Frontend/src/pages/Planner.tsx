@@ -293,13 +293,15 @@ export default function Planner(): React.ReactElement {
                 >
                   edit
                 </button>
-                <button
-                  className="hard_btn"
-                  onClick={handle_start}
-                  disabled={updatePlanMutation.isPending}
-                >
-                  {updatePlanMutation.isPending ? "Starting..." : "start now"}
-                </button>
+                {plan?.status !== "Active" && (
+                  <button
+                    className="hard_btn"
+                    onClick={handle_start}
+                    disabled={updatePlanMutation.isPending}
+                  >
+                    {updatePlanMutation.isPending ? "Starting..." : "start now"}
+                  </button>
+                )}
               </>
             )}
             {status === "view" && (

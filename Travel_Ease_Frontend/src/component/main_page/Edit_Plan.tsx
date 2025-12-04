@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useUpdatePlan } from "../../features/travelPlans/mutations";
-import type { TravelPlan, UpdatePlanPayload, PlanStatus } from "../../types/travelPlan";
+import type { TravelPlan, UpdatePlanPayload } from "../../types/travelPlan";
 
 interface EditPlanProps {
   data: TravelPlan[];
@@ -17,7 +17,6 @@ interface FormData {
   end_date: string;
   max_slots: string;
   visibility: boolean;
-  status: PlanStatus;
 }
 
 // Format date for input (YYYY-MM-DD)
@@ -28,14 +27,6 @@ function formatDateForInput(dateStr: string | null): string {
   return date.toISOString().split("T")[0];
 }
 
-// Status transition rules
-const STATUS_TRANSITIONS: Record<PlanStatus, PlanStatus[]> = {
-  Draft: ["Draft", "Active", "Cancelled"],
-  Active: ["Active", "Completed", "Cancelled"],
-  Completed: ["Completed"],
-  Cancelled: ["Cancelled"],
-};
-
 export default function Edit_Plan({
   data,
   travel_plan,
@@ -43,7 +34,7 @@ export default function Edit_Plan({
 }: EditPlanProps): React.ReactElement {
   const plan = data[0];
   const [submitError, setSubmitError] = useState<string | null>(null);
-  
+
   // Use TanStack Query mutation for updating plans
   const updatePlanMutation = useUpdatePlan();
 
@@ -61,13 +52,10 @@ export default function Edit_Plan({
       end_date: formatDateForInput(plan.end_date),
       max_slots: plan.max_slots?.toString() || plan.slots?.toString() || "",
       visibility: plan.visibility ?? plan.is_public ?? false,
-      status: plan.status || "Draft",
     },
   });
 
   const startDate = watch("start_date");
-  const currentStatus = plan.status || "Draft";
-  const allowedStatuses = STATUS_TRANSITIONS[currentStatus] || [currentStatus];
 
   const on_submit = async (formData: FormData): Promise<void> => {
     setSubmitError(null);
@@ -80,7 +68,6 @@ export default function Edit_Plan({
       end_date: formData.end_date || undefined,
       slots: formData.max_slots ? parseInt(formData.max_slots, 10) : undefined,
       is_public: formData.visibility,
-      status: formData.status,
     };
 
     updatePlanMutation.mutate(
@@ -91,7 +78,9 @@ export default function Edit_Plan({
         },
         onError: (error) => {
           console.error("Error updating plan:", error);
-          setSubmitError(error instanceof Error ? error.message : "Failed to update plan");
+          setSubmitError(
+            error instanceof Error ? error.message : "Failed to update plan"
+          );
         },
       }
     );
@@ -100,9 +89,21 @@ export default function Edit_Plan({
   return (
     <div className="modal">
       <div className="modal_body max-w-lg">
-        <h1 className="text-xl font-semibold text-red-600 text-center mb-4">
-          Edit Plan
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-semibold text-red-600">Edit Plan</h1>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <span className="text-sm text-gray-600">open to Public</span>
+            <div className="relative">
+              <input
+                type="checkbox"
+                id="visibility"
+                {...register("visibility")}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+            </div>
+          </label>
+        </div>
 
         <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
           <div>
@@ -124,15 +125,21 @@ export default function Edit_Plan({
               rows={3}
             />
             {errors.description && (
-              <p className="text-red-500 text-sm">{errors.description.message}</p>
+              <p className="text-red-500 text-sm">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="label">Location</label>
+            <label className="label">
+              Location <span className="font-light">(fixed)</span>
+            </label>
             <input
               {...register("location")}
               className="text_box"
+              value="Tagaytay City"
+              readOnly
             />
             {errors.location && (
               <p className="text-red-500 text-sm">{errors.location.message}</p>
@@ -164,57 +171,32 @@ export default function Edit_Plan({
                 className="text_box"
               />
               {errors.end_date && (
-                <p className="text-red-500 text-sm">{errors.end_date.message}</p>
+                <p className="text-red-500 text-sm">
+                  {errors.end_date.message}
+                </p>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Max Participants</label>
-              <input
-                type="number"
-                min="1"
-                {...register("max_slots", {
-                  validate: (value) => {
-                    if (value && parseInt(value, 10) < 1) {
-                      return "Must be at least 1";
-                    }
-                    return true;
-                  },
-                })}
-                className="text_box"
-                placeholder="No limit"
-              />
-              {errors.max_slots && (
-                <p className="text-red-500 text-sm">{errors.max_slots.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="label">Status</label>
-              <select
-                {...register("status")}
-                className="text_box"
-              >
-                {allowedStatuses.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
+          <div>
+            <label className="label">Max Participants</label>
             <input
-              type="checkbox"
-              id="visibility"
-              {...register("visibility")}
-              className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+              type="number"
+              min="1"
+              {...register("max_slots", {
+                validate: (value) => {
+                  if (value && parseInt(value, 10) < 1) {
+                    return "Must be at least 1";
+                  }
+                  return true;
+                },
+              })}
+              className="text_box"
+              placeholder="No limit"
             />
-            <label htmlFor="visibility" className="text-sm text-gray-700">
-              Make plan public (visible in Quick Join search)
-            </label>
+            {errors.max_slots && (
+              <p className="text-red-500 text-sm">{errors.max_slots.message}</p>
+            )}
           </div>
 
           {submitError && (
@@ -245,4 +227,3 @@ export default function Edit_Plan({
     </div>
   );
 }
-

@@ -24,7 +24,7 @@ export default function Routing_Machine({
         extendToWaypoints: false,
         missingRouteTolerance: 0,
       },
-      show: false,
+      show: true,
       addWaypoints: false,
       routeWhileDragging: false,
       fitSelectedRoutes: true,
