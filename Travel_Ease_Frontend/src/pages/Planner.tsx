@@ -328,7 +328,6 @@ export default function Planner(): React.ReactElement {
 
       {activeModal === "activity" && id && (
         <Create_Activity
-          business={businesses}
           dates={dates}
           id={id}
           on_close={() => {

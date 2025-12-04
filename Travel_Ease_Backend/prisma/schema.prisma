@@ -60,8 +60,7 @@ model User {
 
   // Relations
   activities            Activity[]
-  Blog                  Blog[]               // Uppercase Blog for new schema
-  blog                  blog[]               // Lowercase blog for legacy
+  Blog                  Blog[]
   businesses            Business[]
   business_favorites    BusinessFavorite[]
   business_reviews      BusinessReview[]
@@ -100,17 +99,6 @@ model Blog {
   @@map("Blog")
 }
 
-// Legacy blog table (lowercase b - will be deprecated)
-model blog {
-  blog_id     Int       @id @default(autoincrement())
-  user_id     Int?
-  title       String    @db.VarChar(200)
-  description String?
-  content     String?
-  blog_date   DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
-  user        User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-}
-
 // Business and Related Tables
 model Business {
   business_id          Int                @id @default(autoincrement())
@@ -121,7 +109,7 @@ model Business {
   brgy                 String?            @db.VarChar(300)
   city                 String?            @db.VarChar(300)
   latitude             Float?
-  longtitude           Float?
+  longitude            Float?             @map("longtitude")
   description          String?
   rating               Decimal?           @db.Decimal(3, 1)
   google_authenticator String?            @db.VarChar(100)
@@ -137,6 +125,8 @@ model Business {
   reviews              BusinessReview[]
   menu_items           MenuItem[]
 
+  @@index([user_id], map: "idx_business_user_id")
+  @@index([status], map: "idx_business_status")
   @@map("business")
 }
 
@@ -222,6 +212,9 @@ model TravelPlan {
   favorites            TravelPlanFavorite[]
   reviews              TravelPlanReview[]
 
+  @@index([user_id], map: "idx_travel_plan_user_id")
+  @@index([status], map: "idx_travel_plan_status")
+  @@index([visibility], map: "idx_travel_plan_visibility")
   @@map("travel_plan")
 }
 
@@ -248,6 +241,9 @@ model Activity {
   travel_plan    TravelPlan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
   user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([travel_plan_id], map: "idx_activity_travel_plan_id")
+  @@index([user_id], map: "idx_activity_user_id")
+  @@index([business_id], map: "idx_activity_business_id")
   @@map("activity")
 }
 
@@ -264,6 +260,8 @@ model Participant {
   user           User?            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, travel_plan_id])
+  @@index([travel_plan_id], map: "idx_participant_travel_plan_id")
+  @@index([user_id], map: "idx_participant_user_id")
   @@map("participant")
 }
 

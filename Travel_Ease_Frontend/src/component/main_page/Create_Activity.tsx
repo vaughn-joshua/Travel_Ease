@@ -10,12 +10,10 @@ import type {
   CreateActivityPayload,
 } from "../../types/travelPlan";
 import { BUDGET_RANGES } from "../../types/travelPlan";
-import type { Business } from "../../types/business";
 import type { SearchResult } from "../../types/map";
 
 interface CreateActivityProps {
   on_close: () => void;
-  business?: Business[];
   dates: TravelPlanDates;
   id: string | number;
 }

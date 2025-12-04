@@ -132,7 +132,8 @@ export const editBusinessSchema = z.object({
   lat: z.number().optional().or(z.string().transform(Number).optional()),
   lng: z.number().optional().or(z.string().transform(Number).optional()),
   latitude: z.number().optional(),
-  longtitude: z.number().optional(),
+  longitude: z.number().optional(),
+  longtitude: z.number().optional(), // Legacy typo, kept for backward compatibility
   rating: z.number().min(0).max(5).optional(),
   status: z.boolean().optional(),
   // Accept both naming conventions for picture
@@ -203,7 +204,66 @@ export const priceRangeSchema = z.object({
   id: z.number().int().positive()
 });
 
-// Validation middleware factory
+// ============================================================================
+// Query Parameter Schemas
+// ============================================================================
+
+/** Pagination query params */
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+/** Search/filter query params for travel plans */
+export const planQuerySchema = paginationSchema.extend({
+  status: z.enum(['Draft', 'Active', 'Completed', 'Cancelled']).optional(),
+  search: z.string().min(1).max(200).optional(),
+  location: z.string().min(1).max(200).optional(),
+});
+
+/** Search/filter query params for businesses */
+export const businessQuerySchema = paginationSchema.extend({
+  category: z.string().optional(),
+  city: z.string().max(200).optional(),
+  search: z.string().max(200).optional(),
+  status: z.coerce.boolean().optional(),
+});
+
+// ============================================================================
+// Route Parameter Schemas
+// ============================================================================
+
+/** Single numeric ID param (e.g., /plans/:id) */
+export const idParamSchema = z.object({
+  id: z.coerce.number().int().positive('ID must be a positive integer'),
+});
+
+/** Travel plan ID param */
+export const planIdParamSchema = z.object({
+  plan_id: z.coerce.number().int().positive('Plan ID must be a positive integer'),
+});
+
+/** Activity ID param */
+export const activityIdParamSchema = z.object({
+  activity_id: z.coerce.number().int().positive('Activity ID must be a positive integer'),
+});
+
+/** Business ID param */
+export const businessIdParamSchema = z.object({
+  business_id: z.coerce.number().int().positive('Business ID must be a positive integer'),
+});
+
+/** Participant ID param */
+export const participantIdParamSchema = z.object({
+  participant_id: z.coerce.number().int().positive('Participant ID must be a positive integer'),
+});
+
+// ============================================================================
+// Validation Middleware Factories
+// ============================================================================
+
+/** Validate request body */
 export const validate = <T extends z.ZodType>(schema: T) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -222,6 +282,105 @@ export const validate = <T extends z.ZodType>(schema: T) => {
       }
       next(error);
     }
+  };
+};
+
+/** Validate query parameters */
+export const validateQuery = <T extends z.ZodType>(schema: T) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      return res.status(400).json({
+        error: 'Invalid query parameters',
+        details: result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      });
+    }
+    req.validatedQuery = result.data;
+    next();
+  };
+};
+
+/** Validate route parameters */
+export const validateParams = <T extends z.ZodType>(schema: T) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.params);
+    if (!result.success) {
+      return res.status(400).json({
+        error: 'Invalid route parameters',
+        details: result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      });
+    }
+    req.validatedParams = result.data;
+    next();
+  };
+};
+
+/** Combined validation for body, query, and params */
+export const validateAll = <
+  TBody extends z.ZodType,
+  TQuery extends z.ZodType,
+  TParams extends z.ZodType
+>(schemas: {
+  body?: TBody;
+  query?: TQuery;
+  params?: TParams;
+}) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const errors: Array<{ source: string; field: string; message: string }> = [];
+
+    if (schemas.body) {
+      const result = schemas.body.safeParse(req.body);
+      if (!result.success) {
+        errors.push(...result.error.errors.map(err => ({
+          source: 'body',
+          field: err.path.join('.'),
+          message: err.message
+        })));
+      } else {
+        req.validated = result.data;
+      }
+    }
+
+    if (schemas.query) {
+      const result = schemas.query.safeParse(req.query);
+      if (!result.success) {
+        errors.push(...result.error.errors.map(err => ({
+          source: 'query',
+          field: err.path.join('.'),
+          message: err.message
+        })));
+      } else {
+        req.validatedQuery = result.data;
+      }
+    }
+
+    if (schemas.params) {
+      const result = schemas.params.safeParse(req.params);
+      if (!result.success) {
+        errors.push(...result.error.errors.map(err => ({
+          source: 'params',
+          field: err.path.join('.'),
+          message: err.message
+        })));
+      } else {
+        req.validatedParams = result.data;
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors
+      });
+    }
+
+    next();
   };
 };
 

@@ -1,0 +1,48 @@
+/**
+ * Routes Index
+ * 
+ * Aggregates and exports all route modules.
+ * This provides a single entry point for importing routes.
+ */
+
+import businessRoutes from './businessRoutes.js';
+import travelPlanRoutes from './travelPlanRoutes.js';
+import userRoutes from './userRoutes.js';
+import mapRoutes from './mapRoutes.js';
+import reviewRoutes from './reviewRoutes.js';
+import configRoutes from './configRoutes.js';
+import utilsRoutes from './utilsRoutes.js';
+import { blogRoutes } from './blogRoutes.js';
+
+// Legacy exports for backward compatibility
+export const travel_plan_routes = travelPlanRoutes;
+export const user_routes = userRoutes;
+export const config_routes = configRoutes;
+export const utils_routes = utilsRoutes;
+export const business_routes = businessRoutes;
+export const map_routes = mapRoutes;
+export const review_routes = reviewRoutes;
+
+// New exports with camelCase naming
+export {
+  businessRoutes,
+  travelPlanRoutes,
+  userRoutes,
+  mapRoutes,
+  reviewRoutes,
+  configRoutes,
+  utilsRoutes,
+  blogRoutes,
+};
+
+export default {
+  businessRoutes,
+  travelPlanRoutes,
+  userRoutes,
+  mapRoutes,
+  reviewRoutes,
+  configRoutes,
+  utilsRoutes,
+  blogRoutes,
+};
+

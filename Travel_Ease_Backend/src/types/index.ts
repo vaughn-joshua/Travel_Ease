@@ -1,17 +1,31 @@
-import { Request, Response, NextFunction } from 'express';
-import { TravelPlan, Activity, Business, User, Participant, Blog } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import {
+  TravelPlan,
+  Activity,
+  Business,
+  User,
+  Participant,
+  Blog,
+} from "@prisma/client";
 
 // Extend Express Request to include custom properties
 declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      /** Validated request body (from validate middleware) */
       validated?: unknown;
+      /** Validated query parameters (from validateQuery middleware) */
+      validatedQuery?: unknown;
+      /** Validated route parameters (from validateParams middleware) */
+      validatedParams?: unknown;
       plan?: TravelPlan;
-      activity?: Activity & { travel_plan?: TravelPlan };
+      activity?: Activity & { travel_plan?: TravelPlan | null };
       business?: Business;
       isOwner?: boolean;
       participant?: Participant;
+      /** Request ID for tracing (from requestLogger middleware) */
+      requestId?: string;
     }
   }
 }
@@ -76,7 +90,7 @@ export interface CreatePlanDTO {
 
 export interface CollaboratorDTO {
   user_id: number;
-  role?: 'Admin' | 'Editor' | 'Viewer';
+  role?: "Admin" | "Editor" | "Viewer";
   status?: boolean;
 }
 
@@ -166,4 +180,3 @@ export interface ApiError extends Error {
 }
 
 export {};
-

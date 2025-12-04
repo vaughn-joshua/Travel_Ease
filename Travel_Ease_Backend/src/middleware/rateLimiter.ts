@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import mapConfig from '../../config/map_config.js';
+import mapConfig from '../config/map.js';
 
 const { windowMs, max } = mapConfig.rateLimit;
 

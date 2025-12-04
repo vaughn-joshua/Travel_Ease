@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { supabaseAdmin, isSupabaseConfigured } from '../lib/supabase.js';
-import { prisma, executeWithRetry } from '../lib/prismaHelpers.js';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { supabaseAdmin, isSupabaseConfigured } from "../lib/supabase.js";
+import { prisma, executeWithRetry } from "../lib/prismaHelpers.js";
 
 // Test mode uses local JWT for testing without Supabase
-const isTestMode = process.env.NODE_ENV === 'test';
+const isTestMode = process.env.NODE_ENV === "test";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 interface JwtPayload {
@@ -18,48 +18,74 @@ interface JwtPayload {
  * matches their registered email in our database.
  * Use this for sensitive operations like business creation.
  */
-export const requireGoogleAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const requireGoogleAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // First run the standard auth check
-  const authHeader = req.headers['authorization'];
-  const token = authHeader?.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ error: "Authentication required" });
   }
 
-  // Skip Google requirement in test mode
+  // Skip Google requirement in test mode - but still verify JWT and set req.user
   if (isTestMode && JWT_SECRET) {
-    return next();
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const user = await executeWithRetry(() =>
+        prisma.user.findUnique({
+          where: { user_id: decoded.id },
+        })
+      );
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      req.user = {
+        id: user.user_id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      };
+      return next();
+    } catch (error) {
+      console.error("Test mode auth error:", error);
+      return res.status(403).json({ error: "Invalid or expired token" });
+    }
   }
 
   if (!isSupabaseConfigured()) {
-    return res.status(503).json({ 
-      error: 'Authentication service unavailable',
-      details: 'Supabase is not configured.'
+    return res.status(503).json({
+      error: "Authentication service unavailable",
+      details: "Supabase is not configured.",
     });
   }
 
   try {
     const { data, error } = await supabaseAdmin!.auth.getUser(token);
-    
+
     if (error || !data.user) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      return res.status(403).json({ error: "Invalid or expired token" });
     }
 
     // Check if this is a Google OAuth session
     const provider = data.user.app_metadata?.provider;
-    if (provider !== 'google') {
+    if (provider !== "google") {
       return res.status(403).json({
-        error: 'Google authentication required for this action.',
-        code: 'GOOGLE_AUTH_REQUIRED',
+        error: "Google authentication required for this action.",
+        code: "GOOGLE_AUTH_REQUIRED",
       });
     }
 
     const googleEmail = data.user.email;
     if (!googleEmail) {
       return res.status(400).json({
-        error: 'Google account does not provide an email address.',
-        code: 'OAUTH_EMAIL_MISSING',
+        error: "Google account does not provide an email address.",
+        code: "OAUTH_EMAIL_MISSING",
       });
     }
 
@@ -72,8 +98,9 @@ export const requireGoogleAuth = async (req: Request, res: Response, next: NextF
 
     if (!user) {
       return res.status(403).json({
-        error: 'This Google account is not registered in our system. Please use a registered email address.',
-        code: 'ACCOUNT_NOT_REGISTERED',
+        error:
+          "This Google account is not registered in our system. Please use a registered email address.",
+        code: "ACCOUNT_NOT_REGISTERED",
       });
     }
 
@@ -88,33 +115,43 @@ export const requireGoogleAuth = async (req: Request, res: Response, next: NextF
 
     next();
   } catch (error) {
-    console.error('Google auth verification error:', error);
-    return res.status(403).json({ error: 'Authentication verification failed' });
+    console.error("Google auth verification error:", error);
+    return res
+      .status(403)
+      .json({ error: "Authentication verification failed" });
   }
 };
 
-export const authenticateApiKey = (req: Request, res: Response, next: NextFunction) => {
-  const apiKey = req.headers['x-api-key'] as string | undefined;
+export const authenticateApiKey = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const apiKey = req.headers["x-api-key"] as string | undefined;
   const expectedApiKey = process.env.API_KEY;
   if (!expectedApiKey) {
     return res.status(500).json({
-      error: 'API key not configured'
+      error: "API key not configured",
     });
   }
   if (!apiKey || apiKey !== expectedApiKey) {
     return res.status(401).json({
-      error: 'Invalid or missing API key'
+      error: "Invalid or missing API key",
     });
   }
   next();
 };
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader?.split(' ')[1]; // Bearer TOKEN
+export const authenticateToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.split(" ")[1]; // Bearer TOKEN
 
   if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ error: "Authentication required" });
   }
 
   try {
@@ -123,44 +160,44 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
       const user = await executeWithRetry(() =>
         prisma.user.findUnique({
-          where: { user_id: decoded.id }
+          where: { user_id: decoded.id },
         })
       );
 
       if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: "User not found" });
       }
 
-      req.user = { 
-        id: user.user_id, 
+      req.user = {
+        id: user.user_id,
         email: user.email,
         first_name: user.first_name,
-        last_name: user.last_name
+        last_name: user.last_name,
       };
       return next();
     }
 
     // Production: require Supabase configuration
     if (!isSupabaseConfigured()) {
-      return res.status(503).json({ 
-        error: 'Authentication service unavailable',
-        details: 'Supabase is not configured.'
+      return res.status(503).json({
+        error: "Authentication service unavailable",
+        details: "Supabase is not configured.",
       });
     }
 
     // Verify token with Supabase
     const { data, error } = await supabaseAdmin!.auth.getUser(token);
-    
+
     if (error || !data.user) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+      return res.status(403).json({ error: "Invalid or expired token" });
     }
 
     const email = data.user.email;
 
     if (!email) {
       return res.status(400).json({
-        error: 'Authenticated account does not provide an email address.',
-        code: 'OAUTH_EMAIL_MISSING',
+        error: "Authenticated account does not provide an email address.",
+        code: "OAUTH_EMAIL_MISSING",
       });
     }
 
@@ -172,14 +209,14 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
     if (!user) {
       return res.status(403).json({
-        error: 'This Google account is not registered in our system.',
-        code: 'ACCOUNT_NOT_REGISTERED',
+        error: "This Google account is not registered in our system.",
+        code: "ACCOUNT_NOT_REGISTERED",
       });
     }
 
     if (!user.auth_id || user.auth_id !== data.user.id) {
       const provider =
-        (data.user.app_metadata?.provider as string | undefined) ?? 'google';
+        (data.user.app_metadata?.provider as string | undefined) ?? "google";
 
       user = await executeWithRetry(() =>
         prisma.user.update({
@@ -192,17 +229,16 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       );
     }
 
-    req.user = { 
-      id: user.user_id, 
-      auth_id: data.user.id, 
-      email: data.user.email || '',
+    req.user = {
+      id: user.user_id,
+      auth_id: data.user.id,
+      email: data.user.email || "",
       first_name: user.first_name,
-      last_name: user.last_name
+      last_name: user.last_name,
     };
     next();
   } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    console.error("Auth error:", error);
+    return res.status(403).json({ error: "Invalid or expired token" });
   }
 };
-

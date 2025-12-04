@@ -45,17 +45,30 @@ describe('Supabase Auth Middleware', () => {
     vi.restoreAllMocks();
   });
 
-  it('auto-creates a local profile when Supabase user exists', async () => {
+  it('authenticates user when Supabase token is valid and user exists locally', async () => {
     const authId = randomUUID();
-    const email = `${authId}-user@example.com`;
+    const email = `supabase-test-user-${authId}@example.com`;
 
+    // Clean up any existing user with this auth_id
     await prisma.user.deleteMany({ where: { auth_id: authId } });
+    await prisma.user.deleteMany({ where: { email } });
+
+    // Create user locally first (user must exist for auth to succeed)
+    await prisma.user.create({
+      data: {
+        auth_id: authId,
+        email,
+        first_name: 'Supabase',
+        last_name: 'User',
+      }
+    });
 
     vi.spyOn(supabaseAdmin.auth, 'getUser').mockResolvedValue({
       data: {
         user: {
           id: authId,
           email,
+          app_metadata: { provider: 'google' },
           user_metadata: {
             first_name: 'Supabase',
             last_name: 'User',
@@ -64,7 +77,7 @@ describe('Supabase Auth Middleware', () => {
         }
       },
       error: null
-    });
+    } as any);
 
     const response = await request(app)
       .get('/protected')
@@ -73,9 +86,37 @@ describe('Supabase Auth Middleware', () => {
     expect(response.status).toBe(200);
     expect(response.body.user.email).toBe(email);
 
-    const profile = await prisma.user.findUnique({ where: { auth_id: authId } });
-    expect(profile).not.toBeNull();
-    expect(profile?.first_name).toBe('Supabase');
+    // Cleanup
+    await prisma.user.deleteMany({ where: { auth_id: authId } });
+  });
+
+  it('rejects Supabase user without local profile', async () => {
+    const authId = randomUUID();
+    const email = `supabase-test-user-${authId}@example.com`;
+
+    // Ensure no local user exists
+    await prisma.user.deleteMany({ where: { auth_id: authId } });
+    await prisma.user.deleteMany({ where: { email } });
+
+    vi.spyOn(supabaseAdmin.auth, 'getUser').mockResolvedValue({
+      data: {
+        user: {
+          id: authId,
+          email,
+          app_metadata: { provider: 'google' },
+          user_metadata: {}
+        }
+      },
+      error: null
+    } as any);
+
+    const response = await request(app)
+      .get('/protected')
+      .set('Authorization', 'Bearer dummy-token');
+
+    // Should reject because user doesn't exist locally
+    expect(response.status).toBe(403);
+    expect(response.body.code).toBe('ACCOUNT_NOT_REGISTERED');
   });
 
   it('rejects missing tokens', async () => {

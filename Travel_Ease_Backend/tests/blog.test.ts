@@ -8,6 +8,7 @@ import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
 import { blogRoutes } from '../src/routes/blogRoutes.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
+import { invalidateCachePattern } from '../src/lib/cache.js';
 import { createTestUser } from './setup.js';
 import type { User } from '@prisma/client';
 
@@ -228,6 +229,9 @@ describe('Blog Authentication', () => {
     });
 
     it('should return featured blogs when they exist', async () => {
+      // Invalidate cache to ensure fresh results
+      await invalidateCachePattern('blogs:');
+      
       // Create a featured blog directly in the database
       const featuredBlog = await prisma.blog.create({
         data: {

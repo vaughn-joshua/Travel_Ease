@@ -2,16 +2,17 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import {
-  travel_plan_routes,
-  user_routes,
-  config_routes,
-  utils_routes,
-  business_routes,
-} from "./routes/index.js";
-import map_routes from "./routes/map_routes.js";
-import review_routes from "./routes/review_routes.js";
-import { blogRoutes } from "./src/routes/blogRoutes.js";
+  travelPlanRoutes,
+  userRoutes,
+  configRoutes,
+  utilsRoutes,
+  businessRoutes,
+  mapRoutes,
+  reviewRoutes,
+  blogRoutes,
+} from "./src/routes/index.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
+import { requestLogger } from "./src/middleware/requestLogger.js";
 import { prisma } from "./src/lib/prisma.js";
 
 async function testConnection(): Promise<boolean> {
@@ -41,8 +42,31 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+// CORS configuration with explicit origin whitelist
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
+  "http://localhost:3000",
+  "http://localhost:5173", // Vite dev server
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+  })
+);
 app.use(express.json());
+app.use(requestLogger);
 
 // Routes
 app.use(
@@ -51,15 +75,15 @@ app.use(
     console.log("Travel plan route accessed");
     next();
   },
-  travel_plan_routes
+  travelPlanRoutes
 );
-app.use("/api/user", user_routes);
-app.use("/api/utils", utils_routes);
-app.use("/api/config", config_routes);
-app.use("/api/business", business_routes);
+app.use("/api/user", userRoutes);
+app.use("/api/utils", utilsRoutes);
+app.use("/api/config", configRoutes);
+app.use("/api/business", businessRoutes);
 app.use("/api/blogs", blogRoutes);
-app.use("/api/reviews", review_routes);
-app.use("/api/map", map_routes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/map", mapRoutes);
 
 // Health check with database status
 app.get("/api/health", async (req: Request, res: Response) => {

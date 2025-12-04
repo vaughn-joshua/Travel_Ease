@@ -16,18 +16,10 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
     "types": ["node"]
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "tests/**/*"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "tests/**/*"]
 }
-
