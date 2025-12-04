@@ -205,7 +205,8 @@ export default function Create_Plan({ on_close }: CreatePlanProps): React.ReactE
                     </span>
                     <input
                       {...register("location", { required: "Location is required" })}
-                      placeholder="e.g., Tagaytay, Cavite"
+                      value="Tagaytay Cavite"
+                      readOnly
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
                   </div>

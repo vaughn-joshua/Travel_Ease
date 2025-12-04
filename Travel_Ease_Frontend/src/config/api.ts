@@ -1,6 +1,9 @@
 /**
  * API Configuration
  * Central configuration for all API endpoints
+ *
+ * NOTE: These paths are relative to the axios baseURL ("/api").
+ * Do NOT include "/api" prefix here - it's added by the axios instance.
  */
 
 import type { Endpoints } from "../types/api";
@@ -10,94 +13,94 @@ import type { Endpoints } from "../types/api";
 export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || "/api";
 
 // Export specific endpoint builders
+// Paths are relative to baseURL - do not include /api prefix
 export const endpoints: Endpoints = {
   // Travel Plan endpoints
   travelPlan: {
-    base: `${API_BASE_URL}/travel_plan`,
-    ongoing: `${API_BASE_URL}/travel_plan/ongoing_plan`,
-    plans: `${API_BASE_URL}/travel_plan/plans`,
-    previous: `${API_BASE_URL}/travel_plan/previous_plans`,
-    public: `${API_BASE_URL}/travel_plan/public_plans`,
-    quickJoin: `${API_BASE_URL}/travel_plan/quick_join`,
-    requestJoin: `${API_BASE_URL}/travel_plan/request_join`,
-    joinPlan: `${API_BASE_URL}/travel_plan/join_plan`,
+    base: `/travel_plan`,
+    ongoing: `/travel_plan/ongoing_plan`,
+    plans: `/travel_plan/plans`,
+    previous: `/travel_plan/previous_plans`,
+    public: `/travel_plan/public_plans`,
+    quickJoin: `/travel_plan/quick_join`,
+    requestJoin: `/travel_plan/request_join`,
+    joinPlan: `/travel_plan/join_plan`,
     pendingRequests: (id: string | number) =>
-      `${API_BASE_URL}/travel_plan/${id}/pending_requests`,
+      `/travel_plan/${id}/pending_requests`,
     approveJoin: (planId: string | number, participantId: string | number) =>
-      `${API_BASE_URL}/travel_plan/${planId}/approve/${participantId}`,
+      `/travel_plan/${planId}/approve/${participantId}`,
     denyJoin: (planId: string | number, participantId: string | number) =>
-      `${API_BASE_URL}/travel_plan/${planId}/deny/${participantId}`,
-    byId: (id) => `${API_BASE_URL}/travel_plan/plans/${id}`,
-    activities: (id) => `${API_BASE_URL}/travel_plan/activities/${id}`,
-    createActivity: `${API_BASE_URL}/travel_plan/create_activity`,
-    createPlan: `${API_BASE_URL}/travel_plan/create_plan`,
-    editPlan: (id) => `${API_BASE_URL}/travel_plan/edit_plan/${id}`,
-    editActivity: (id) => `${API_BASE_URL}/travel_plan/activity_edit/${id}`,
-    updateActivity: (id) => `${API_BASE_URL}/travel_plan/update_activity/${id}`,
-    deleteActivity: (id) => `${API_BASE_URL}/travel_plan/delete_activity/${id}`,
+      `/travel_plan/${planId}/deny/${participantId}`,
+    byId: (id) => `/travel_plan/plans/${id}`,
+    activities: (id) => `/travel_plan/activities/${id}`,
+    createActivity: `/travel_plan/create_activity`,
+    createPlan: `/travel_plan/create_plan`,
+    editPlan: (id) => `/travel_plan/edit_plan/${id}`,
+    editActivity: (id) => `/travel_plan/activity_edit/${id}`,
+    updateActivity: (id) => `/travel_plan/update_activity/${id}`,
+    deleteActivity: (id) => `/travel_plan/delete_activity/${id}`,
     // Participant/Collaborator endpoints
-    participants: (id) => `${API_BASE_URL}/travel_plan/${id}/participants`,
+    participants: (id) => `/travel_plan/${id}/participants`,
     participantById: (planId, userId) =>
-      `${API_BASE_URL}/travel_plan/${planId}/participants/${userId}`,
+      `/travel_plan/${planId}/participants/${userId}`,
   },
 
   // Business endpoints
   business: {
-    base: `${API_BASE_URL}/business`,
-    businesses: `${API_BASE_URL}/business/businesses`,
-    create: `${API_BASE_URL}/business/create_business`,
-    myBusinesses: `${API_BASE_URL}/business/my-businesses`,
-    byId: (id) => `${API_BASE_URL}/business/fetch_business/${id}`,
-    categoriesById: (id) => `${API_BASE_URL}/business/fetch_categories/${id}`,
-    edit: (id) => `${API_BASE_URL}/business/edit_business/${id}`,
-    delete: (id) => `${API_BASE_URL}/business/delete_business/${id}`,
-    priceRange: `${API_BASE_URL}/business/price_range`,
-    travelSpots: `${API_BASE_URL}/business/travel_spots`,
-    reviews: (id) => `${API_BASE_URL}/business/travel_spots/reviews/${id}`,
-    categories: `${API_BASE_URL}/business/categories`,
-    menu: (id) => `${API_BASE_URL}/business/${id}/menu`,
-    menuItem: (id, itemId) => `${API_BASE_URL}/business/${id}/menu/${itemId}`,
+    base: `/business`,
+    businesses: `/business/businesses`,
+    create: `/business/create_business`,
+    myBusinesses: `/business/my-businesses`,
+    byId: (id) => `/business/fetch_business/${id}`,
+    categoriesById: (id) => `/business/fetch_categories/${id}`,
+    edit: (id) => `/business/edit_business/${id}`,
+    delete: (id) => `/business/delete_business/${id}`,
+    priceRange: `/business/price_range`,
+    travelSpots: `/business/travel_spots`,
+    reviews: (id) => `/business/travel_spots/reviews/${id}`,
+    categories: `/business/categories`,
+    menu: (id) => `/business/${id}/menu`,
+    menuItem: (id, itemId) => `/business/${id}/menu/${itemId}`,
   },
 
   // User endpoints
   user: {
-    register: `${API_BASE_URL}/user/register`,
-    login: `${API_BASE_URL}/user/login`,
-    favorite: `${API_BASE_URL}/user/favorite`,
-    favoriteById: (id) => `${API_BASE_URL}/user/favorite/${id}`,
-    byId: (id) => `${API_BASE_URL}/user/user/${id}`,
+    register: `/user/register`,
+    login: `/user/login`,
+    favorite: `/user/favorite`,
+    favoriteById: (id) => `/user/favorite/${id}`,
+    byId: (id) => `/user/user/${id}`,
   },
 
   // Utils endpoints (image uploads)
   utils: {
-    upload: `${API_BASE_URL}/utils/upload`,
-    uploadImages: `${API_BASE_URL}/utils/upload_images`,
+    upload: `/utils/upload`,
+    uploadImages: `/utils/upload_images`,
   },
 
   // Map endpoints
   map: {
-    search: `${API_BASE_URL}/map/search`,
-    suggestions: `${API_BASE_URL}/map/suggestions`,
-    geocode: `${API_BASE_URL}/map/geocode`,
-    reverse: `${API_BASE_URL}/map/reverse`,
-    route: `${API_BASE_URL}/map/route`,
+    search: `/map/search`,
+    suggestions: `/map/suggestions`,
+    geocode: `/map/geocode`,
+    reverse: `/map/reverse`,
+    route: `/map/route`,
   },
 
   // Blog endpoints
   blogs: {
-    base: `${API_BASE_URL}/blogs`,
-    featured: `${API_BASE_URL}/blogs/featured`,
-    overview: `${API_BASE_URL}/blogs/overview`,
-    bySlug: (slug) => `${API_BASE_URL}/blogs/${slug}`,
-    byId: (id) => `${API_BASE_URL}/blogs/${id}`,
+    base: `/blogs`,
+    featured: `/blogs/featured`,
+    overview: `/blogs/overview`,
+    bySlug: (slug) => `/blogs/${slug}`,
+    byId: (id) => `/blogs/${id}`,
   },
 
   // Review endpoints
   reviews: {
-    business: `${API_BASE_URL}/reviews/business`,
-    travelPlan: `${API_BASE_URL}/reviews/travel_plan`,
-    travelPlanById: (id: string | number) =>
-      `${API_BASE_URL}/reviews/travel_plan/${id}`,
+    business: `/reviews/business`,
+    travelPlan: `/reviews/travel_plan`,
+    travelPlanById: (id: string | number) => `/reviews/travel_plan/${id}`,
   },
 };
 

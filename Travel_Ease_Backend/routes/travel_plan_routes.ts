@@ -65,7 +65,6 @@ router.post('/quick_join', quick_join); // Search is public, joining requires au
 
 // Quick join queue routes (auth required)
 router.post('/request_join', authenticateToken, request_join);
-router.get('/:id/pending_requests', authenticateToken, requirePlanOwnership, get_pending_requests);
 router.put('/:id/approve/:participantId', authenticateToken, requirePlanOwnership, approve_join);
 router.delete('/:id/deny/:participantId', authenticateToken, requirePlanOwnership, deny_join);
 
@@ -79,6 +78,8 @@ router.get('/activities/:id', authenticateToken, fetch_activities);
 // Create routes (auth + validation)
 router.post('/create_plan', authenticateToken, validate(createPlanSchema), create_plan);
 router.post('/create_activity', authenticateToken, validate(createActivitySchema), create_activity);
+
+router.get('/:id/pending_requests', authenticateToken, requirePlanOwnership, get_pending_requests);
 
 // Edit routes (auth + ownership + validation)
 router.put('/edit_plan/:id', authenticateToken, requirePlanOwnership, validate(editPlanSchema), plan_edit);

@@ -34,7 +34,7 @@ export default function Planner(): React.ReactElement {
   // Track token availability - re-check when auth loading changes or session changes
   const [tokenReady, setTokenReady] = useState(false);
   const [tokenChecked, setTokenChecked] = useState(false);
-  
+
   useEffect(() => {
     // Only check for token AFTER auth loading is complete
     if (!authLoading) {
@@ -42,20 +42,20 @@ export default function Planner(): React.ReactElement {
       const checkToken = () => {
         const token = localStorage.getItem("token");
         const hasToken = !!token;
-        
+
         // Debug logging
-        console.log("Planner auth check:", { 
-          authLoading, 
-          hasToken, 
+        console.log("Planner auth check:", {
+          authLoading,
+          hasToken,
           hasSession: !!session,
           hasUser: !!user,
-          tokenLength: token?.length 
+          tokenLength: token?.length,
         });
-        
+
         setTokenReady(hasToken);
         setTokenChecked(true);
       };
-      
+
       // Give AuthContext a moment to sync the token
       const timeoutId = setTimeout(checkToken, 100);
       return () => clearTimeout(timeoutId);
@@ -63,11 +63,11 @@ export default function Planner(): React.ReactElement {
   }, [authLoading, session, user]);
 
   // Use TanStack Query for plan data - only enable when auth is ready and we have a token
-  const { 
-    data: plan, 
-    isLoading: planLoading, 
+  const {
+    data: plan,
+    isLoading: planLoading,
     error: planError,
-    refetch: refetchPlan 
+    refetch: refetchPlan,
   } = useTravelPlanDetail(tokenReady && tokenChecked ? id : undefined);
 
   const [days, setDays] = useState<number>(0);
@@ -91,7 +91,9 @@ export default function Planner(): React.ReactElement {
 
   const handle_close = (): void => {
     // Invalidate and refetch instead of full page reload
-    queryClient.invalidateQueries({ queryKey: travelPlanKeys.detail(id ?? "") });
+    queryClient.invalidateQueries({
+      queryKey: travelPlanKeys.detail(id ?? ""),
+    });
     setActiveModal("");
   };
 
@@ -99,7 +101,6 @@ export default function Planner(): React.ReactElement {
     console.log({ lat, long });
     setClickActivity({ start: null, end: [lat, long] });
   };
-
 
   // Refetch plan when modal closes (for edit updates)
   useEffect(() => {
@@ -127,7 +128,7 @@ export default function Planner(): React.ReactElement {
 
     return {
       calculatedDays: dayCount,
-      calculatedDates: { start: start.toISOString(), end: end.toISOString() }
+      calculatedDates: { start: start.toISOString(), end: end.toISOString() },
     };
   }, [plan?.start_date, plan?.end_date]);
 
@@ -146,7 +147,7 @@ export default function Planner(): React.ReactElement {
 
   const handle_start = (): void => {
     if (!id) return;
-    
+
     // Update the plan status from Draft to Active
     updatePlanMutation.mutate(
       { id, data: { status: "Active" } },
@@ -170,7 +171,11 @@ export default function Planner(): React.ReactElement {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600">
-            {authLoading ? "Checking authentication..." : !tokenChecked ? "Verifying session..." : "Loading plan..."}
+            {authLoading
+              ? "Checking authentication..."
+              : !tokenChecked
+              ? "Verifying session..."
+              : "Loading plan..."}
           </p>
         </div>
       </div>
@@ -183,11 +188,10 @@ export default function Planner(): React.ReactElement {
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <p className="text-red-600 mb-4">Authentication required</p>
-          <p className="text-gray-500 text-sm mb-4">Please log in to view this plan.</p>
-          <button 
-            onClick={() => navigate("/login")} 
-            className="hard_btn"
-          >
+          <p className="text-gray-500 text-sm mb-4">
+            Please log in to view this plan.
+          </p>
+          <button onClick={() => navigate("/login")} className="hard_btn">
             Log In
           </button>
         </div>
@@ -202,10 +206,7 @@ export default function Planner(): React.ReactElement {
         <div className="text-center">
           <p className="text-red-600 mb-4">Failed to load plan</p>
           <p className="text-gray-500 text-sm mb-4">{planError.message}</p>
-          <button 
-            onClick={() => refetchPlan()} 
-            className="hard_btn"
-          >
+          <button onClick={() => refetchPlan()} className="hard_btn">
             Try Again
           </button>
         </div>
@@ -218,10 +219,7 @@ export default function Planner(): React.ReactElement {
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <p className="text-gray-600">Plan not found</p>
-          <button 
-            onClick={() => navigate("/plans")} 
-            className="soft_btn mt-4"
-          >
+          <button onClick={() => navigate("/plans")} className="soft_btn mt-4">
             Back to Plans
           </button>
         </div>
@@ -295,8 +293,8 @@ export default function Planner(): React.ReactElement {
                 >
                   edit
                 </button>
-                <button 
-                  className="hard_btn" 
+                <button
+                  className="hard_btn"
                   onClick={handle_start}
                   disabled={updatePlanMutation.isPending}
                 >
@@ -312,7 +310,7 @@ export default function Planner(): React.ReactElement {
                 edit
               </button>
             )}
-            <button 
+            <button
               className="hard_btn"
               onClick={() => setActiveModal("collaborators")}
             >
@@ -352,4 +350,3 @@ export default function Planner(): React.ReactElement {
     </div>
   );
 }
-

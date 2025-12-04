@@ -4,7 +4,11 @@ import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
 import Search_Box from "../map_components/Search_Box";
 import { useCreateActivity } from "../../features/travelPlans/mutations";
-import type { TravelPlanDates, BudgetRange, CreateActivityPayload } from "../../types/travelPlan";
+import type {
+  TravelPlanDates,
+  BudgetRange,
+  CreateActivityPayload,
+} from "../../types/travelPlan";
 import { BUDGET_RANGES } from "../../types/travelPlan";
 import type { Business } from "../../types/business";
 import type { SearchResult } from "../../types/map";
@@ -37,8 +41,10 @@ export default function Create_Activity({
   };
 
   const [value, setValue] = useState<Date | string>(dates.start);
-  const [search_result, set_search_result] = useState<SearchResult | null>(null);
-  
+  const [search_result, set_search_result] = useState<SearchResult | null>(
+    null
+  );
+
   // Use TanStack Query mutation for creating activities
   const createActivityMutation = useCreateActivity();
 
@@ -60,6 +66,15 @@ export default function Create_Activity({
     }
   };
 
+  // Format date as YYYY-MM-DD in local timezone (avoids UTC conversion issues)
+  const formatDateForBackend = (date: Date | string): string => {
+    const d = typeof date === "string" ? new Date(date) : date;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const on_submit = async (data: FormData): Promise<void> => {
     if (!search_result) {
       alert("Please select a location");
@@ -75,7 +90,7 @@ export default function Create_Activity({
       brgy: search_result.address?.barangay || "",
       province: search_result.address?.province || "",
       city: search_result.address?.city || "",
-      target_date: typeof value === "string" ? value : value.toISOString(),
+      target_date: formatDateForBackend(value),
       budget_range: data.budget_range || undefined,
       notes: data.notes || undefined,
     };
@@ -98,7 +113,9 @@ export default function Create_Activity({
   return (
     <div className="modal">
       <div className="modal_body">
-        <h1 className="text-xl font-semibold text-red-600 mb-4">Create Activity</h1>
+        <h1 className="text-xl font-semibold text-red-600 mb-4">
+          Create Activity
+        </h1>
 
         <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
           <div>
@@ -116,8 +133,12 @@ export default function Create_Activity({
             <input
               {...register("target_date", {
                 validate: (val) => {
-                  const range = `${formatDate(dates.start)} - ${formatDate(dates.end)}`;
-                  return val !== range || "Please choose a date within the range";
+                  const range = `${formatDate(dates.start)} - ${formatDate(
+                    dates.end
+                  )}`;
+                  return (
+                    val !== range || "Please choose a date within the range"
+                  );
                 },
               })}
               className="text_box"
@@ -161,7 +182,9 @@ export default function Create_Activity({
               ))}
             </select>
             {errors.budget_range && (
-              <p className="text-red-500 text-sm">{errors.budget_range.message}</p>
+              <p className="text-red-500 text-sm">
+                {errors.budget_range.message}
+              </p>
             )}
           </div>
 
@@ -171,16 +194,16 @@ export default function Create_Activity({
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <button 
-              type="button" 
-              onClick={on_close} 
+            <button
+              type="button"
+              onClick={on_close}
               disabled={createActivityMutation.isPending}
               className="soft_btn"
             >
               Exit
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={createActivityMutation.isPending}
               className="hard_btn"
             >
@@ -192,4 +215,3 @@ export default function Create_Activity({
     </div>
   );
 }
-

@@ -96,4 +96,3 @@ export default function Main_Page(): React.ReactElement {
     </div>
   );
 }
-
