@@ -155,10 +155,13 @@ export const blogApi = {
       await api.delete(`/blogs/${id}`);
       // 204 No Content is a successful response with no body
       return;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If it's a 204, it's actually successful
-      if (error.response?.status === 204) {
-        return;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 204) {
+          return;
+        }
       }
       throw error;
     }
@@ -271,13 +274,13 @@ export const businessApi = {
   },
 
   // Create new business
-  createBusiness: async (data: any): Promise<{ message: string; business_id: number }> => {
+  createBusiness: async (data: Partial<Business> & { category?: string[]; business_hrs?: { day: string; start?: string; end?: string }[] }): Promise<{ message: string; business_id: number }> => {
     const response = await api.post("/business/create_business", data);
     return response.data;
   },
 
   // Update business
-  updateBusiness: async (id: string | number, data: any): Promise<any> => {
+  updateBusiness: async (id: string | number, data: Partial<Business> & { category?: string[]; business_hrs?: { day: string; start?: string; end?: string }[] }): Promise<{ message: string; business: Business }> => {
     const response = await api.put(`/business/edit_business/${id}`, data);
     return response.data;
   },
@@ -397,13 +400,13 @@ export const userApi = {
   },
 
   // Add favorite
-  addFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<any> => {
+  addFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<{ message: string; favorite_id: number }> => {
     const response = await api.post("/user/favorite", data);
     return response.data;
   },
 
   // Remove favorite
-  removeFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<any> => {
+  removeFavorite: async (data: { business_id?: number; travel_plan_id?: number }): Promise<{ message: string }> => {
     const response = await api.delete("/user/favorite", { data });
     return response.data;
   },
