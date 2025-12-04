@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { upload_image } from '../utils/upload_image.js';
-import { upload_images } from '../utils/upload_images.js';
+import { upload_image, upload_images } from '../src/modules/uploads/index.js';
 import { authenticateToken } from '../src/middleware/auth.js';
 
 const router = Router();

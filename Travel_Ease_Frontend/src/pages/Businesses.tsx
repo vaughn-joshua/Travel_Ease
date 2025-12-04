@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { endpoints } from "../config/api.js";
-import BusinessCard, { Business } from "../component/business/BusinessCard";
-import BusinessFilterBar from "../component/business/BusinessFilterBar";
+import BusinessCard, { Business } from "../components/business/BusinessCard";
+import BusinessFilterBar from "../components/business/BusinessFilterBar";
 
 const PRICE_RANGES: Record<string, { min: number; max: number }> = {
   budget: { min: 0, max: 200 },

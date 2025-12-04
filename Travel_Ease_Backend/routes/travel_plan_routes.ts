@@ -55,7 +55,7 @@ import {
   add_participant,
   update_participant,
   remove_participant,
-} from '../travel_plan/index.js';
+} from '../src/modules/travel-plan/index.js';
 
 const router = Router();
 

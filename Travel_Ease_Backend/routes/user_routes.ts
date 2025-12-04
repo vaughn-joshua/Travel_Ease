@@ -27,7 +27,7 @@ import {
   update_profile,
   get_me,
   delete_account,
-} from '../user/index.js';
+} from '../src/modules/user/index.js';
 
 const router = Router();
 

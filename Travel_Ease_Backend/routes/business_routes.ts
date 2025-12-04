@@ -19,7 +19,7 @@ import {
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
-} from '../business/index.js';
+} from '../src/modules/business/index.js';
 import { prisma, executeWithRetry, handlePrismaError } from '../src/lib/prismaHelpers.js';
 import { cacheResult, buildCacheKey, invalidateCachePattern } from '../src/lib/cache.js';
 
