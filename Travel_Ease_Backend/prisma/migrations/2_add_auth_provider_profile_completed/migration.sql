@@ -15,3 +15,4 @@ UPDATE "user" SET "auth_provider" = 'email' WHERE "password" IS NOT NULL AND "au
 
 
 
+
