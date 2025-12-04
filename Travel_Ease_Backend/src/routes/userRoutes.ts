@@ -27,6 +27,7 @@ import {
   update_profile,
   get_me,
   delete_account,
+  search_users,
 } from '../modules/user/index.js';
 
 const router = Router();
@@ -44,6 +45,9 @@ router.post('/oauth', authenticateToken, oauth_sync);
 router.get('/me', authenticateToken, get_me);
 router.put('/profile', authenticateToken, update_profile);
 router.delete('/account', authenticateToken, delete_account);
+
+// User search (for collaborator autocomplete)
+router.get('/search', authenticateToken, search_users);
 
 // Protected routes (auth required)
 router.post('/favorite', authenticateToken, validate(createFavoriteSchema), favorite);

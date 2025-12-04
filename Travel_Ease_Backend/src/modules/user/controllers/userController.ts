@@ -500,3 +500,44 @@ export async function delete_account(req: Request, res: Response) {
   }
 }
 
+/**
+ * Search users by email (for collaborator autocomplete)
+ * Returns matching users excluding the current user
+ */
+export async function search_users(req: Request, res: Response) {
+  try {
+    const { q } = req.query;
+    const currentUserId = req.user!.id;
+
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      return res.json([]);
+    }
+
+    const users = await executeWithRetry(() =>
+      prisma.user.findMany({
+        where: {
+          email: {
+            contains: q,
+            mode: 'insensitive'
+          },
+          user_id: {
+            not: currentUserId
+          }
+        },
+        select: {
+          user_id: true,
+          email: true,
+          first_name: true,
+          last_name: true
+        },
+        take: 5
+      })
+    );
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error searching users:', error);
+    return handlePrismaError(error, res, 'Searching users');
+  }
+}
+

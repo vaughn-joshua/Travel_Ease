@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTravelPlanParticipants } from "../../features/travelPlans/queries";
 import {
   useRemoveParticipant,
   useUpdateParticipantRole,
   useApproveParticipant,
+  useAddParticipant,
 } from "../../features/travelPlans/mutations";
+import { userApi, type UserSearchResult } from "../../services/api";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Participant } from "../../utils/travel_plan/fetch_participants";
 
 interface CollaboratorsProps {
@@ -19,6 +22,16 @@ export default function Collaborators({
   on_close,
 }: CollaboratorsProps): React.ReactElement {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  
+  // Email search state
+  const [emailSearch, setEmailSearch] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [showCopyLinkModal, setShowCopyLinkModal] = useState<boolean>(false);
+
+  // Debounce the search query
+  const debouncedSearch = useDebouncedValue(emailSearch, 300);
 
   // Use TanStack Query for fetching participants
   const {
@@ -35,6 +48,55 @@ export default function Collaborators({
   const removeParticipantMutation = useRemoveParticipant();
   const updateRoleMutation = useUpdateParticipantRole();
   const approveParticipantMutation = useApproveParticipant();
+  const addParticipantMutation = useAddParticipant();
+
+  // Search for users when debounced search changes
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (debouncedSearch.length < 2) {
+        setSearchResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await userApi.searchUsers(debouncedSearch);
+        // Filter out users already in participants
+        const existingUserIds = participants.map((p) => p.user_id);
+        const filtered = results.filter(
+          (user) => !existingUserIds.includes(user.user_id)
+        );
+        setSearchResults(filtered);
+        setShowDropdown(filtered.length > 0);
+      } catch (error) {
+        console.error("Error searching users:", error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    searchUsers();
+  }, [debouncedSearch, participants]);
+
+  // Add a collaborator
+  const handleAddCollaborator = (user: UserSearchResult) => {
+    addParticipantMutation.mutate(
+      { planId, userId: user.user_id, role: "Viewer" },
+      {
+        onSuccess: () => {
+          setEmailSearch("");
+          setSearchResults([]);
+          setShowDropdown(false);
+          refetch();
+        },
+        onError: (err) => {
+          alert(err instanceof Error ? err.message : "Failed to add collaborator");
+        },
+      }
+    );
+  };
 
   const handleRemove = async (userId: number): Promise<void> => {
     if (!confirm("Are you sure you want to remove this collaborator?")) return;
@@ -148,6 +210,76 @@ export default function Collaborators({
             </svg>
           </button>
         </div>
+
+        {/* Invite Section - Only for owners */}
+        {isOwner && (
+          <div className="mb-4 pb-4 border-b">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Invite Collaborators
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                {addParticipantMutation.isPending ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : "✉️"}
+              </span>
+              <input
+                type="text"
+                value={addParticipantMutation.isPending ? "" : emailSearch}
+                onChange={(e) => setEmailSearch(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                placeholder={addParticipantMutation.isPending ? "Adding collaborator..." : "Search by email..."}
+                disabled={addParticipantMutation.isPending}
+                className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none ${
+                  addParticipantMutation.isPending ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
+              />
+              {isSearching && !addParticipantMutation.isPending && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </span>
+              )}
+
+              {/* Dropdown with search results */}
+              {showDropdown && searchResults.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
+                  {searchResults.map((user) => (
+                    <button
+                      key={user.user_id}
+                      type="button"
+                      onClick={() => handleAddCollaborator(user)}
+                      disabled={addParticipantMutation.isPending}
+                      className="w-full px-4 py-2 text-left hover:bg-red-50 transition-colors border-b border-gray-100 last:border-b-0 disabled:opacity-50"
+                    >
+                      <div className="font-medium text-gray-800">
+                        {user.first_name} {user.last_name}
+                      </div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Copy Link Button */}
+            <button
+              onClick={() => setShowCopyLinkModal(true)}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Copy Invite Link
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-8">
@@ -312,6 +444,31 @@ export default function Collaborators({
           </button>
         </div>
       </div>
+
+      {/* Copy Link Placeholder Modal */}
+      {showCopyLinkModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 text-center">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Coming Soon!
+            </h3>
+            <p className="text-gray-600 mb-4">
+              The invite link feature is currently being developed. Check back soon!
+            </p>
+            <button
+              onClick={() => setShowCopyLinkModal(false)}
+              className="hard_btn w-full"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

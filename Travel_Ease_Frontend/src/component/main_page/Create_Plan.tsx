@@ -5,10 +5,12 @@
  * Uses native HTML date inputs for better compatibility and easier testing.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, FieldErrors } from "react-hook-form";
 import { useCreatePlan } from "../../features/travelPlans/mutations";
-import type { CreatePlanPayload } from "../../types/travelPlan";
+import type { CreatePlanPayload, CollaboratorPayload } from "../../types/travelPlan";
+import { userApi, type UserSearchResult } from "../../services/api";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import React from "react";
 
 interface CreatePlanProps {
@@ -22,7 +24,13 @@ interface FormData {
   start_date: string;
   end_date: string;
   slots?: string;
-  collaborators?: string;
+}
+
+interface SelectedCollaborator {
+  user_id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
 }
 
 export default function Create_Plan({
@@ -41,6 +49,16 @@ export default function Create_Plan({
   const [counter, setCounter] = useState<number>(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Collaborator search state
+  const [emailSearch, setEmailSearch] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [selectedCollaborators, setSelectedCollaborators] = useState<SelectedCollaborator[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+
+  // Debounce the search query
+  const debouncedSearch = useDebouncedValue(emailSearch, 300);
+
   // Use TanStack Query mutation for creating plans
   const createPlanMutation = useCreatePlan();
 
@@ -50,6 +68,48 @@ export default function Create_Plan({
 
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split("T")[0];
+
+  // Search for users when debounced search changes
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (debouncedSearch.length < 2) {
+        setSearchResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await userApi.searchUsers(debouncedSearch);
+        // Filter out already selected users
+        const filtered = results.filter(
+          (user) => !selectedCollaborators.some((c) => c.user_id === user.user_id)
+        );
+        setSearchResults(filtered);
+        setShowDropdown(filtered.length > 0);
+      } catch (error) {
+        console.error("Error searching users:", error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    searchUsers();
+  }, [debouncedSearch, selectedCollaborators]);
+
+  // Add a collaborator to the selected list
+  const addCollaborator = (user: UserSearchResult) => {
+    setSelectedCollaborators((prev) => [...prev, user]);
+    setEmailSearch("");
+    setSearchResults([]);
+    setShowDropdown(false);
+  };
+
+  // Remove a collaborator from the selected list
+  const removeCollaborator = (userId: number) => {
+    setSelectedCollaborators((prev) => prev.filter((c) => c.user_id !== userId));
+  };
 
   const handle_back = (): void => {
     setCounter((prev) => prev - 1);
@@ -88,13 +148,21 @@ export default function Create_Plan({
       return;
     }
 
+    // Map selected collaborators to the payload format
+    const collaborators: CollaboratorPayload[] = selectedCollaborators.map((c) => ({
+      user_id: c.user_id,
+      role: "Viewer" as const,
+      status: true,
+    }));
+
     const payload: CreatePlanPayload = {
       title: d.title,
       description: d.description,
       location: d.location,
       start_date: d.start_date,
       end_date: d.end_date,
-      slots: d.slots ? parseInt(d.slots, 10) : undefined, // Backend accepts both slots and max_slots
+      slots: d.slots ? parseInt(d.slots, 10) : undefined,
+      collaborators: collaborators.length > 0 ? collaborators : undefined,
     };
 
     console.log("Creating plan with payload:", payload);
@@ -102,6 +170,7 @@ export default function Create_Plan({
     createPlanMutation.mutate(payload, {
       onSuccess: () => {
         setCounter(0);
+        setSelectedCollaborators([]);
         on_close();
       },
       onError: (error) => {
@@ -348,19 +417,72 @@ export default function Create_Plan({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Invite Collaborators (Optional)
                   </label>
+                  
+                  {/* Selected collaborators as chips */}
+                  {selectedCollaborators.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {selectedCollaborators.map((collab) => (
+                        <div
+                          key={collab.user_id}
+                          className="flex items-center gap-1 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm"
+                        >
+                          <span>{collab.email}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeCollaborator(collab.user_id)}
+                            className="ml-1 text-red-600 hover:text-red-800 font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Email search input with dropdown */}
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                       ✉️
                     </span>
                     <input
-                      {...register("collaborators")}
-                      placeholder="Enter email addresses"
+                      type="text"
+                      value={emailSearch}
+                      onChange={(e) => setEmailSearch(e.target.value)}
+                      onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                      placeholder="Search by email..."
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
+                    {isSearching && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      </span>
+                    )}
+
+                    {/* Dropdown with search results */}
+                    {showDropdown && searchResults.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
+                        {searchResults.map((user) => (
+                          <button
+                            key={user.user_id}
+                            type="button"
+                            onClick={() => addCollaborator(user)}
+                            className="w-full px-4 py-2 text-left hover:bg-red-50 transition-colors border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-gray-800">
+                              {user.first_name} {user.last_name}
+                            </div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    You can invite collaborators later from the plan details
-                    page
+                    Search for users by email to invite them as collaborators
                   </p>
                 </div>
 
@@ -376,6 +498,9 @@ export default function Create_Plan({
                       📅 {watch("start_date") || "?"} →{" "}
                       {watch("end_date") || "?"}
                     </p>
+                    {selectedCollaborators.length > 0 && (
+                      <p>👥 {selectedCollaborators.length} collaborator(s) invited</p>
+                    )}
                   </div>
                 </div>
               </div>

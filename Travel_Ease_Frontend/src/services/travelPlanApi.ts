@@ -241,6 +241,24 @@ export const travelPlanApi = {
     );
     return response.data;
   },
+
+  /**
+   * Add a new participant to a travel plan
+   */
+  addParticipant: async (
+    planId: number | string,
+    data: { user_id: number; role?: "Admin" | "Editor" | "Viewer"; status?: boolean }
+  ): Promise<ParticipantResponse> => {
+    const response = await api.post<ParticipantResponse>(
+      endpoints.travelPlan.participants(planId),
+      {
+        user_id: data.user_id,
+        role: data.role || "Viewer",
+        status: data.status ?? true,
+      }
+    );
+    return response.data;
+  },
 };
 
 export default travelPlanApi;

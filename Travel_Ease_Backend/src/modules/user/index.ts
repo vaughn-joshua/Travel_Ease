@@ -15,5 +15,6 @@ export {
   oauth_sync, 
   update_profile, 
   get_me, 
-  delete_account 
+  delete_account,
+  search_users
 } from './controllers/userController.js';

@@ -442,6 +442,14 @@ interface FavoritesResponse {
   }>;
 }
 
+// User search result type
+export interface UserSearchResult {
+  user_id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
 export const userApi = {
   // Register new user
   register: async (data: RegisterPayload): Promise<AuthResponse> => {
@@ -452,6 +460,13 @@ export const userApi = {
   // Login user
   login: async (data: LoginPayload): Promise<AuthResponse> => {
     const response = await api.post("/user/login", data);
+    return response.data;
+  },
+
+  // Search users by email (for collaborator autocomplete)
+  searchUsers: async (query: string): Promise<UserSearchResult[]> => {
+    if (!query || query.length < 2) return [];
+    const response = await api.get("/user/search", { params: { q: query } });
     return response.data;
   },
 

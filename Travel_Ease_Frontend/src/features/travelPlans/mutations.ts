@@ -276,3 +276,33 @@ export function useApproveParticipant() {
   });
 }
 
+/**
+ * useAddParticipant
+ * Adds a new participant to a travel plan.
+ */
+export function useAddParticipant() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      planId,
+      userId,
+      role = "Viewer",
+    }: {
+      planId: number | string;
+      userId: number;
+      role?: "Admin" | "Editor" | "Viewer";
+    }) => travelPlanApi.addParticipant(planId, { user_id: userId, role, status: true }),
+    onSuccess: (_data, variables) => {
+      // Invalidate participants for the specific plan
+      queryClient.invalidateQueries({
+        queryKey: travelPlanKeys.participants(variables.planId),
+      });
+      // Also invalidate plan detail as participant count may change
+      queryClient.invalidateQueries({
+        queryKey: travelPlanKeys.detail(variables.planId),
+      });
+    },
+  });
+}
+
