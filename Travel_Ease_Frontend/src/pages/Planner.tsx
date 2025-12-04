@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTravelPlanDetail } from "../features/travelPlans/queries";
-import { useUpdatePlan } from "../features/travelPlans/mutations";
+import { useUpdatePlan, useRequestJoin } from "../features/travelPlans/mutations";
 import { useTravelSpots } from "../features/businesses/queries";
 import Activities from "../component/main_page/Activities";
 import Edit_Plan from "../component/main_page/Edit_Plan";
@@ -145,6 +145,10 @@ export default function Planner(): React.ReactElement {
   // Use TanStack Query mutation for updating plan status
   const updatePlanMutation = useUpdatePlan();
 
+  // Use TanStack Query mutation for requesting to join
+  const requestJoinMutation = useRequestJoin();
+  const [joinSuccess, setJoinSuccess] = useState(false);
+
   const handle_start = (): void => {
     if (!id) return;
 
@@ -282,7 +286,30 @@ export default function Planner(): React.ReactElement {
 
           <div id="buttons_container" className="space-x-2">
             {status === "join" && (
-              <button className="hard_btn">join now</button>
+              joinSuccess ? (
+                <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
+                  Request Sent!
+                </span>
+              ) : (
+                <button
+                  className="hard_btn"
+                  onClick={() =>
+                    requestJoinMutation.mutate(
+                      { travel_plan_id: Number(id) },
+                      {
+                        onSuccess: () => setJoinSuccess(true),
+                        onError: (error) => {
+                          console.error("Join request error:", error);
+                          alert("Failed to send join request. Please try again.");
+                        },
+                      }
+                    )
+                  }
+                  disabled={requestJoinMutation.isPending}
+                >
+                  {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
+                </button>
+              )
             )}
             {status === "start" && (
               <>
@@ -305,12 +332,23 @@ export default function Planner(): React.ReactElement {
               </>
             )}
             {status === "view" && (
-              <button
-                onClick={() => setActiveModal("plan")}
-                className="soft_btn"
-              >
-                edit
-              </button>
+              <>
+                <button
+                  onClick={() => setActiveModal("plan")}
+                  className="soft_btn"
+                >
+                  edit
+                </button>
+                {plan?.status !== "Active" && (
+                  <button
+                    className="hard_btn"
+                    onClick={handle_start}
+                    disabled={updatePlanMutation.isPending}
+                  >
+                    {updatePlanMutation.isPending ? "Starting..." : "Start"}
+                  </button>
+                )}
+              </>
             )}
             <button
               className="hard_btn"

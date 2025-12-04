@@ -10,9 +10,13 @@ interface QuickJoinProps {
 }
 
 interface FormData {
-  location: string;
   start_date: string;
   end_date: string;
+}
+
+// Helper to format date for display
+function formatDateDisplay(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactElement {
@@ -70,7 +74,7 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
     setSearchError(null);
 
     const payload: QuickJoinPayload = {
-      location: data.location,
+      location: "Tagaytay Cavite",
       start_date: data.start_date,
       end_date: data.end_date,
     };
@@ -103,14 +107,15 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
         <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
           <div>
             <label className="label">Location</label>
-            <input
-              {...register("location", { required: "Location is required" })}
-              className="text_box"
-              placeholder="Where do you want to go?"
-            />
-            {errors.location && (
-              <p className="text-red-500 text-sm">{errors.location.message}</p>
-            )}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📍</span>
+              <input
+                type="text"
+                value="Tagaytay Cavite"
+                className="text_box pl-10 bg-gray-50 text-gray-700 cursor-default"
+                readOnly
+              />
+            </div>
           </div>
 
           <div>
@@ -128,8 +133,34 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
             />
             <input type="hidden" {...register("start_date", { required: true })} />
             <input type="hidden" {...register("end_date", { required: true })} />
+            
+            {/* Date range display */}
+            {dateRange.length > 0 ? (
+              <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                <p className="text-sm text-gray-700 flex items-center gap-2">
+                  <span className="text-red-500">📅</span>
+                  <span className="font-medium">{formatDateDisplay(dateRange[0])}</span>
+                  {dateRange.length === 2 && dateRange[1] && (
+                    <>
+                      <span className="text-gray-400">→</span>
+                      <span className="font-medium">{formatDateDisplay(dateRange[1])}</span>
+                    </>
+                  )}
+                </p>
+                {dateRange.length === 2 && dateRange[1] && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {Math.ceil((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1} days
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 mt-2">
+                Click above to select your travel dates
+              </p>
+            )}
+            
             {(errors.start_date || errors.end_date) && (
-              <p className="text-red-500 text-sm">
+              <p className="text-red-500 text-sm mt-1">
                 {errors.start_date?.message || "Please select a date range"}
               </p>
             )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useRequestJoin } from "../../features/travelPlans/mutations";
 import type { TravelPlan } from "../../types/travelPlan";
 
@@ -16,12 +17,18 @@ function formatDate(dateStr: string | null): string {
 }
 
 export default function Plan_Modal({ results, on_close }: PlanModalProps): React.ReactElement {
+  const navigate = useNavigate();
   const [joiningPlanId, setJoiningPlanId] = useState<number | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState<number | null>(null);
   
   // Use TanStack Query mutation for requesting to join
   const requestJoinMutation = useRequestJoin();
+
+  const handleViewPlan = (planId: number): void => {
+    on_close(); // Close modal first
+    navigate(`/planner/join/${planId}`);
+  };
 
   const handle_join = async (planId: number): Promise<void> => {
     const token = localStorage.getItem("token");
@@ -95,11 +102,12 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
               return (
                 <div
                   key={planId}
-                  className="card hover:shadow-lg transition-shadow"
+                  className="card hover:shadow-lg hover:border-red-200 transition-all cursor-pointer group"
+                  onClick={() => handleViewPlan(planId)}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
                         {plan.title || plan.name}
                       </h3>
                       {plan.description && (
@@ -123,8 +131,11 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
                           Organized by {plan.user.first_name} {plan.user.last_name}
                         </p>
                       )}
+                      <p className="text-xs text-red-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to view plan →
+                      </p>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-4" onClick={(e) => e.stopPropagation()}>
                       {hasJoined ? (
                         <span className="px-3 py-1.5 text-sm bg-green-100 text-green-700 rounded-lg">
                           Request Sent!
