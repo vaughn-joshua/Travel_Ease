@@ -1,7 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePreviousPlans } from "../../features/travelPlans/queries";
 
 export default function Previous_Plans(): React.ReactElement {
+  const navigate = useNavigate();
   const { loading: authLoading } = useAuth();
 
   // Check for token in localStorage to determine if user is authenticated
@@ -58,7 +60,8 @@ export default function Previous_Plans(): React.ReactElement {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-100 p-3"
+              onClick={() => navigate(`/planner/view/${plan.id}`)}
+              className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md hover:border-red-200 transition-all"
             >
               <h4 className="font-medium text-gray-900 text-sm">{plan.title}</h4>
               <p className="text-xs text-gray-600 mt-1">{plan.location}</p>
