@@ -23,31 +23,35 @@ export interface ParticipantsResponse {
 }
 
 export async function fetch_participants(planId: number | string): Promise<Participant[]> {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.warn("No authentication token found for fetch_participants.");
-      return [];
-    }
-
-    const result = await fetch(endpoints.travelPlan.participants(planId), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-
-    if (!result.ok) {
-      throw new Error(`Failed to fetch participants: ${result.status}`);
-    }
-
-    const response: ParticipantsResponse = await result.json();
-    return response.data || [];
-  } catch (e) {
-    console.error("Error fetching participants:", e);
-    return [];
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Authentication required. Please log in.");
   }
+
+  const result = await fetch(endpoints.travelPlan.participants(planId), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!result.ok) {
+    // Try to get error details from response
+    let errorMessage = `Failed to fetch participants (${result.status})`;
+    try {
+      const errorData = await result.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(errorMessage);
+  }
+
+  const response: ParticipantsResponse = await result.json();
+  return response.data || [];
 }
 
 export async function remove_participant(planId: number | string, userId: number): Promise<boolean> {

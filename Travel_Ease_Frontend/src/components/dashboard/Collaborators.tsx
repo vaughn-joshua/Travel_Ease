@@ -34,8 +34,9 @@ export default function Collaborators({
       const data = await fetch_participants(planId);
       setParticipants(data);
     } catch (e) {
-      setError("Failed to load collaborators");
-      console.error(e);
+      const errorMessage = e instanceof Error ? e.message : "Failed to load collaborators";
+      setError(errorMessage);
+      console.error("Collaborators load error:", e);
     } finally {
       setLoading(false);
     }
