@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { useState } from "react";
-import Search_Box from "../map_components/Search_Box";
+import MapSearchBox from "../map/MapSearchBox";
 import { useCreateActivity } from "../../features/travelPlans/mutations";
 import type {
   TravelPlanDates,
@@ -118,7 +118,7 @@ export default function Create_Activity({
         <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
           <div>
             <label className="label">Location:</label>
-            <Search_Box onSearch={handleSearch} />
+            <MapSearchBox onSearch={handleSearch} />
             {search_result && (
               <p className="text-sm text-green-600 mt-1">
                 Selected: {search_result.name}

@@ -5,6 +5,26 @@ export interface BusinessCategory {
   name: string;
 }
 
+/**
+ * Raw travel spot data from API (different shape from transformed Business)
+ */
+export interface TravelSpotBusiness {
+  business_id: number;
+  user_id: number | null;
+  name: string;
+  house_number: string | null;
+  street: string | null;
+  brgy: string | null;
+  city: string | null;
+  latitude: number | null;
+  longtitude: number | null;
+  description: string | null;
+  rating: number | null;
+  status: boolean | null;
+  picture: string | null;
+  reviewCount: number;
+}
+
 export interface BusinessHours {
   open: string | null;
   close: string | null;

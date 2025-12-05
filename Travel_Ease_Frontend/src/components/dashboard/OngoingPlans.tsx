@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useOngoingPlans, useTravelPlanActivities } from "../../features/travelPlans/queries";
-import Landing_Page from "../../pages/Landing_Page";
+import LandingPage from "../../pages/LandingPage";
 import type { Activity } from "../../types/travelPlan";
 
 // Tagaytay center coordinates
@@ -131,7 +131,7 @@ export default function OngoingPlans(): React.ReactElement {
       <div className="flex flex-col lg:flex-row h-[450px]">
         {/* Map Section - 2/3 width */}
         <div className="lg:w-2/3 h-full relative">
-          <Landing_Page
+          <LandingPage
             className="w-full h-full"
             start={TAGAYTAY_CENTER}
             end={selectedActivity}

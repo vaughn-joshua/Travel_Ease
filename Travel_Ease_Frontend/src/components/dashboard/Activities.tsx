@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import Edit_Activity from "./Edit_Activity";
+import EditActivity from "./EditActivity";
 import { useDeleteActivity } from "../../features/travelPlans/mutations";
 import { useTravelPlanActivities } from "../../features/travelPlans/queries";
 import type { Activity, TravelPlanDates } from "../../types/travelPlan";
@@ -170,7 +170,7 @@ export default function Activities({
       </div>
 
       {clicked && data && (
-        <Edit_Activity on_close={handle_close} data={data} dates={dates} planId={reference_id} />
+        <EditActivity on_close={handle_close} data={data} dates={dates} planId={reference_id} />
       )}
 
       {confirmDelete === "verify" && (

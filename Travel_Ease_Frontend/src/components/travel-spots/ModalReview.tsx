@@ -1,8 +1,19 @@
 import { useMemo, useState } from "react";
-import type { Business, BusinessReview } from "../../types/business";
+import type { BusinessReview } from "../../types/business";
+
+// Modal accepts simplified business shape from travel spots
+interface ModalBusiness {
+  id: number;
+  name: string;
+  description: string | null;
+  rating: number | null;
+  picture?: string | null;
+  city?: string | null;
+  reviews: BusinessReview[];
+}
 
 interface ModalReviewProps {
-  business: Business;
+  business: ModalBusiness;
   onClose: () => void;
   isLoading?: boolean;
 }

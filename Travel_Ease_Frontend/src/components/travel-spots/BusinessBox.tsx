@@ -1,13 +1,13 @@
 import { useState } from "react";
-import Modal_Review from "./Modal_Review";
-import type { Business, BusinessReview } from "../../types/business";
+import ModalReview from "./ModalReview";
+import type { TravelSpotBusiness, BusinessReview } from "../../types/business";
 import { useBusinessReviews } from "../../features/reviews/queries";
 
 interface BusinessBoxProps {
-  business: Business;
+  business: TravelSpotBusiness;
 }
 
-export default function Business_box({
+export default function BusinessBox({
   business,
 }: BusinessBoxProps): React.ReactElement {
   const [showReviews, setShowReviews] = useState<boolean>(false);
@@ -16,7 +16,7 @@ export default function Business_box({
 
   // Fetch reviews using TanStack Query hook (only when modal is open)
   const { data: rawReviews, isLoading: loadingReviews } = useBusinessReviews(
-    showReviews ? business.id : undefined
+    showReviews ? business.business_id : undefined
   );
 
   // Map backend response to frontend shape
@@ -35,9 +35,14 @@ export default function Business_box({
       : null,
   }));
 
-  // Create business with reviews for modal
-  const businessWithReviews: Business = {
-    ...business,
+  // Create business shape for modal (transform TravelSpotBusiness to modal shape)
+  const businessWithReviews = {
+    id: business.business_id,
+    name: business.name,
+    description: business.description,
+    rating: business.rating,
+    picture: business.picture,
+    city: business.city,
     reviews,
   };
 
@@ -92,17 +97,9 @@ export default function Business_box({
             />
           </svg>
           <p className="text-sm text-gray-500">
-            {business.location?.address || "Location not available"}
+            {business.city || "Location not available"}
           </p>
         </div>
-
-        {/* Price Range */}
-        {business.priceRange && (
-          <p className="text-sm text-green-600 font-medium mb-3">
-            ₱{business.priceRange.min.toLocaleString()} - ₱
-            {business.priceRange.max.toLocaleString()}
-          </p>
-        )}
 
         {/* Reviews Button - Google Maps Style */}
         <button
@@ -127,7 +124,7 @@ export default function Business_box({
       </div>
 
       {showReviews && (
-        <Modal_Review
+        <ModalReview
           business={businessWithReviews}
           onClose={() => setShowReviews(false)}
           isLoading={loadingReviews}

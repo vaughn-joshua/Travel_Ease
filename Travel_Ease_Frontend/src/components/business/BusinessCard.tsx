@@ -16,7 +16,7 @@ export interface Business {
     address: string;
   };
   rating: number | null;
-  status: boolean;
+  status?: boolean;
 }
 
 interface BusinessCardProps {

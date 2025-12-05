@@ -97,7 +97,7 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
               const slotInfo = getSlotInfo(plan);
               const isJoining = joiningPlanId === planId;
               const hasJoined = joinSuccess === planId;
-              const isFull = plan.isFull || (plan.slotsAvailable !== null && plan.slotsAvailable <= 0);
+              const isFull = plan.isFull || (plan.slotsAvailable != null && plan.slotsAvailable <= 0);
 
               return (
                 <div

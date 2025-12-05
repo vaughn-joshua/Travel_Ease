@@ -1,10 +1,10 @@
 import { useState } from "react";
-import Business_box from "../../components/Travel_Spots/Business_box";
-import Search_Box from "../../components/Travel_Spots/Search_Box";
+import BusinessBox from "../../components/travel-spots/BusinessBox";
+import SpotSearchBox from "../../components/travel-spots/SpotSearchBox";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useTravelSpots } from "../../features/businesses/queries";
 
-export default function Main_Travel_Spots(): React.ReactElement {
+export default function MainTravelSpots(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Debounce search input to avoid excessive API calls
@@ -34,7 +34,7 @@ export default function Main_Travel_Spots(): React.ReactElement {
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Travel Spots</h1>
 
         <div className="mb-6">
-          <Search_Box onSearch={handleSearch} />
+          <SpotSearchBox onSearch={handleSearch} />
         </div>
 
         {loading ? (
@@ -59,7 +59,7 @@ export default function Main_Travel_Spots(): React.ReactElement {
               </p>
             ) : (
               businesses.map((business) => (
-                <Business_box key={business.business_id} business={business} />
+                <BusinessBox key={business.business_id} business={business} />
               ))
             )}
           </div>

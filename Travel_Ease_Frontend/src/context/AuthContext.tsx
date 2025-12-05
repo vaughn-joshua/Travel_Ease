@@ -50,7 +50,7 @@ const AUTH_CONTEXT_KEY = "__TRAVEL_EASE_AUTH_CONTEXT__";
 
 declare global {
   // eslint-disable-next-line no-var
-  var [AUTH_CONTEXT_KEY]: React.Context<AuthContextType | undefined> | undefined;
+  var __TRAVEL_EASE_AUTH_CONTEXT__: React.Context<AuthContextType | undefined> | undefined;
 }
 
 const AuthContext: React.Context<AuthContextType | undefined> =

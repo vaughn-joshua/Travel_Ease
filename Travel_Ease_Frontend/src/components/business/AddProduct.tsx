@@ -46,11 +46,12 @@ function AddProduct({ on_close, id }: AddProductProps) {
 
       const upload = await upload_images(form_data);
 
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
       const payload = {
         ...data,
         pictures: upload,
-        id: id,
-        business_id: id,
+        id: numericId,
+        business_id: numericId,
       };
 
       console.log({ payload });

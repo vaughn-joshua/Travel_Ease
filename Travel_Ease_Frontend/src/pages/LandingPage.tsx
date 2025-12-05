@@ -26,7 +26,7 @@ interface LandingPageProps {
   end?: [number, number] | null;
 }
 
-export default function Landing_Page({
+export default function LandingPage({
   className,
   start,
   end,
