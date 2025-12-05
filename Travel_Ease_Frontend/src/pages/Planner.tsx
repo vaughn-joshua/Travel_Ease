@@ -285,77 +285,86 @@ export default function Planner(): React.ReactElement {
           <h1>{plan.title}</h1>
 
           <div id="buttons_container" className="space-x-2">
-            {status === "join" && (
-              joinSuccess ? (
-                <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
-                  Request Sent!
-                </span>
-              ) : (
+            {/* Draft + start: Start Now, Edit, Collaborators */}
+            {/* Completed + start: Start Now, Edit, Collaborators */}
+            {status === "start" && (plan?.status === "Draft" || plan?.status === "Completed") && (
+              <>
                 <button
                   className="hard_btn"
-                  onClick={() =>
-                    requestJoinMutation.mutate(
-                      { travel_plan_id: Number(id) },
-                      {
-                        onSuccess: () => setJoinSuccess(true),
-                        onError: (error) => {
-                          console.error("Join request error:", error);
-                          alert("Failed to send join request. Please try again.");
-                        },
-                      }
-                    )
-                  }
-                  disabled={requestJoinMutation.isPending}
+                  onClick={handle_start}
+                  disabled={updatePlanMutation.isPending}
                 >
-                  {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
+                  {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
                 </button>
-              )
-            )}
-            {status === "start" && (
-              <>
                 <button
                   onClick={() => setActiveModal("plan")}
                   className="soft_btn"
                   disabled={updatePlanMutation.isPending}
                 >
-                  edit
+                  Edit
                 </button>
-                {plan?.status !== "Active" && (
-                  <button
-                    className="hard_btn"
-                    onClick={handle_start}
-                    disabled={updatePlanMutation.isPending}
-                  >
-                    {updatePlanMutation.isPending ? "Starting..." : "start now"}
-                  </button>
-                )}
+                <button
+                  className="soft_btn"
+                  onClick={() => setActiveModal("collaborators")}
+                >
+                  Collaborators
+                </button>
               </>
             )}
-            {status === "view" && (
+
+            {/* Draft + join: Join, Collaborators */}
+            {status === "join" && plan?.status === "Draft" && (
+              <>
+                {joinSuccess ? (
+                  <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
+                    Request Sent!
+                  </span>
+                ) : (
+                  <button
+                    className="hard_btn"
+                    onClick={() =>
+                      requestJoinMutation.mutate(
+                        { travel_plan_id: Number(id) },
+                        {
+                          onSuccess: () => setJoinSuccess(true),
+                          onError: (error) => {
+                            console.error("Join request error:", error);
+                            alert("Failed to send join request. Please try again.");
+                          },
+                        }
+                      )
+                    }
+                    disabled={requestJoinMutation.isPending}
+                  >
+                    {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
+                  </button>
+                )}
+                <button
+                  className="soft_btn"
+                  onClick={() => setActiveModal("collaborators")}
+                >
+                  Collaborators
+                </button>
+              </>
+            )}
+
+            {/* Active + view: Edit, Collaborators */}
+            {status === "view" && plan?.status === "Active" && (
               <>
                 <button
                   onClick={() => setActiveModal("plan")}
                   className="soft_btn"
                 >
-                  edit
+                  Edit
                 </button>
-                {plan?.status !== "Active" && (
-                  <button
-                    className="hard_btn"
-                    onClick={handle_start}
-                    disabled={updatePlanMutation.isPending}
-                  >
-                    {updatePlanMutation.isPending ? "Starting..." : "Start"}
-                  </button>
-                )}
+                <button
+                  className="soft_btn"
+                  onClick={() => setActiveModal("collaborators")}
+                >
+                  Collaborators
+                </button>
               </>
             )}
-            <button
-              className="hard_btn"
-              onClick={() => setActiveModal("collaborators")}
-            >
-              Collaborators
-            </button>
           </div>
         </div>
 

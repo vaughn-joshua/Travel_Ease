@@ -53,7 +53,7 @@ export async function register(req: Request, res: Response) {
           first_name,
           last_name,
           contact_no,
-          password: null
+          password: '[SECURED BY SUPABASE]'
         }
       })
     );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import CreatePlan from "../components/dashboard/CreatePlan";
 import UpcomingPlans from "../components/dashboard/UpcomingPlans";
 import OngoingPlans from "../components/dashboard/OngoingPlans";
@@ -7,20 +8,23 @@ import PublicPlans from "../components/dashboard/PublicPlans";
 import QuickJoin from "../components/dashboard/QuickJoin";
 import PlanModal from "../components/dashboard/PlanModal";
 import type { TravelPlan } from "../types/travelPlan";
+import { travelPlanKeys } from "../lib/queryKeys";
 
 type ModalType = "" | "create" | "join" | "quick";
 
 export default function MainPage(): React.ReactElement {
+  const queryClient = useQueryClient();
+  
   // Tracks which modal is currently open
   const [activeModal, setActiveModal] = useState<ModalType>("");
 
   // Stores results returned from Quick Join
   const [results, setResults] = useState<TravelPlan[]>([]);
 
-  // Closes modal & refreshes page (used after creating a plan)
+  // Closes modal - no reload needed, TanStack Query handles cache invalidation
   const handle_close = (): void => {
-    window.location.reload();
-    console.log("closing na");
+    // Invalidate plan queries to refetch fresh data
+    queryClient.invalidateQueries({ queryKey: travelPlanKeys.all });
     setActiveModal("");
   };
 

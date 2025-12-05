@@ -73,7 +73,7 @@ export default function App(): React.ReactElement {
       <Navbar />
       <main className="flex-grow">
         <Routes>
-          {/* Landing route: blogs for visitors, redirect to /plans for authenticated */}
+          {/* Landing route: blogs for visitors, travel plans for authenticated */}
           <Route path="/" element={<LandingRoute publicComponent={<Blogs />} />} />
 
           {/* Plans dashboard - requires auth */}

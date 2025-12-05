@@ -3,6 +3,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDeleteAccount } from "../features/user/mutations";
 
+// Storage key for intended redirect after Google OAuth
+const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
+
 interface FormData {
   first_name: string;
   last_name: string;
@@ -11,8 +14,9 @@ interface FormData {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, updateProfile, signOut } = useAuth();
+  const { user, loading: authLoading, updateProfile, signOut, signInWithGoogle, isConfigured } = useAuth();
 
+  const [redirectingToBusiness, setRedirectingToBusiness] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     first_name: "",
     last_name: "",
@@ -121,6 +125,41 @@ export default function Profile() {
     setIsEditing(false);
     setErrors({});
     setSubmitError("");
+  };
+
+  const handleCreateBusinessClick = async () => {
+    if (authLoading || redirectingToBusiness) return;
+
+    const targetPath = "/businesses/onboarding";
+
+    // Remember intended destination post-auth
+    localStorage.setItem("auth_redirect", targetPath);
+
+    // Store the user's email for verification after Google OAuth
+    if (user?.email) {
+      localStorage.setItem(BUSINESS_AUTH_EMAIL_KEY, user.email);
+    }
+
+    // Store the current user profile so we can restore it if there's a mismatch
+    if (user) {
+      localStorage.setItem("travelEaseOriginalUser", JSON.stringify(user));
+    }
+
+    // If Supabase is not configured, fall back to login page
+    if (!isConfigured) {
+      navigate("/login", { replace: true, state: { from: targetPath } });
+      return;
+    }
+
+    // Always trigger Google OAuth for business creation
+    setRedirectingToBusiness(true);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Google sign-in failed:", error);
+      setRedirectingToBusiness(false);
+      navigate("/login", { replace: true, state: { from: targetPath } });
+    }
   };
 
   if (authLoading) {
@@ -319,6 +358,32 @@ export default function Profile() {
           <div className="border-t border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
             <div className="grid grid-cols-2 gap-3">
+              {/* Create Business Button */}
+              <button
+                onClick={handleCreateBusinessClick}
+                disabled={redirectingToBusiness}
+                className="flex items-center gap-3 p-3 border-2 border-dashed border-primary-red/40 rounded-lg hover:bg-primary-red/5 hover:border-primary-red transition-colors disabled:opacity-70 disabled:cursor-wait col-span-2"
+              >
+                <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center">
+                  {redirectingToBusiness ? (
+                    <svg className="w-5 h-5 text-primary-red animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-primary-red">
+                    {redirectingToBusiness ? "Redirecting…" : "Create Business"}
+                  </p>
+                  <p className="text-xs text-gray-500">Register your business with Google</p>
+                </div>
+              </button>
+
               <Link
                 to="/businesses/my"
                 className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

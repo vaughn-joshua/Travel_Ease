@@ -284,11 +284,12 @@ interface LandingRouteProps {
 }
 
 /**
- * Landing route component - shows the same content (blogs) for all users.
- * No longer redirects authenticated users to /plans.
+ * Landing route component:
+ * - Authenticated users → redirect to /plans (Travel Plans)
+ * - Guests → show blogs
  */
 export function LandingRoute({ publicComponent }: LandingRouteProps): React.ReactElement {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
 
   // Show loading state while auth is resolving
   if (loading) {
@@ -299,7 +300,12 @@ export function LandingRoute({ publicComponent }: LandingRouteProps): React.Reac
     );
   }
 
-  // Show blogs for everyone (authenticated and unauthenticated)
+  // Authenticated users go to Travel Plans
+  if (user) {
+    return <Navigate to="/plans" replace />;
+  }
+
+  // Guests see blogs
   return <>{publicComponent}</>;
 }
 

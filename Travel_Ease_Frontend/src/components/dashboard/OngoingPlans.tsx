@@ -130,7 +130,7 @@ export default function OngoingPlans(): React.ReactElement {
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="flex flex-col lg:flex-row h-[450px]">
         {/* Map Section - 2/3 width */}
-        <div className="lg:w-2/3 h-full relative">
+        <div className="lg:w-2/3 h-full relative z-0">
           <LandingPage
             className="w-full h-full"
             start={TAGAYTAY_CENTER}

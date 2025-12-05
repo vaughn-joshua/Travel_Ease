@@ -56,7 +56,7 @@ export default function LandingPage({
   });
 
   return (
-    <div className={className}>
+    <div className={`${className} [&_.leaflet-pane]:z-[1] [&_.leaflet-control]:z-[1]`}>
       <MapContainer
         center={Tagaytay_Center}
         zoom={zoom}
