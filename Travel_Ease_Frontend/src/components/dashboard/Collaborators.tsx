@@ -8,6 +8,7 @@ import {
 } from "../../features/travelPlans/mutations";
 import { userApi, type UserSearchResult } from "../../services/api";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useAuth } from "../../context/AuthContext";
 import type { Participant } from "../../utils/travel_plan/fetch_participants";
 
 interface CollaboratorsProps {
@@ -21,7 +22,9 @@ export default function Collaborators({
   isOwner,
   on_close,
 }: CollaboratorsProps): React.ReactElement {
+  const { user } = useAuth();
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
   
   // Email search state
   const [emailSearch, setEmailSearch] = useState<string>("");
@@ -154,6 +157,27 @@ export default function Collaborators({
     );
   };
 
+  // Handle leaving the plan (for non-owners)
+  const handleLeave = async (): Promise<void> => {
+    if (!user?.id) return;
+    if (!confirm("Are you sure you want to leave this plan?")) return;
+
+    setIsLeaving(true);
+    removeParticipantMutation.mutate(
+      { planId, userId: user.id },
+      {
+        onSuccess: () => {
+          setIsLeaving(false);
+          on_close();
+        },
+        onError: (err) => {
+          alert(err instanceof Error ? err.message : "Failed to leave plan");
+          setIsLeaving(false);
+        },
+      }
+    );
+  };
+
   const getRoleBadgeColor = (role: string): string => {
     switch (role) {
       case "Admin":
@@ -183,8 +207,14 @@ export default function Collaborators({
   };
 
   // Separate approved and pending participants
+  // Sort pending by joined_at (earliest first)
   const approvedParticipants = participants.filter((p) => p.status);
-  const pendingParticipants = participants.filter((p) => !p.status);
+  const pendingParticipants = participants
+    .filter((p) => !p.status)
+    .sort((a, b) => {
+      if (!a.joined_at || !b.joined_at) return 0;
+      return new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
+    });
 
   return (
     <div className="modal">
@@ -330,7 +360,7 @@ export default function Collaborators({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {isOwner && participant.role !== "Admin" ? (
+                        {isOwner ? (
                           <select
                             value={participant.role}
                             onChange={(e) =>
@@ -355,7 +385,7 @@ export default function Collaborators({
                             {participant.role}
                           </span>
                         )}
-                        {isOwner && participant.role !== "Admin" && (
+                        {isOwner && (
                           <button
                             onClick={() => handleRemove(participant.user_id)}
                             disabled={actionLoading === participant.user_id}
@@ -438,7 +468,19 @@ export default function Collaborators({
           </div>
         )}
 
-        <div className="flex justify-end pt-4 border-t mt-4">
+        <div className="flex justify-between pt-4 border-t mt-4">
+          {/* Leave button for non-owners who are participants */}
+          {!isOwner && user?.id && participants.some(p => p.user_id === user.id) ? (
+            <button
+              onClick={handleLeave}
+              disabled={isLeaving}
+              className="px-4 py-2 text-sm bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition disabled:opacity-50"
+            >
+              {isLeaving ? "Leaving..." : "Leave Plan"}
+            </button>
+          ) : (
+            <div></div>
+          )}
           <button onClick={on_close} className="soft_btn">
             Close
           </button>

@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useOngoingPlans, useTravelPlanActivities } from "../../features/travelPlans/queries";
 import LandingPage from "../../pages/LandingPage";
 import type { Activity } from "../../types/travelPlan";
+import type { RouteInfo } from "../map/RoutingMachine";
 
 // Tagaytay center coordinates
 const TAGAYTAY_CENTER: [number, number] = [14.1154, 120.962];
@@ -20,9 +21,23 @@ export default function OngoingPlans(): React.ReactElement {
   const navigate = useNavigate();
   const { loading: authLoading } = useAuth();
 
+  // State for view mode (cards vs detail)
+  const [viewMode, setViewMode] = useState<"cards" | "detail">("cards");
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+
   // State for day selection and activity routing
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedActivity, setSelectedActivity] = useState<[number, number] | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+
+  // Callback for when route is found
+  const handleRouteFound = useCallback((info: RouteInfo) => {
+    if (info.distance > 0 && info.time > 0) {
+      setRouteInfo(info);
+    } else {
+      setRouteInfo(null);
+    }
+  }, []);
 
   // Check for token in localStorage to determine if user is authenticated
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -36,32 +51,44 @@ export default function OngoingPlans(): React.ReactElement {
     refetch,
   } = useOngoingPlans(!authLoading && Boolean(token));
 
-  // Get the first (featured) ongoing plan
-  const featuredPlan = plans[0];
+  // Auto-select first plan when there's only one plan
+  useEffect(() => {
+    if (plans.length === 1) {
+      setSelectedPlanId(plans[0].id);
+      setViewMode("detail");
+    }
+  }, [plans]);
 
-  // Fetch activities for the featured plan
+  // Get the selected plan (or first plan if only one)
+  const selectedPlan = useMemo(() => {
+    if (plans.length === 0) return null;
+    if (plans.length === 1) return plans[0];
+    return plans.find(p => p.id === selectedPlanId) || null;
+  }, [plans, selectedPlanId]);
+
+  // Fetch activities for the selected plan
   const { data: allActivities = [], isLoading: activitiesLoading } = useTravelPlanActivities(
-    featuredPlan?.id
+    selectedPlan?.id
   );
 
   // Calculate number of days from plan dates
   const days = useMemo(() => {
-    if (!featuredPlan?.start_date || !featuredPlan?.end_date) return 1;
+    if (!selectedPlan?.start_date || !selectedPlan?.end_date) return 1;
     
-    const start = new Date(featuredPlan.start_date);
-    const end = new Date(featuredPlan.end_date);
+    const start = new Date(selectedPlan.start_date);
+    const end = new Date(selectedPlan.end_date);
     
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1;
     
     const diff = end.getTime() - start.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
-  }, [featuredPlan?.start_date, featuredPlan?.end_date]);
+  }, [selectedPlan?.start_date, selectedPlan?.end_date]);
 
   // Filter activities by selected day
   const activitiesForDay = useMemo(() => {
-    if (!allActivities.length || !featuredPlan?.start_date) return [];
+    if (!allActivities.length || !selectedPlan?.start_date) return [];
 
-    const startDate = new Date(featuredPlan.start_date);
+    const startDate = new Date(selectedPlan.start_date);
     const targetDate = new Date(startDate.getTime() + (selectedDay - 1) * 24 * 60 * 60 * 1000);
 
     return allActivities.filter((activity) => {
@@ -69,7 +96,7 @@ export default function OngoingPlans(): React.ReactElement {
       const activityDate = new Date(activity.target_date);
       return activityDate.toDateString() === targetDate.toDateString();
     });
-  }, [allActivities, featuredPlan?.start_date, selectedDay]);
+  }, [allActivities, selectedPlan?.start_date, selectedDay]);
 
   // Handle activity click - set route endpoint
   const handleActivityClick = (activity: Activity) => {
@@ -80,9 +107,25 @@ export default function OngoingPlans(): React.ReactElement {
 
   // Navigate to full planner
   const handleViewPlanner = () => {
-    if (featuredPlan) {
-      navigate(`/planner/view/${featuredPlan.id}`);
+    if (selectedPlan) {
+      navigate(`/planner/view/${selectedPlan.id}`);
     }
+  };
+
+  // Handle card click - switch to detail view
+  const handleCardClick = (planId: number) => {
+    setSelectedPlanId(planId);
+    setSelectedDay(1);
+    setSelectedActivity(null);
+    setViewMode("detail");
+  };
+
+  // Handle back button - return to cards view
+  const handleBackToCards = () => {
+    setViewMode("cards");
+    setSelectedPlanId(null);
+    setSelectedDay(1);
+    setSelectedActivity(null);
   };
 
   // Show loading while auth is resolving or plans are loading
@@ -126,30 +169,109 @@ export default function OngoingPlans(): React.ReactElement {
     );
   }
 
+  // Show cards grid when multiple plans and in cards view
+  if (plans.length > 1 && viewMode === "cards") {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 className="font-semibold text-gray-900 mb-4">Ongoing Plans ({plans.length})</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              onClick={() => handleCardClick(plan.id)}
+              className="p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-red-300 hover:bg-red-50/50 transition-all"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                  {plan.status}
+                </span>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">{plan.title}</h4>
+              <p className="text-sm text-gray-500 mb-2">📍 {plan.location}</p>
+              <p className="text-xs text-gray-400">
+                📅 {plan.start_date} - {plan.end_date}
+              </p>
+              {plan.approvedParticipants !== undefined && (
+                <p className="text-xs text-gray-400 mt-1">
+                  👥 {plan.approvedParticipants}/{plan.max_slots} participants
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show detail view (map + sidebar) - for single plan or when a plan is selected
+  if (!selectedPlan) {
+    return <></>;
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="flex flex-col lg:flex-row h-[450px]">
         {/* Map Section - 2/3 width */}
-        <div className="lg:w-2/3 h-full relative z-0">
-          <LandingPage
-            className="w-full h-full"
-            start={TAGAYTAY_CENTER}
-            end={selectedActivity}
-          />
-          {/* Map overlay with plan title */}
-          <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-md">
-            <h3 className="font-semibold text-gray-900">{featuredPlan.title}</h3>
-            <p className="text-xs text-gray-500">{featuredPlan.location}</p>
+        <div className="lg:w-2/3 h-full relative">
+          <div className="w-full h-full z-0">
+            <LandingPage
+              className="w-full h-full"
+              start={TAGAYTAY_CENTER}
+              end={selectedActivity}
+              onRouteFound={handleRouteFound}
+            />
           </div>
+          {/* Plan title overlay - outside map container */}
+          <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-lg z-[1000] pointer-events-none">
+            <h3 className="font-semibold text-gray-900">{selectedPlan.title}</h3>
+            <p className="text-xs text-gray-500">{selectedPlan.location}</p>
+          </div>
+          {/* ETA overlay - outside map container to avoid Leaflet re-render issues */}
+          {routeInfo && selectedActivity && (
+            <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg z-[1000] pointer-events-none">
+              <p className="text-xs text-gray-500 mb-1">Estimated Travel</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">{routeInfo.time} min</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">{routeInfo.distance} km</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar - 1/3 width */}
         <div className="lg:w-1/3 h-full flex flex-col border-l border-gray-100">
+          {/* Back button when multiple plans */}
+          {plans.length > 1 && (
+            <button
+              onClick={handleBackToCards}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-gray-50 border-b border-gray-100 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to all plans
+            </button>
+          )}
+
           {/* Plan Details Header */}
           <div className="p-4 border-b border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
-                {featuredPlan.status}
+                {selectedPlan.status}
               </span>
               <button
                 onClick={handleViewPlanner}
@@ -158,14 +280,14 @@ export default function OngoingPlans(): React.ReactElement {
                 Open Planner →
               </button>
             </div>
-            <h3 className="font-semibold text-gray-900 text-lg mb-1">{featuredPlan.title}</h3>
-            <p className="text-sm text-gray-500 mb-2">📍 {featuredPlan.location}</p>
+            <h3 className="font-semibold text-gray-900 text-lg mb-1">{selectedPlan.title}</h3>
+            <p className="text-sm text-gray-500 mb-2">📍 {selectedPlan.location}</p>
             <p className="text-sm text-gray-600">
-              📅 {featuredPlan.start_date} - {featuredPlan.end_date}
+              📅 {selectedPlan.start_date} - {selectedPlan.end_date}
             </p>
-            {featuredPlan.approvedParticipants !== undefined && (
+            {selectedPlan.approvedParticipants !== undefined && (
               <p className="text-xs text-gray-400 mt-1">
-                👥 {featuredPlan.approvedParticipants}/{featuredPlan.max_slots} participants
+                👥 {selectedPlan.approvedParticipants}/{selectedPlan.max_slots} participants
               </p>
             )}
           </div>
@@ -248,15 +370,6 @@ export default function OngoingPlans(): React.ReactElement {
               </div>
             )}
           </div>
-
-          {/* Footer with view all link if multiple plans */}
-          {plans.length > 1 && (
-            <div className="p-3 border-t border-gray-100 bg-gray-50">
-              <p className="text-xs text-gray-500 text-center">
-                +{plans.length - 1} more ongoing plan{plans.length > 2 ? "s" : ""}
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

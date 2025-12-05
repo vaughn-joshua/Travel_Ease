@@ -18,18 +18,20 @@ import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 
-import RoutingMachine from "../components/map/RoutingMachine";
+import RoutingMachine, { type RouteInfo } from "../components/map/RoutingMachine";
 
 interface LandingPageProps {
   className?: string;
   start?: [number, number] | null;
   end?: [number, number] | null;
+  onRouteFound?: (routeInfo: RouteInfo) => void;
 }
 
 export default function LandingPage({
   className,
   start,
   end,
+  onRouteFound,
 }: LandingPageProps): React.ReactElement {
   // Default map center (Tagaytay)
   const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
@@ -79,7 +81,7 @@ export default function LandingPage({
 
         {end && <Marker position={end as LatLngExpression} icon={custom_icon} />}
 
-        <RoutingMachine start={start} end={end} />
+        <RoutingMachine start={start} end={end} onRouteFound={onRouteFound} />
       </MapContainer>
     </div>
   );

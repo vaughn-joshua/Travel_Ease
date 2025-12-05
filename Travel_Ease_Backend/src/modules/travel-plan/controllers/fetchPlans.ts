@@ -5,21 +5,15 @@ import { Request, Response } from "express";
 
 /**
  * Fetch UPCOMING plans for the authenticated user:
- * - Draft plans (being prepared, regardless of date)
- * - Active plans with start_date in the FUTURE (not yet started)
+ * - Only Draft plans (being prepared)
  * 
- * Plans that are Active with start_date <= today should NOT appear here
- * (those belong in ongoing_plans)
+ * Active plans belong in ongoing_plans
  */
 export async function fetch_plans(req: Request, res: Response) {
   try {
     const userId = req.user!.id;
     const { page, pageSize, skip, take } = parsePagination(req.query as Record<string, string>);
     const filters = buildPlanFilters(req.query as Record<string, string>);
-
-    // Get today's date at start of day (UTC) for consistent comparison
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
 
     // Single query to get plan IDs where user is owner OR participant
     // Note: Table names use lowercase with @@map in Prisma schema
@@ -38,17 +32,10 @@ export async function fetch_plans(req: Request, res: Response) {
     }
 
     // Build where clause for UPCOMING plans
+    // Only Draft plans - Active plans are in ongoing
     const where: any = {
       travel_plan_id: { in: accessiblePlanIds },
-      OR: [
-        // Draft plans - always upcoming regardless of date
-        { status: 'Draft' },
-        // Active plans with future start date only
-        {
-          status: 'Active',
-          start_date: { gt: today }
-        }
-      ],
+      status: 'Draft',
       // Apply any additional filters
       ...filters
     };

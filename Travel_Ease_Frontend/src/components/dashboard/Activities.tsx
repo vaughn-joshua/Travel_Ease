@@ -101,7 +101,8 @@ export default function Activities({
   };
 
   const click_plan = (plan: Activity): void => {
-    if (status === "view" && plan.lat && plan.lng) {
+    // Allow clicking activities for view, start, and join statuses
+    if (plan.lat && plan.lng) {
       onSendData(plan.lat, plan.lng);
     }
   };

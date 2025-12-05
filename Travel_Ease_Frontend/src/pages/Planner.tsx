@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTravelPlanDetail } from "../features/travelPlans/queries";
@@ -11,6 +11,7 @@ import Collaborators from "../components/dashboard/Collaborators";
 import React from "react";
 import LandingPage from "./LandingPage";
 import type { TravelPlanDates } from "../types/travelPlan";
+import type { RouteInfo } from "../components/map/RoutingMachine";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
 
@@ -89,6 +90,17 @@ export default function Planner(): React.ReactElement {
     end: null,
   });
 
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+
+  // Callback for when route is found
+  const handleRouteFound = useCallback((info: RouteInfo) => {
+    if (info.distance > 0 && info.time > 0) {
+      setRouteInfo(info);
+    } else {
+      setRouteInfo(null);
+    }
+  }, []);
+
   const handle_close = (): void => {
     // Invalidate and refetch instead of full page reload
     queryClient.invalidateQueries({
@@ -136,6 +148,13 @@ export default function Planner(): React.ReactElement {
     setDays(calculatedDays);
     setDates(calculatedDates);
   }, [calculatedDays, calculatedDates]);
+
+  // Redirect from /start to /view if plan is already Active
+  useEffect(() => {
+    if (status === "start" && plan?.status === "Active" && id) {
+      navigate(`/planner/view/${id}`, { replace: true });
+    }
+  }, [status, plan?.status, id, navigate]);
 
   const click_day = (i: number): void => {
     setLoadActivity((prev) => !prev);
@@ -234,12 +253,41 @@ export default function Planner(): React.ReactElement {
   return (
     <div className="p-5">
       <div className="flex gap-6">
-        <div id="map-container" className="card w-9/12 h-[60vh]">
-          <LandingPage
-            start={itineraryRoute.start}
-            end={clickedActivity.end}
-            className="w-full h-full grid col-span-8"
-          />
+        <div className="w-9/12 h-[60vh] relative">
+          <div id="map-container" className="card w-full h-full">
+            <LandingPage
+              start={itineraryRoute.start}
+              end={clickedActivity.end}
+              className="w-full h-full grid col-span-8"
+              onRouteFound={handleRouteFound}
+            />
+          </div>
+          {/* Plan title overlay - outside map container */}
+          <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-lg z-[1000] pointer-events-none">
+            <h3 className="font-semibold text-gray-900">{plan.title}</h3>
+            <p className="text-xs text-gray-500">{plan.location}</p>
+          </div>
+          {/* ETA overlay - outside map container to avoid Leaflet re-render issues */}
+          {routeInfo && clickedActivity.end && (
+            <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg z-[1000] pointer-events-none">
+              <p className="text-xs text-gray-500 mb-1">Estimated Travel</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">{routeInfo.time} min</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">{routeInfo.distance} km</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="activities w-3/12">
           <div className="flex justify-between">
@@ -312,8 +360,8 @@ export default function Planner(): React.ReactElement {
               </>
             )}
 
-            {/* Draft + join: Join, Collaborators */}
-            {status === "join" && plan?.status === "Draft" && (
+            {/* Join: Request to Join, Collaborators (any plan status) */}
+            {status === "join" && (
               <>
                 {joinSuccess ? (
                   <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
@@ -351,6 +399,56 @@ export default function Planner(): React.ReactElement {
             {/* Active + view: Edit, Collaborators */}
             {status === "view" && plan?.status === "Active" && (
               <>
+                <button
+                  onClick={() => setActiveModal("plan")}
+                  className="soft_btn"
+                >
+                  Edit
+                </button>
+                <button
+                  className="soft_btn"
+                  onClick={() => setActiveModal("collaborators")}
+                >
+                  Collaborators
+                </button>
+              </>
+            )}
+
+            {/* Draft + view: Start Now, Edit, Collaborators */}
+            {status === "view" && plan?.status === "Draft" && (
+              <>
+                <button
+                  className="hard_btn"
+                  onClick={handle_start}
+                  disabled={updatePlanMutation.isPending}
+                >
+                  {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
+                </button>
+                <button
+                  onClick={() => setActiveModal("plan")}
+                  className="soft_btn"
+                >
+                  Edit
+                </button>
+                <button
+                  className="soft_btn"
+                  onClick={() => setActiveModal("collaborators")}
+                >
+                  Collaborators
+                </button>
+              </>
+            )}
+
+            {/* Completed + view: Start Now, Edit, Collaborators */}
+            {status === "view" && plan?.status === "Completed" && (
+              <>
+                <button
+                  className="hard_btn"
+                  onClick={handle_start}
+                  disabled={updatePlanMutation.isPending}
+                >
+                  {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
+                </button>
                 <button
                   onClick={() => setActiveModal("plan")}
                   className="soft_btn"
