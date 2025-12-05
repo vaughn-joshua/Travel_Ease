@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import BusinessCard, { Business } from "../component/business/BusinessCard";
-import BusinessFilterBar from "../component/business/BusinessFilterBar";
+import BusinessCard, { Business } from "../components/business/BusinessCard";
+import BusinessFilterBar from "../components/business/BusinessFilterBar";
 import {
   useBusinessList,
   useBusinessCategories,

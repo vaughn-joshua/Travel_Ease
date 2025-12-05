@@ -1,16 +1,16 @@
 import { useState } from "react";
-import Create_Plan from "../component/main_page/Create_Plan";
-import Upcoming_Plans from "../component/main_page/Upcoming_Plans";
-import Ongoing_Plans from "../component/main_page/Ongoing_Plans";
-import Previous_Plans from "../component/main_page/Previous_Plans";
-import Public_Plans from "../component/main_page/Public_Plans";
-import Quick_Join from "../component/main_page/Quick_Join";
-import Plan_Modal from "../component/main_page/Plan_Modal";
+import CreatePlan from "../components/dashboard/CreatePlan";
+import UpcomingPlans from "../components/dashboard/UpcomingPlans";
+import OngoingPlans from "../components/dashboard/OngoingPlans";
+import PreviousPlans from "../components/dashboard/PreviousPlans";
+import PublicPlans from "../components/dashboard/PublicPlans";
+import QuickJoin from "../components/dashboard/QuickJoin";
+import PlanModal from "../components/dashboard/PlanModal";
 import type { TravelPlan } from "../types/travelPlan";
 
 type ModalType = "" | "create" | "join" | "quick";
 
-export default function Main_Page(): React.ReactElement {
+export default function MainPage(): React.ReactElement {
   // Tracks which modal is currently open
   const [activeModal, setActiveModal] = useState<ModalType>("");
 
@@ -41,11 +41,11 @@ export default function Main_Page(): React.ReactElement {
                 + Create Plan
               </button>
             </div>
-            <Ongoing_Plans />
+            <OngoingPlans />
           </div>
 
           <div className="mt-6">
-            <Upcoming_Plans />
+            <UpcomingPlans />
           </div>
         </div>
 
@@ -63,18 +63,18 @@ export default function Main_Page(): React.ReactElement {
                 Quick Join
               </button>
             </div>
-            <Public_Plans />
+            <PublicPlans />
           </div>
 
           <div className="mt-6">
-            <Previous_Plans />
+            <PreviousPlans />
           </div>
         </div>
       </div>
 
       {/* MODAL: Quick Join */}
       {activeModal === "join" && (
-        <Quick_Join
+        <QuickJoin
           on_close={(result: TravelPlan[]) => {
             setActiveModal("quick");
             if (result.length > 0) {
@@ -87,11 +87,11 @@ export default function Main_Page(): React.ReactElement {
       )}
 
       {/* MODAL: Create Plan */}
-      {activeModal === "create" && <Create_Plan on_close={handle_close} />}
+      {activeModal === "create" && <CreatePlan on_close={handle_close} />}
 
       {/* MODAL: Plan Details for Quick Join Results */}
       {activeModal === "quick" && (
-        <Plan_Modal results={results} on_close={() => setActiveModal("")} />
+        <PlanModal results={results} on_close={() => setActiveModal("")} />
       )}
     </div>
   );

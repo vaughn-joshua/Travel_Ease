@@ -5,7 +5,7 @@ interface SearchBoxProps {
   placeholder?: string;
 }
 
-export default function Search_Box({
+export default function SpotSearchBox({
   onSearch,
   placeholder = "Search travel spots...",
 }: SearchBoxProps): React.ReactElement {

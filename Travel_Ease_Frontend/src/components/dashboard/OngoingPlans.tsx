@@ -16,7 +16,7 @@ const formatBudgetRange = (range: string | null): string => {
   return `₱${min} - ₱${max}`;
 };
 
-export default function Ongoing_Plans(): React.ReactElement {
+export default function OngoingPlans(): React.ReactElement {
   const navigate = useNavigate();
   const { loading: authLoading } = useAuth();
 

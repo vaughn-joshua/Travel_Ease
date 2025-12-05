@@ -1,6 +1,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
-import Navbar from "./component/blog/Navbar";
-import Footer from "./component/blog/Footer";
+import Navbar from "./components/blog/Navbar";
+import Footer from "./components/blog/Footer";
 import { RequireAuth, LandingRoute } from "./routes/AuthRoutes";
 
 // Blog pages
@@ -15,18 +15,18 @@ import BusinessDetail from "./pages/BusinessDetail";
 import BusinessForm from "./pages/BusinessForm";
 import BusinessOnboarding from "./pages/BusinessOnboarding";
 import MyBusinesses from "./pages/MyBusinesses";
-import Business_Page from "./pages/Business_Page";
+import BusinessPage from "./pages/BusinessPage";
 
 // Travel plan pages
-import Main_Page from "./pages/Main_Page";
+import MainPage from "./pages/MainPage";
 import Planner from "./pages/Planner";
-import Main_Landing_Page from "./pages/Main_Landing_Page";
+import MainLandingPage from "./pages/MainLandingPage";
 
 // Map pages
-import Main_Map_Page from "./component/map_components/Main_Map_Page";
+import MainMapPage from "./components/map/MainMapPage";
 
 // Travel spots
-import Main_Travel_Spots from "./pages/Travel_Spots/Main_Travel_Spots";
+import MainTravelSpots from "./pages/travel-spots/MainTravelSpots";
 
 // Auth pages
 import Login from "./pages/Login";
@@ -34,7 +34,7 @@ import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
 import Contact from "./pages/Contact";
 // Business landing
-import Landing_Page from "./pages/Landing_Page";
+import LandingPage from "./pages/LandingPage";
 
 // Auth
 import AuthCallback from "./pages/AuthCallback";
@@ -55,12 +55,12 @@ export default function App(): React.ReactElement {
       <Routes>
         <Route path="/map" element={
           <RequireAuth>
-            <Main_Map_Page />
+            <MainMapPage />
           </RequireAuth>
         } />
         <Route path="/map/div" element={
           <RequireAuth>
-            <Main_Landing_Page />
+            <MainLandingPage />
           </RequireAuth>
         } />
       </Routes>
@@ -79,7 +79,7 @@ export default function App(): React.ReactElement {
           {/* Plans dashboard - requires auth */}
           <Route path="/plans" element={
             <RequireAuth>
-              <Main_Page />
+              <MainPage />
             </RequireAuth>
           } />
 
@@ -91,11 +91,11 @@ export default function App(): React.ReactElement {
           } />
 
           {/* Travel spots - public */}
-          <Route path="/travel_spots_page" element={<Main_Travel_Spots />} />
+          <Route path="/travel_spots_page" element={<MainTravelSpots />} />
 
           {/* Business landing/registration */}
-          <Route path="/business_landing_page" element={<Landing_Page />} />
-          <Route path="/business/:id" element={<Business_Page />} />
+          <Route path="/business_landing_page" element={<LandingPage />} />
+          <Route path="/business/:id" element={<BusinessPage />} />
 
           {/* Blog routes - public */}
           <Route path="/blogs" element={<Blogs />} />

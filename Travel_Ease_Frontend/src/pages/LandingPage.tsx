@@ -18,7 +18,7 @@ import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 
-import Routing_Machine from "../component/map_components/Routing_Machine";
+import RoutingMachine from "../components/map/RoutingMachine";
 
 interface LandingPageProps {
   className?: string;
@@ -79,7 +79,7 @@ export default function Landing_Page({
 
         {end && <Marker position={end as LatLngExpression} icon={custom_icon} />}
 
-        <Routing_Machine start={start} end={end} />
+        <RoutingMachine start={start} end={end} />
       </MapContainer>
     </div>
   );

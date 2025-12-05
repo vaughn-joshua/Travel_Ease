@@ -9,7 +9,7 @@ interface AddProductProps {
   id: string | number;
 }
 
-function Add_Product({ on_close, id }: AddProductProps) {
+function AddProduct({ on_close, id }: AddProductProps) {
   const {
     register,
     handleSubmit,
@@ -161,4 +161,4 @@ function Add_Product({ on_close, id }: AddProductProps) {
   );
 }
 
-export default Add_Product;
+export default AddProduct;

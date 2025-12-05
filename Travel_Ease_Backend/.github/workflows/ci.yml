@@ -2,11 +2,11 @@ name: Backend CI
 
 on:
   push:
-    branches: [main, develop, tanstack-refactor]
+    branches: [main, develop, dev, hotfix/test, test]
     paths:
       - 'Travel_Ease_Backend/**'
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, dev]
     paths:
       - 'Travel_Ease_Backend/**'
 

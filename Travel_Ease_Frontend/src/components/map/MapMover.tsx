@@ -6,7 +6,7 @@ interface MapMoverProps {
   position: LatLngExpression | null;
 }
 
-export function Map_Mover({ position }: MapMoverProps): null {
+export function MapMover({ position }: MapMoverProps): null {
   const map = useMap();
 
   useEffect(() => {
@@ -18,5 +18,5 @@ export function Map_Mover({ position }: MapMoverProps): null {
   return null;
 }
 
-export default Map_Mover;
+export default MapMover;
 

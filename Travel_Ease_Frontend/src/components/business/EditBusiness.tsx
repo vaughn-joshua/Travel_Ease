@@ -1,6 +1,7 @@
 import { useForm, FieldValues } from "react-hook-form";
-import Register_Map from "./Register_Map";
+import RegisterMap from "./RegisterMap";
 import { useEffect, useState, ChangeEvent } from "react";
+import { useUpdateBusiness } from "../../features/businesses/mutations";
 
 // Predefined category list selection
 const category = [
@@ -37,18 +38,52 @@ interface Pin {
   lon: number;
 }
 
-interface RegisterProps {
-  on_close: () => void;
+interface BusinessCategory {
+  category_id: number;
+  category_name: string;
+  price_range?: {
+    min_price: number;
+    max_price: number;
+  };
 }
 
-function Register({ on_close }: RegisterProps) {
+interface BusinessHour {
+  day_of_week: string;
+  open_time: string;
+  close_time: string;
+}
+
+interface Business {
+  id: number | string;
+  name: string;
+  description: string;
+  street: string;
+  brgy: string;
+  city: string;
+  house_number: string;
+  categories: BusinessCategory[];
+  business_hours: BusinessHour[];
+}
+
+interface EditBusinessProps {
+  on_close: () => void;
+  business: Business;
+}
+
+function EditBusiness({ on_close, business }: EditBusinessProps) {
   // react-hook-form configuration
   const {
     register,
     handleSubmit,
     formState: { errors },
     getValues,
+    watch,
   } = useForm();
+
+  const selectedCategories = watch("category") || [];
+
+  // TanStack Query mutation for updating business
+  const updateBusinessMutation = useUpdateBusiness();
 
   // Multi-step form counter (0, 1, 2)
   const [counter, setCounter] = useState(0);
@@ -60,7 +95,7 @@ function Register({ on_close }: RegisterProps) {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
   // Final business hours stored after selection
-  const [hours, setHours] = useState<DaySchedule[]>([]);
+  const [, setHours] = useState<DaySchedule[]>([]);
 
   /**
    * Callback for moving pin on map
@@ -69,6 +104,38 @@ function Register({ on_close }: RegisterProps) {
     setPins([{ lat, lon: lng }]);
     console.log({ lat, lng });
   };
+
+  useEffect(() => {
+    const load_pin = async () => {
+      try {
+        const street = business.street;
+        const brgy = business.brgy;
+
+        const response = await fetch("/api/map/search", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: `${street}, ${brgy}, Tagaytay` }),
+        });
+
+        const result = await response.json();
+
+        // Convert API results to map-friendly format
+        const cleanPins =
+          result?.places?.map((loc: { lat: number; lng: number }) => ({
+            lat: Number(loc.lat),
+            lon: Number(loc.lng),
+          })) || [];
+
+        console.log({ cleanPins });
+        setPins(cleanPins);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    load_pin();
+  }, [business.street, business.brgy]);
 
   /**
    * Auto-pin based on street + barangay search
@@ -106,30 +173,37 @@ function Register({ on_close }: RegisterProps) {
    * Handles final form submission
    */
   const on_submit = async (data: FieldValues) => {
-    if (counter == 2) {
+    if (counter == 3) {
       // Build image upload payload
       const formData = new FormData();
       const pictureFiles = data.picture as FileList;
-      formData.append("image", pictureFiles[0]);
-      formData.append("name", data.name);
-      formData.append("folder", "Travel_Ease/Business");
+      if (pictureFiles?.[0]) {
+        formData.append("image", pictureFiles[0]);
+        formData.append("name", data.name);
+        formData.append("folder", "Travel_Ease/Business");
+      }
 
       // Placeholder since upload is disabled temporarily
       data.secure_url = "upload";
 
       // Store pin coordinates
-      data.lat = pin[0].lat;
-      data.lng = pin[0].lon;
-
-      // Attach business hours
-      data.business_hrs = hours;
+      data.lat = pin[0]?.lat;
+      data.lng = pin[0]?.lon;
 
       console.log({ data });
 
-      // Submit business to backend
-      // await create_business(data);
-
-      on_close();
+      // Submit business to backend using TanStack Query mutation
+      updateBusinessMutation.mutate(
+        { id: String(business.id), data: data as any },
+        {
+          onSuccess: () => {
+            on_close();
+          },
+          onError: (error) => {
+            console.error("Failed to update business:", error);
+          },
+        }
+      );
     } else {
       // Move to next step
       setCounter((prev) => prev + 1);
@@ -204,13 +278,17 @@ function Register({ on_close }: RegisterProps) {
     console.log(selectedDays);
   }, [selectedDays]);
 
+  // Suppress unused variable warning
+  void clicked_day;
+  void change_time;
+
   return (
     <div className="modal">
       <div className="modal_body w-[70vw] h-[60vh]">
         <div className="flex gap-6 h-full">
           {/* Map Section */}
           <div className="map-side w-[70%]">
-            <Register_Map pins={pin} onPinMove={handlePinMove} />
+            <RegisterMap pins={pin} onPinMove={handlePinMove} />
           </div>
 
           {/* Form Section */}
@@ -236,6 +314,7 @@ function Register({ on_close }: RegisterProps) {
                     <input
                       {...register("name", { required: "name is required" })}
                       className="text_box"
+                      defaultValue={business.name}
                     />
                   </label>
                   {errors.name && <p>{errors.name.message as string}</p>}
@@ -248,6 +327,9 @@ function Register({ on_close }: RegisterProps) {
                           <input
                             type="checkbox"
                             value={cat}
+                            defaultChecked={business.categories?.some(
+                              (c) => c.category_name === cat
+                            )}
                             {...register("category", {
                               required: "category is required",
                             })}
@@ -268,6 +350,7 @@ function Register({ on_close }: RegisterProps) {
                         required: "description is required",
                       })}
                       className="text_box"
+                      defaultValue={business.description}
                     />
                   </label>
                   {errors.description && (
@@ -286,6 +369,7 @@ function Register({ on_close }: RegisterProps) {
                         required: "House Number is required",
                       })}
                       className="text_box"
+                      defaultValue={business.house_number}
                     />
                   </label>
                   {errors.house_no && (
@@ -300,6 +384,7 @@ function Register({ on_close }: RegisterProps) {
                       })}
                       className="text_box"
                       onChange={handle_change}
+                      defaultValue={business.street}
                     />
                   </label>
                   {errors.street && <p>{errors.street.message as string}</p>}
@@ -312,6 +397,7 @@ function Register({ on_close }: RegisterProps) {
                       })}
                       className="text_box"
                       onChange={handle_change}
+                      defaultValue={business.brgy}
                     />
                   </label>
                   {errors.brgy && <p>{errors.brgy.message as string}</p>}
@@ -322,6 +408,7 @@ function Register({ on_close }: RegisterProps) {
                       {...register("city", { required: "City is required" })}
                       className="text_box"
                       onChange={set_pin}
+                      defaultValue={business.city}
                     />
                   </label>
                   {errors.city && <p>{errors.city.message as string}</p>}
@@ -333,68 +420,101 @@ function Register({ on_close }: RegisterProps) {
                 <>
                   <label className="label">
                     Business Hours:
-                    <div className="flex flex-col gap-2">
-                      {/* Day Buttons */}
-                      <div className="days w-100 mt-2">
-                        {days.map((day, index) => (
-                          <button
-                            className="day_btn"
-                            key={index}
-                            type="button"
-                            onClick={() => clicked_day(day.day)}
-                          >
-                            {day.day}
-                          </button>
-                        ))}
+                    {business.business_hours.map((hour, index) => (
+                      <div key={index} className="flex gap-1">
+                        <p>{hour.day_of_week} :</p>
+                        <input
+                          {...register(`business_hrs.${index}.open_time`)}
+                          className="text_box"
+                          defaultValue={hour.open_time}
+                        />
+                        <input
+                          {...register(`business_hrs.${index}.close_time`)}
+                          className="text_box"
+                          defaultValue={hour.close_time}
+                        />
+                        <input
+                          {...register(`business_hrs.${index}.day_of_week`)}
+                          value={hour.day_of_week}
+                          hidden
+                          readOnly
+                        />
                       </div>
-
-                      {/* Time Inputs */}
-                      {selectedDays.length > 0 && (
-                        <div className="flex gap-2">
-                          <input
-                            {...register("starting_time", {
-                              required: "starting_time is required",
-                            })}
-                            type="time"
-                            className="text_box"
-                            onChange={(e) =>
-                              change_time("start", e.target.value)
-                            }
-                          />
-
-                          <input
-                            {...register("ending_time", {
-                              required: "ending_time is required",
-                            })}
-                            type="time"
-                            className="text_box"
-                            onChange={(e) => change_time("end", e.target.value)}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </label>
-
-                  {/* Error messages */}
-                  {errors.starting_time && (
-                    <p>{errors.starting_time.message as string}</p>
-                  )}
-                  {errors.ending_time && (
-                    <p>{errors.ending_time.message as string}</p>
-                  )}
 
                   {/* Business Picture */}
                   <label className="label">
                     Picture:
                     <input
-                      {...register("picture", {
-                        required: "picture is required",
-                      })}
+                      {...register("picture")}
                       className="text_box"
                       type="file"
                     />
                   </label>
                   {errors.picture && <p>{errors.picture.message as string}</p>}
+                </>
+              )}
+
+              {counter === 3 && (
+                <>
+                  {(selectedCategories as string[]).map(
+                    (cat: string, index: number) => {
+                      // Find matching existing category
+                      const existing = business.categories.find(
+                        (c) => c.category_name === cat
+                      );
+
+                      return (
+                        <div key={index}>
+                          <label className="label">
+                            {cat} Price Range:
+                            <div className="flex gap-3">
+                              <input
+                                {...register(`categories.${index}.min_price`, {
+                                  min: 1,
+                                })}
+                                className="text_box"
+                                type="number"
+                                defaultValue={
+                                  business.categories[index]?.price_range
+                                    ?.min_price
+                                }
+                              />
+                              <input
+                                {...register(`categories.${index}.max_price`, {
+                                  min: 1,
+                                })}
+                                className="text_box"
+                                type="number"
+                                defaultValue={
+                                  business.categories[index]?.price_range
+                                    ?.max_price
+                                }
+                              />
+                              <input
+                                type="hidden"
+                                {...register(
+                                  `categories.${index}.category_name`
+                                )}
+                                value={cat}
+                              />
+
+                              {/* existing category? give its id, else null */}
+                              <input
+                                type="hidden"
+                                {...register(`categories.${index}.category_id`)}
+                                value={existing?.category_id || ""}
+                              />
+                            </div>
+                          </label>
+                          {errors.category && (
+                            <p>{(errors.category as any).message}</p>
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
                 </>
               )}
 
@@ -412,8 +532,15 @@ function Register({ on_close }: RegisterProps) {
 
                 <input
                   type="submit"
-                  value={counter == 2 ? "submit" : "next"}
+                  value={
+                    counter == 3
+                      ? updateBusinessMutation.isPending
+                        ? "Saving..."
+                        : "submit"
+                      : "next"
+                  }
                   className="hard_btn"
+                  disabled={updateBusinessMutation.isPending}
                 />
               </div>
             </form>
@@ -424,4 +551,4 @@ function Register({ on_close }: RegisterProps) {
   );
 }
 
-export default Register;
+export default EditBusiness;

@@ -4,7 +4,7 @@ import L, { LatLngExpression, LeafletEvent } from "leaflet";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import { useEffect, useState } from "react";
-import MapFlyTo from "./Fly_To";
+import MapFlyTo from "./FlyTo";
 
 const defaultIcon = L.icon({
   iconUrl: markerIcon,
@@ -25,7 +25,7 @@ interface RegisterMapProps {
   onPinMove: (lat: number, lng: number) => void;
 }
 
-function Register_Map({ pins, onPinMove }: RegisterMapProps) {
+function RegisterMap({ pins, onPinMove }: RegisterMapProps) {
   const [center, setCenter] = useState<LatLngExpression>(Tagaytay_Center);
   const firstPin = pins?.[0];
 
@@ -70,4 +70,4 @@ function Register_Map({ pins, onPinMove }: RegisterMapProps) {
   );
 }
 
-export default Register_Map;
+export default RegisterMap;

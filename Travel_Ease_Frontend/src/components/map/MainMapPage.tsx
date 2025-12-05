@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Map_Page from "./Map_Page";
-import Search_Box from "./Search_Box";
-import Route_Form from "./Route_Form";
+import MapPage from "./MapPage";
+import MapSearchBox from "./MapSearchBox";
+import RouteForm from "./RouteForm";
 import MapNavMenu from "./MapNavMenu";
 import type { SearchResult, RouteSubmission } from "../../types/map";
 
-export default function Main_Map_Page(): React.ReactElement {
+export default function MainMapPage(): React.ReactElement {
   const navigate = useNavigate();
   const [search_result, set_search_result] = useState<SearchResult | null>(null);
   const [start, setStart] = useState<[number, number] | null>(null);
@@ -57,7 +57,7 @@ export default function Main_Map_Page(): React.ReactElement {
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-gray-900">
       {/* Fullscreen Map */}
-      <Map_Page
+      <MapPage
         search_result={getSearchPosition()}
         start={start}
         end={end}
@@ -69,8 +69,8 @@ export default function Main_Map_Page(): React.ReactElement {
 
       {/* Search and Route Controls */}
       <div className="absolute top-4 left-20 z-[9998] flex flex-col gap-2 max-w-sm">
-        <Search_Box onSearch={handleSearch} />
-        <Route_Form onRouteSubmit={handleRouteSubmit} />
+        <MapSearchBox onSearch={handleSearch} />
+        <RouteForm onRouteSubmit={handleRouteSubmit} />
       </div>
 
       {/* Current Location Button */}

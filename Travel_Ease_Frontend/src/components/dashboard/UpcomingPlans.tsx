@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useUpcomingPlans } from "../../features/travelPlans/queries";
 
-export default function Upcoming_Plans(): React.ReactElement {
+export default function UpcomingPlans(): React.ReactElement {
   const navigate = useNavigate();
   const { loading: authLoading } = useAuth();
 

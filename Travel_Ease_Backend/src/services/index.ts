@@ -3,7 +3,7 @@
  * 
  * Re-exports all services for convenient importing:
  * 
- *   import { travelPlanService, businessService, activityService } from '../services/index.js';
+ *   import { travelPlanService, businessService, activityService, userService, blogService } from '../services/index.js';
  *   
  * Or import specific functions:
  * 
@@ -13,6 +13,8 @@
 export * as travelPlanService from './travelPlanService.js';
 export * as businessService from './businessService.js';
 export * as activityService from './activityService.js';
+export * as userService from './userService.js';
+export * as blogService from './blogService.js';
 
 // Re-export commonly used types
 export type {
@@ -35,4 +37,21 @@ export type {
   CreateActivityInput,
   UpdateActivityInput,
 } from './activityService.js';
+
+export type {
+  UserDTO,
+  RegisterInput,
+  LoginInput,
+  UpdateProfileInput,
+  LoginResult,
+  RegisterResult,
+} from './userService.js';
+
+export type {
+  BlogDTO,
+  BlogListItemDTO,
+  CreateBlogInput,
+  UpdateBlogInput,
+  BlogFilters,
+} from './blogService.js';
 

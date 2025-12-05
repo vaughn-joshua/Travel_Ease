@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useBusinessDetail } from "../features/businesses/queries";
-import Add_Product from "../component/business/Add_Product";
-import Edit_Business from "../component/business/Edit_Business";
+import AddProduct from "../components/business/AddProduct";
+import EditBusiness from "../components/business/EditBusiness";
 import type { Business } from "../types/business";
 
 interface BusinessHour {
@@ -24,7 +24,7 @@ interface PictureData {
   secure_url?: string[];
 }
 
-export default function Business_Page(): React.ReactElement {
+export default function BusinessPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<boolean>(false);
   const [clicked, setClicked] = useState<string | null>(null);
@@ -237,9 +237,9 @@ export default function Business_Page(): React.ReactElement {
           </div>
         </div>
       )}
-      {product && id && <Add_Product on_close={handle_close} id={id} />}
+      {product && id && <AddProduct on_close={handle_close} id={id} />}
       {edit && businessData && (
-        <Edit_Business on_close={handle_close} business={businessData as any} />
+        <EditBusiness on_close={handle_close} business={businessData as any} />
       )}
     </>
   );

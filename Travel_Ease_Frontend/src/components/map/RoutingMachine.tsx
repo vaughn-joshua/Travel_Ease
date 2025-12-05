@@ -8,7 +8,7 @@ interface RoutingMachineProps {
   end?: [number, number] | null;
 }
 
-export default function Routing_Machine({
+export default function RoutingMachine({
   start,
   end,
 }: RoutingMachineProps): null {

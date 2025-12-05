@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { usePublicPlans } from "../../features/travelPlans/queries";
 
-export default function Public_Plans(): React.ReactElement {
+export default function PublicPlans(): React.ReactElement {
   const navigate = useNavigate();
 
   // Use TanStack Query hook for fetching public plans

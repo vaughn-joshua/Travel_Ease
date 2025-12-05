@@ -205,7 +205,7 @@ function ReviewCard({ review }: { review: BusinessReview }) {
  */
 type SortOption = "newest" | "highest" | "lowest";
 
-export default function Modal_Review({
+export default function ModalReview({
   business,
   onClose,
   isLoading = false,

@@ -19,7 +19,7 @@ interface FormData {
   notes: string;
 }
 
-export default function Edit_Activity({
+export default function EditActivity({
   on_close,
   data,
   dates,

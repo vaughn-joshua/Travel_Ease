@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import Search_Box from "./Search_Box";
+import MapSearchBox from "./MapSearchBox";
 import type { SearchResult, RouteSubmission } from "../../types/map";
 
 interface RouteFormProps {
   onRouteSubmit: (route: RouteSubmission) => void;
 }
 
-export default function Route_Form({ onRouteSubmit }: RouteFormProps): React.ReactElement {
+export default function RouteForm({ onRouteSubmit }: RouteFormProps): React.ReactElement {
   const [startPoint, setStartPoint] = useState<SearchResult | null>(null);
   const [endPoint, setEndPoint] = useState<SearchResult | null>(null);
 
@@ -24,14 +24,14 @@ export default function Route_Form({ onRouteSubmit }: RouteFormProps): React.Rea
     <form onSubmit={handleSubmit} className="bg-white p-3 rounded-lg shadow-md space-y-2">
       <div>
         <label className="text-xs text-gray-600">From:</label>
-        <Search_Box onSearch={setStartPoint} placeholder="Start location" />
+        <MapSearchBox onSearch={setStartPoint} placeholder="Start location" />
         {startPoint && (
           <p className="text-xs text-green-600 mt-1">✓ {startPoint.name}</p>
         )}
       </div>
       <div>
         <label className="text-xs text-gray-600">To:</label>
-        <Search_Box onSearch={setEndPoint} placeholder="Destination" />
+        <MapSearchBox onSearch={setEndPoint} placeholder="Destination" />
         {endPoint && (
           <p className="text-xs text-green-600 mt-1">✓ {endPoint.name}</p>
         )}

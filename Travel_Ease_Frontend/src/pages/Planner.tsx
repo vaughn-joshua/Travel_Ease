@@ -4,12 +4,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTravelPlanDetail } from "../features/travelPlans/queries";
 import { useUpdatePlan, useRequestJoin } from "../features/travelPlans/mutations";
 import { useTravelSpots } from "../features/businesses/queries";
-import Activities from "../component/main_page/Activities";
-import Edit_Plan from "../component/main_page/Edit_Plan";
-import Create_Activity from "../component/main_page/Create_Activity";
-import Collaborators from "../component/main_page/Collaborators";
+import Activities from "../components/dashboard/Activities";
+import EditPlan from "../components/dashboard/EditPlan";
+import CreateActivity from "../components/dashboard/CreateActivity";
+import Collaborators from "../components/dashboard/Collaborators";
 import React from "react";
-import Landing_Page from "./Landing_Page";
+import LandingPage from "./LandingPage";
 import type { TravelPlanDates } from "../types/travelPlan";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
@@ -235,7 +235,7 @@ export default function Planner(): React.ReactElement {
     <div className="p-5">
       <div className="flex gap-6">
         <div id="map-container" className="card w-9/12 h-[60vh]">
-          <Landing_Page
+          <LandingPage
             start={itineraryRoute.start}
             end={clickedActivity.end}
             className="w-full h-full grid col-span-8"
@@ -367,7 +367,7 @@ export default function Planner(): React.ReactElement {
       </div>
 
       {activeModal === "activity" && id && (
-        <Create_Activity
+        <CreateActivity
           dates={dates}
           id={id}
           on_close={() => {
@@ -377,7 +377,7 @@ export default function Planner(): React.ReactElement {
         />
       )}
       {activeModal === "plan" && id && plan && (
-        <Edit_Plan data={[plan]} travel_plan={id} on_close={handle_close} />
+        <EditPlan data={[plan]} travel_plan={id} on_close={handle_close} />
       )}
       {activeModal === "collaborators" && id && (
         <Collaborators

@@ -3,8 +3,8 @@ import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, ZoomControl, useMap } from "react-leaflet";
 import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import Pin_Icon from "../../assets/pin.png";
-import { Map_Mover } from "./Map_Mover";
-import Routing_Machine from "./Routing_Machine";
+import { MapMover } from "./MapMover";
+import RoutingMachine from "./RoutingMachine";
 
 interface MapPageProps {
   search_result?: [number, number] | { lat: number; lng: number } | null;
@@ -93,9 +93,9 @@ export default function Map_Page({
 
       {position && <Marker position={position} icon={custom_icon} />}
 
-      {position && <Map_Mover position={position} />}
+      {position && <MapMover position={position} />}
 
-      {start && end && <Routing_Machine start={start} end={end} />}
+      {start && end && <RoutingMachine start={start} end={end} />}
     </MapContainer>
   );
 }

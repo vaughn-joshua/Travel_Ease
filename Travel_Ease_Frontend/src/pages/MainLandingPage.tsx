@@ -1,4 +1,4 @@
-import Landing_Page from "./Landing_Page";
+import LandingPage from "./LandingPage";
 import React, { useState } from "react";
 
 interface RouteData {
@@ -6,7 +6,7 @@ interface RouteData {
   end: [number, number];
 }
 
-export default function Main_Landing_Page(): React.ReactElement {
+export default function MainLandingPage(): React.ReactElement {
   const [start, setStart] = useState<[number, number] | null>(null);
   const [end, setEnd] = useState<[number, number] | null>(null);
 
@@ -26,7 +26,7 @@ export default function Main_Landing_Page(): React.ReactElement {
 
   return (
     <div className="w-4xl h-1/3 grid grid-cols-12 gap-3 bg-[#f7faf8] p-4 rounded-lg">
-      <Landing_Page
+      <LandingPage
         start={start}
         end={end}
         className="w-full h-full grid col-span-8"

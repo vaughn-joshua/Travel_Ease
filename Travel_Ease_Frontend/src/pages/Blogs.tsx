@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import Carousel from "../component/blog/Carousel";
-import Section from "../component/blog/Section";
+import Carousel from "../components/blog/Carousel";
+import Section from "../components/blog/Section";
 import { useBlogOverview } from "../features/blogs/queries";
 import { useAuth } from "../context/AuthContext";
 
