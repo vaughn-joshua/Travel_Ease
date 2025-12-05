@@ -16,6 +16,7 @@ interface CreateActivityProps {
   on_close: () => void;
   dates: TravelPlanDates;
   id: string | number;
+  initialLocation?: SearchResult;
 }
 
 interface FormData {
@@ -28,6 +29,7 @@ export default function Create_Activity({
   on_close,
   dates,
   id,
+  initialLocation,
 }: CreateActivityProps): React.ReactElement {
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -40,7 +42,7 @@ export default function Create_Activity({
 
   const [value, setValue] = useState<Date | string>(dates.start);
   const [search_result, set_search_result] = useState<SearchResult | null>(
-    null
+    initialLocation || null
   );
 
   // Use TanStack Query mutation for creating activities
@@ -118,7 +120,10 @@ export default function Create_Activity({
         <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
           <div>
             <label className="label">Location:</label>
-            <MapSearchBox onSearch={handleSearch} />
+            <MapSearchBox 
+              onSearch={handleSearch} 
+              initialValue={initialLocation?.name || ""}
+            />
             {search_result && (
               <p className="text-sm text-green-600 mt-1">
                 Selected: {search_result.name}

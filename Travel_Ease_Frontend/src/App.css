@@ -67,7 +67,8 @@
 }
 
 .modal {
-  @apply fixed inset-0 flex items-center justify-center bg-black/40 z-50;
+  @apply fixed inset-0 flex items-center justify-center bg-black/40;
+  z-index: 9999;
 }
 
 .modal_body {

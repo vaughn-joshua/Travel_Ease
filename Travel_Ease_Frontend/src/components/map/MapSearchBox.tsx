@@ -9,13 +9,15 @@ import type { SearchResult, NormalizedPlace } from "../../types/map";
 interface SearchBoxProps {
   onSearch: (result: SearchResult) => void;
   placeholder?: string;
+  initialValue?: string;
 }
 
 export default function MapSearchBox({
   onSearch,
   placeholder = "Search for a place...",
+  initialValue = "",
 }: SearchBoxProps): React.ReactElement {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialValue);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchOnEnter, setSearchOnEnter] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);

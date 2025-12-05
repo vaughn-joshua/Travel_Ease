@@ -4,13 +4,14 @@ import { MapContainer, TileLayer, Marker, ZoomControl, useMap } from "react-leaf
 import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import Pin_Icon from "../../assets/pin.png";
 import { MapMover } from "./MapMover";
-import RoutingMachine from "./RoutingMachine";
+import RoutingMachine, { RouteInfo } from "./RoutingMachine";
 
 interface MapPageProps {
   search_result?: [number, number] | { lat: number; lng: number } | null;
   start?: [number, number] | null;
   end?: [number, number] | null;
   onMapClear?: () => void;
+  onRouteFound?: (routeInfo: RouteInfo) => void;
 }
 
 const custom_icon = new Icon({
@@ -43,6 +44,7 @@ export default function Map_Page({
   start,
   end,
   onMapClear,
+  onRouteFound,
 }: MapPageProps): React.ReactElement {
   const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
   const zoom = 14;
@@ -95,7 +97,7 @@ export default function Map_Page({
 
       {position && <MapMover position={position} />}
 
-      {start && end && <RoutingMachine start={start} end={end} />}
+      {start && end && <RoutingMachine start={start} end={end} onRouteFound={onRouteFound} />}
     </MapContainer>
   );
 }

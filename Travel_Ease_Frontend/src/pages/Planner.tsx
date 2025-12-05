@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTravelPlanDetail } from "../features/travelPlans/queries";
 import { useUpdatePlan, useRequestJoin } from "../features/travelPlans/mutations";
@@ -12,6 +12,7 @@ import React from "react";
 import LandingPage from "./LandingPage";
 import type { TravelPlanDates } from "../types/travelPlan";
 import type { RouteInfo } from "../components/map/RoutingMachine";
+import type { SearchResult } from "../types/map";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
 
@@ -26,11 +27,22 @@ interface ClickedActivity {
   end: [number, number] | null;
 }
 
+interface LocationState {
+  prefillActivity?: SearchResult;
+}
+
 export default function Planner(): React.ReactElement {
   const { id, status } = useParams<{ id: string; status: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user, loading: authLoading, session } = useAuth();
+  
+  // Get prefill data from navigation state (from Map page)
+  const locationState = location.state as LocationState | null;
+  const [prefillActivity, setPrefillActivity] = useState<SearchResult | null>(
+    locationState?.prefillActivity || null
+  );
 
   // Track token availability - re-check when auth loading changes or session changes
   const [tokenReady, setTokenReady] = useState(false);
@@ -155,6 +167,15 @@ export default function Planner(): React.ReactElement {
       navigate(`/planner/view/${id}`, { replace: true });
     }
   }, [status, plan?.status, id, navigate]);
+
+  // Auto-open activity modal if coming from Map page with prefill data
+  useEffect(() => {
+    if (prefillActivity && plan && dates.start) {
+      setActiveModal("activity");
+      // Clear the location state to prevent re-opening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [prefillActivity, plan, dates.start]);
 
   const click_day = (i: number): void => {
     setLoadActivity((prev) => !prev);
@@ -477,9 +498,11 @@ export default function Planner(): React.ReactElement {
         <CreateActivity
           dates={dates}
           id={id}
+          initialLocation={prefillActivity || undefined}
           on_close={() => {
             setLoadActivity((prev) => !prev);
             setActiveModal("");
+            setPrefillActivity(null); // Clear prefill after closing
           }}
         />
       )}
