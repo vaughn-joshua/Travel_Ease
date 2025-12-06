@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useBusinessDetail } from "../features/businesses/queries";
 import { useDeleteBusiness } from "../features/businesses/mutations";
+import { useCreateBusinessReview } from "../features/reviews/mutations";
+import { useAuth } from "../context/AuthContext";
 
 interface MenuItem {
   id: number;
@@ -59,10 +61,17 @@ const DAYS_ORDER = [
 export default function BusinessDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"menu" | "gallery" | "reviews">(
     "menu"
   );
+
+  // Review form state
+  const [reviewRating, setReviewRating] = useState<number>(0);
+  const [reviewContent, setReviewContent] = useState<string>("");
+  const [reviewError, setReviewError] = useState<string>("");
+  const [reviewSuccess, setReviewSuccess] = useState<string>("");
 
   // Use TanStack Query for fetching business
   const {
@@ -76,6 +85,9 @@ export default function BusinessDetail() {
 
   // Use TanStack Query mutation for deletion
   const deleteBusinessMutation = useDeleteBusiness();
+
+  // Use TanStack Query mutation for creating reviews
+  const createReviewMutation = useCreateBusinessReview();
 
   const formatTime = (time: string | null) => {
     if (!time) return "Closed";
@@ -102,6 +114,71 @@ export default function BusinessDetail() {
 
   const formatCategoryName = (name: string) => {
     return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReviewError("");
+    setReviewSuccess("");
+
+    if (reviewRating === 0) {
+      setReviewError("Please select a rating");
+      return;
+    }
+
+    if (!reviewContent.trim()) {
+      setReviewError("Please enter a review");
+      return;
+    }
+
+    try {
+      await createReviewMutation.mutateAsync({
+        businessId: parseInt(id!, 10),
+        data: {
+          rating: reviewRating,
+          content: reviewContent.trim(),
+        },
+      });
+      setReviewSuccess("Review submitted successfully!");
+      setReviewRating(0);
+      setReviewContent("");
+      // Clear success message after 3 seconds
+      setTimeout(() => setReviewSuccess(""), 3000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to submit review";
+      setReviewError(errorMessage);
+    }
+  };
+
+  const StarRatingInput = ({ rating, onRatingChange }: { rating: number; onRatingChange: (rating: number) => void }) => {
+    const [hoverRating, setHoverRating] = useState(0);
+
+    return (
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onRatingChange(star)}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+            className="p-0.5 transition-transform hover:scale-110"
+          >
+            <svg
+              className={`h-8 w-8 ${
+                star <= (hoverRating || rating)
+                  ? "text-yellow-400"
+                  : "text-gray-300"
+              }`}
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          </button>
+        ))}
+      </div>
+    );
   };
 
   if (loading) {
@@ -417,9 +494,85 @@ export default function BusinessDetail() {
                 {/* Reviews Tab */}
                 {activeTab === "reviews" && (
                   <div>
+                    {/* Review Form - Only for authenticated users */}
+                    {user ? (
+                      <div className="mb-6 pb-6 border-b border-gray-200">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                          Write a Review
+                        </h3>
+                        <form onSubmit={handleReviewSubmit} className="space-y-4">
+                          {/* Star Rating Input */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Your Rating
+                            </label>
+                            <StarRatingInput
+                              rating={reviewRating}
+                              onRatingChange={setReviewRating}
+                            />
+                          </div>
+
+                          {/* Review Content */}
+                          <div>
+                            <label
+                              htmlFor="reviewContent"
+                              className="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                              Your Review
+                            </label>
+                            <textarea
+                              id="reviewContent"
+                              value={reviewContent}
+                              onChange={(e) => setReviewContent(e.target.value)}
+                              rows={4}
+                              placeholder="Share your experience with this business..."
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-red focus:border-transparent resize-none"
+                            />
+                          </div>
+
+                          {/* Error/Success Messages */}
+                          {reviewError && (
+                            <p className="text-red-600 text-sm">{reviewError}</p>
+                          )}
+                          {reviewSuccess && (
+                            <p className="text-green-600 text-sm">{reviewSuccess}</p>
+                          )}
+
+                          {/* Submit Button */}
+                          <button
+                            type="submit"
+                            disabled={createReviewMutation.isPending}
+                            className="inline-flex items-center px-6 py-3 bg-primary-red text-white font-medium rounded-lg hover:bg-primary-red-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {createReviewMutation.isPending ? (
+                              <>
+                                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                Submitting...
+                              </>
+                            ) : (
+                              "Submit Review"
+                            )}
+                          </button>
+                        </form>
+                      </div>
+                    ) : (
+                      <div className="mb-6 pb-6 border-b border-gray-200 bg-gray-50 rounded-lg p-4">
+                        <p className="text-gray-600 text-center">
+                          <Link
+                            to="/"
+                            className="text-primary-red hover:underline font-medium"
+                          >
+                            Sign in
+                          </Link>{" "}
+                          to write a review
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Existing Reviews */}
                     {business.reviews.length === 0 ? (
                       <p className="text-gray-500 text-center py-8">
-                        No reviews yet
+                        No reviews yet. Be the first to review!
                       </p>
                     ) : (
                       <div className="space-y-4">

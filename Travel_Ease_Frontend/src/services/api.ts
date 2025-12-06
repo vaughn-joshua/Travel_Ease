@@ -234,6 +234,7 @@ interface BusinessQueryParams {
 interface TravelSpotsParams {
   search?: string;
   city?: string;
+  category?: string;
   limit?: number;
 }
 

@@ -166,6 +166,7 @@ router.delete("/:id/menu/:itemId", authenticateToken, deleteMenuItem);
 interface TravelSpotsQuery {
   search?: string;
   city?: string;
+  category?: string;
   limit?: string;
 }
 
@@ -180,7 +181,7 @@ router.get(
     res: Response
   ) => {
     try {
-      const { search, city, limit } = req.query;
+      const { search, city, category, limit } = req.query;
       const maxLimit = Math.min(parseInt(limit || "50", 10) || 50, 100);
 
       // Build where clause
@@ -194,6 +195,14 @@ router.get(
       if (city) {
         where.city = { contains: city, mode: "insensitive" };
       }
+      // Filter by category - businesses must have this category in their categories relation
+      if (category) {
+        where.categories = {
+          some: {
+            category_name: category,
+          },
+        };
+      }
 
       // Use Redis-backed cache with in-memory fallback
       const {
@@ -204,6 +213,7 @@ router.get(
         key: buildCacheKey("business", "travel_spots", {
           search: search || "",
           city: city || "",
+          category: category || "",
           limit: maxLimit,
         }),
         ttl: CACHE_TTL.TRAVEL_SPOTS,
