@@ -104,19 +104,27 @@ blogRoutes.get('/featured', async (req: Request, res: Response) => {
 // Clear cache: Use invalidateCachePattern('blogs:') after blog create/update/delete
 blogRoutes.get('/overview', async (req: Request, res: Response) => {
   const startTime = Date.now();
-  const REQUEST_TIMEOUT = 8000; // 8 second timeout
+  const REQUEST_TIMEOUT = 5000; // 5 second timeout (reduced from 8s)
+  
+  // Empty fallback data when DB is unavailable
+  const emptyPayload = {
+    featured: [],
+    destinations: [],
+    tips: [],
+    clientEducation: [],
+    fromCache: false,
+    dbUnavailable: true
+  };
   
   // Set up a response timeout to ensure we always respond
   let responded = false;
   const timeoutId = setTimeout(() => {
     if (!responded) {
       responded = true;
-      console.error(`[TIMEOUT] /blogs/overview forced timeout after ${REQUEST_TIMEOUT}ms`);
-      res.status(504).json({
-        error: 'Gateway Timeout',
-        message: 'Blog overview request timed out. Please try again.',
-        code: 'TIMEOUT'
-      });
+      console.warn(`[TIMEOUT] /blogs/overview timed out after ${REQUEST_TIMEOUT}ms - returning empty data`);
+      res.set('X-Cache', 'MISS');
+      res.set('X-DB-Status', 'timeout');
+      res.json(emptyPayload);
     }
   }, REQUEST_TIMEOUT);
   
@@ -142,34 +150,53 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
       ttl: CACHE_TTL.OVERVIEW,
       fetchFn: async () => {
         // Fetch all data concurrently with retry
-        const [featured, destinations, tips, clientEducation] = await executeWithRetry(() =>
-          Promise.all([
+        // Use Promise.allSettled to handle partial failures gracefully
+        const results = await Promise.allSettled([
+          executeWithRetry(() =>
             prisma.blog.findMany({
               where: { isFeatured: true },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 5
-            }),
+            })
+          , 1), // Only 1 retry for faster response
+          executeWithRetry(() =>
             prisma.blog.findMany({
               where: { category: 'Destinations' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 3
-            }),
+            })
+          , 1),
+          executeWithRetry(() =>
             prisma.blog.findMany({
               where: { category: 'Tips' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 3
-            }),
+            })
+          , 1),
+          executeWithRetry(() =>
             prisma.blog.findMany({
               where: { category: 'Client Education' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 3
             })
-          ])
-        );
+          , 1)
+        ]);
+
+        // Extract results, using empty arrays for failed queries
+        const featured = results[0].status === 'fulfilled' ? results[0].value : [];
+        const destinations = results[1].status === 'fulfilled' ? results[1].value : [];
+        const tips = results[2].status === 'fulfilled' ? results[2].value : [];
+        const clientEducation = results[3].status === 'fulfilled' ? results[3].value : [];
+
+        // Log any failures
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          console.warn(`[PARTIAL] /blogs/overview: ${failures.length}/4 queries failed`);
+        }
 
         return { featured, destinations, tips, clientEducation };
       }
@@ -198,8 +225,21 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
     responded = true;
     
     const duration = Date.now() - startTime;
-    console.error(`[ERROR] /blogs/overview failed after ${duration}ms:`, error instanceof Error ? error.message : error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     
+    // Check if it's a database connection error
+    const isDbConnectionError = errorMessage.includes("Can't reach database") || 
+                                errorMessage.includes('Connection refused') ||
+                                errorMessage.includes('ECONNREFUSED');
+    
+    if (isDbConnectionError) {
+      console.warn(`[DB_UNAVAILABLE] /blogs/overview after ${duration}ms - returning empty data`);
+      res.set('X-Cache', 'MISS');
+      res.set('X-DB-Status', 'unavailable');
+      return res.json(emptyPayload);
+    }
+    
+    console.error(`[ERROR] /blogs/overview failed after ${duration}ms:`, errorMessage);
     return handlePrismaError(error, res, 'Fetching blog overview');
   }
 });

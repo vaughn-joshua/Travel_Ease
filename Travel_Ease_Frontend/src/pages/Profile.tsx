@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDeleteAccount } from "../features/user/mutations";
+import { useMyBusinesses } from "../features/businesses/queries";
 
 // Storage key for intended redirect after Google OAuth
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
@@ -28,9 +29,15 @@ export default function Profile() {
   const [submitError, setSubmitError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDisconnectGoogle, setShowDisconnectGoogle] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   // TanStack Query mutation for account deletion
   const deleteAccountMutation = useDeleteAccount();
+
+  // Fetch user's businesses to determine if "Create Business" should be shown
+  const { data: businessesData, isLoading: businessesLoading } = useMyBusinesses();
+  const hasBusinesses = (businessesData?.data?.length ?? 0) > 0;
 
   // Pre-fill form with user data
   useEffect(() => {
@@ -358,49 +365,63 @@ export default function Profile() {
           <div className="border-t border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
             <div className="grid grid-cols-2 gap-3">
-              {/* Create Business Button */}
-              <button
-                onClick={handleCreateBusinessClick}
-                disabled={redirectingToBusiness}
-                className="flex items-center gap-3 p-3 border-2 border-dashed border-primary-red/40 rounded-lg hover:bg-primary-red/5 hover:border-primary-red transition-colors disabled:opacity-70 disabled:cursor-wait col-span-2"
-              >
-                <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center">
-                  {redirectingToBusiness ? (
-                    <svg className="w-5 h-5 text-primary-red animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-primary-red">
-                    {redirectingToBusiness ? "Redirecting…" : "Create Business"}
-                  </p>
-                  <p className="text-xs text-gray-500">Register your business with Google</p>
-                </div>
-              </button>
+              {/* Create Business Button - Only show if user has no businesses */}
+              {!businessesLoading && !hasBusinesses && (
+                <button
+                  onClick={handleCreateBusinessClick}
+                  disabled={redirectingToBusiness}
+                  className="flex items-center gap-3 p-3 border-2 border-dashed border-primary-red/40 rounded-lg hover:bg-primary-red/5 hover:border-primary-red transition-colors disabled:opacity-70 disabled:cursor-wait col-span-2"
+                >
+                  <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center">
+                    {redirectingToBusiness ? (
+                      <svg className="w-5 h-5 text-primary-red animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-primary-red">
+                      {redirectingToBusiness ? "Redirecting…" : "Create Business"}
+                    </p>
+                    <p className="text-xs text-gray-500">Register your business with Google</p>
+                  </div>
+                </button>
+              )}
 
+              {/* My Businesses Link - Show with indicator if user has businesses */}
               <Link
                 to="/businesses/my"
-                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className={`flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${hasBusinesses ? 'col-span-2 bg-primary-red/5 border-primary-red/20' : ''}`}
               >
                 <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-gray-900">My Businesses</p>
-                  <p className="text-xs text-gray-500">Manage your listings</p>
+                  <p className="text-xs text-gray-500">
+                    {hasBusinesses 
+                      ? `${businessesData?.data?.length} business${(businessesData?.data?.length ?? 0) > 1 ? 'es' : ''} registered`
+                      : 'Manage your listings'
+                    }
+                  </p>
                 </div>
+                {hasBusinesses && (
+                  <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
               </Link>
+
               <Link
                 to="/user/favorites"
-                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className={`flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${hasBusinesses ? '' : ''}`}
               >
                 <div className="w-10 h-10 bg-pink-50 rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -419,15 +440,47 @@ export default function Profile() {
           <div className="border-t border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Danger Zone</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Once you delete your account, there is no going back. Please be certain.
+              These actions are permanent and cannot be undone.
             </p>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="py-2 px-4 border border-red-500 text-red-500 font-medium rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-            >
-              Delete Account
-            </button>
+            
+            <div className="space-y-4">
+              {/* Disconnect Google - only show for Google-connected users */}
+              {user?.source === "google" && (
+                <div className="flex items-center justify-between p-4 border border-amber-200 bg-amber-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-amber-800">Disconnect Google Account</p>
+                    <p className="text-sm text-amber-600">
+                      Remove Google sign-in from your account. You'll need to set a password to continue logging in.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDisconnectGoogle(true)}
+                    className="py-2 px-4 border border-amber-500 text-amber-700 font-medium rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
+
+              {/* Delete Account */}
+              <div className="flex items-center justify-between p-4 border border-red-200 bg-red-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-red-800">Delete Account</p>
+                  <p className="text-sm text-red-600">
+                    Permanently delete your account and all associated data
+                    {hasBusinesses && `, including ${businessesData?.data?.length} business${(businessesData?.data?.length ?? 0) > 1 ? 'es' : ''}`}.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="py-2 px-4 border border-red-500 text-red-500 font-medium rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -443,9 +496,19 @@ export default function Profile() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Account?</h3>
-              <p className="text-gray-600 mb-6">
-                This action cannot be undone. All your data, including favorites and preferences, will be permanently deleted.
+              <p className="text-gray-600 mb-4">
+                This action cannot be undone. All your data will be permanently deleted:
               </p>
+              <ul className="text-left text-sm text-gray-600 mb-6 space-y-1 pl-4">
+                <li>• Your profile and account information</li>
+                <li>• Favorites and preferences</li>
+                <li>• Travel plans you've created</li>
+                {hasBusinesses && (
+                  <li className="text-red-600 font-medium">
+                    • {businessesData?.data?.length} registered business{(businessesData?.data?.length ?? 0) > 1 ? 'es' : ''}
+                  </li>
+                )}
+              </ul>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
@@ -462,6 +525,36 @@ export default function Profile() {
                   {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disconnect Google Modal */}
+      {showDisconnectGoogle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-amber-600" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Disconnect Google?</h3>
+              <p className="text-gray-600 mb-6">
+                To disconnect your Google account, you'll need to set a password for your account first. 
+                This feature will be available in a future update.
+              </p>
+              <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg mb-6">
+                For now, you can continue using Google sign-in, or delete your account entirely if you no longer wish to use this service.
+              </p>
+              <button
+                onClick={() => setShowDisconnectGoogle(false)}
+                className="w-full py-2 px-4 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Got it
+              </button>
             </div>
           </div>
         </div>

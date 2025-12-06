@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin, isSupabaseConfigured } from "../lib/supabase.js";
 import { prisma, executeWithRetry } from "../lib/prismaHelpers.js";
+import { logger } from "../lib/logger.js";
 import type { AuthProvider } from "../types/index.js";
 
 // Test mode uses local JWT for testing without Supabase
@@ -19,6 +20,31 @@ interface JwtPayload {
 function mapAuthProvider(provider?: string): AuthProvider {
   if (provider === 'google') return 'google';
   return 'password';
+}
+
+/**
+ * Extract user name from Supabase user metadata
+ * Falls back to email prefix if no name is available
+ */
+function extractUserName(supabaseUser: { email?: string; user_metadata?: Record<string, unknown> }): { firstName: string; lastName: string } {
+  const metadata = supabaseUser.user_metadata || {};
+  const email = supabaseUser.email || '';
+  const emailPrefix = email.split('@')[0] || 'User';
+  
+  // Try various metadata fields that OAuth providers use
+  const firstName = 
+    (metadata.first_name as string) ||
+    (metadata.given_name as string) ||
+    (metadata.full_name as string)?.split(' ')[0] ||
+    emailPrefix;
+    
+  const lastName = 
+    (metadata.last_name as string) ||
+    (metadata.family_name as string) ||
+    (metadata.full_name as string)?.split(' ').slice(1).join(' ') ||
+    '';
+    
+  return { firstName, lastName };
 }
 
 /**
@@ -100,19 +126,49 @@ export const requireGoogleAuth = async (
       });
     }
 
-    // Verify the Google email matches the user's registered email
-    const user = await executeWithRetry(() =>
+    // Find or auto-provision user for Google OAuth
+    let user = await executeWithRetry(() =>
       prisma.user.findUnique({
         where: { email: googleEmail },
       })
     );
 
     if (!user) {
-      return res.status(403).json({
-        error:
-          "This Google account is not registered in our system. Please use a registered email address.",
-        code: "ACCOUNT_NOT_REGISTERED",
-      });
+      // AUTO-PROVISION: Create a minimal user record for new Google OAuth users
+      const { firstName, lastName } = extractUserName(data.user);
+      
+      logger.info({
+        module: 'auth',
+        event: 'AUTO_PROVISIONED',
+        email: googleEmail,
+        provider: 'google',
+        supabaseUserId: data.user.id,
+        middleware: 'requireGoogleAuth',
+      }, 'Auto-provisioning new user from Google OAuth');
+
+      user = await executeWithRetry(() =>
+        prisma.user.create({
+          data: {
+            email: googleEmail,
+            auth_id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            auth_provider: 'google',
+            profile_completed: false, // Requires onboarding
+          },
+        })
+      );
+    } else if (!user.auth_id || user.auth_id !== data.user.id) {
+      // Sync auth_id if needed for existing users
+      user = await executeWithRetry(() =>
+        prisma.user.update({
+          where: { user_id: user!.user_id },
+          data: {
+            auth_id: data.user.id,
+            auth_provider: 'google',
+          },
+        })
+      );
     }
 
     // Attach user info to request
@@ -222,16 +278,35 @@ export const authenticateToken = async (
       })
     );
 
-    if (!user) {
-      return res.status(403).json({
-        error: "This Google account is not registered in our system.",
-        code: "ACCOUNT_NOT_REGISTERED",
-      });
-    }
-
-    // Sync auth_id and provider if needed
     const provider = mapAuthProvider(data.user.app_metadata?.provider);
-    if (!user.auth_id || user.auth_id !== data.user.id || user.auth_provider !== provider) {
+
+    if (!user) {
+      // AUTO-PROVISION: Create a minimal user record for new OAuth users
+      // This allows the onboarding flow to work correctly
+      const { firstName, lastName } = extractUserName(data.user);
+      
+      logger.info({
+        module: 'auth',
+        event: 'AUTO_PROVISIONED',
+        email,
+        provider,
+        supabaseUserId: data.user.id,
+      }, 'Auto-provisioning new user from OAuth');
+
+      user = await executeWithRetry(() =>
+        prisma.user.create({
+          data: {
+            email,
+            auth_id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            auth_provider: provider,
+            profile_completed: false, // Requires onboarding
+          },
+        })
+      );
+    } else if (!user.auth_id || user.auth_id !== data.user.id || user.auth_provider !== provider) {
+      // Sync auth_id and provider if needed for existing users
       user = await executeWithRetry(() =>
         prisma.user.update({
           where: { user_id: user!.user_id },

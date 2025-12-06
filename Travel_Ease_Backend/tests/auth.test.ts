@@ -319,5 +319,100 @@ describe('Authentication', () => {
       expect(response.body.user.auth_provider).toBe('google');
     });
   });
+
+  describe('Auto-Provisioned Users', () => {
+    /**
+     * Tests for auto-provisioning behavior.
+     * 
+     * In production, when a user authenticates via Supabase OAuth (Google)
+     * but has no local user record, the authenticateToken middleware
+     * auto-provisions a minimal user with:
+     * - first_name/last_name from Supabase metadata
+     * - auth_provider='google'
+     * - profile_completed=false (requires onboarding)
+     * 
+     * In test mode (local JWT), we simulate this by creating users
+     * with profile_completed=false and auth_provider='google'.
+     */
+    
+    it('should handle auto-provisioned user with minimal profile data', async () => {
+      // Simulate auto-provisioned user (minimal data, no contact info)
+      const testEmail = `autoprov_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { user, token } = await createTestUser({
+        email: testEmail,
+        first_name: 'Google',
+        last_name: 'User',
+        auth_provider: 'google',
+        profile_completed: false,
+        contact_no: undefined, // Auto-provisioned users may not have contact
+      });
+
+      // OAuth sync should work and indicate onboarding needed
+      const response = await request(app)
+        .post('/api/user/oauth')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.needsOnboarding).toBe(true);
+      expect(response.body.user.auth_provider).toBe('google');
+      expect(response.body.user.profile_completed).toBe(false);
+    });
+
+    it('should allow profile completion for auto-provisioned user', async () => {
+      // Simulate auto-provisioned user
+      const testEmail = `autoprov_complete_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { user, token } = await createTestUser({
+        email: testEmail,
+        first_name: 'Google',
+        last_name: '',
+        auth_provider: 'google',
+        profile_completed: false,
+      });
+
+      // Complete profile via onboarding
+      const updateResponse = await request(app)
+        .put('/api/user/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          first_name: 'Updated',
+          last_name: 'Name',
+          contact_no: '+1234567890',
+        });
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.body.user.profile_completed).toBe(true);
+
+      // Subsequent OAuth sync should show onboarding not needed
+      const oauthResponse = await request(app)
+        .post('/api/user/oauth')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(oauthResponse.status).toBe(200);
+      expect(oauthResponse.body.needsOnboarding).toBe(false);
+    });
+
+    it('should preserve Google auth_provider after profile update', async () => {
+      const testEmail = `autoprov_preserve_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'google',
+        profile_completed: false,
+      });
+
+      // Update profile
+      await request(app)
+        .put('/api/user/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ first_name: 'Test', last_name: 'User' });
+
+      // Verify auth_provider is still google
+      const response = await request(app)
+        .get('/api/user/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.auth_provider).toBe('google');
+    });
+  });
 });
 

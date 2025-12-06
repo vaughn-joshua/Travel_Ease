@@ -3,13 +3,17 @@
  *
  * TanStack Query hooks for travel plan read operations.
  * Reuses existing utility functions under utils/travel_plan which handle auth headers.
+ * 
+ * Degraded Mode Support:
+ * - Some hooks (usePublicPlansWithMeta, usePreviousPlansWithMeta) return dbUnavailable flag
+ * - Use these when you need to display degraded state banners in UI
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { travelPlanKeys } from "../../lib/queryKeys";
 import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
-import { fetch_previous_plans } from "../../utils/travel_plan/fetch_previous_plans";
-import { fetch_public_plans } from "../../utils/travel_plan/fetch_public_plans";
+import { fetch_previous_plans, fetch_previous_plans_with_meta, type PreviousPlansResult } from "../../utils/travel_plan/fetch_previous_plans";
+import { fetch_public_plans, fetch_public_plans_with_meta, type PublicPlansResult } from "../../utils/travel_plan/fetch_public_plans";
 import { fetch_plans } from "../../utils/travel_plan/fetch_plans";
 import { fetch_plan_id } from "../../utils/travel_plan/fetch_plan_id";
 import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
@@ -45,6 +49,20 @@ export function usePreviousPlans(enabled = true) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// usePreviousPlansWithMeta
+// Fetches the current user's completed/past travel plans with degraded state metadata.
+// Use this when you need to display a banner when database is unavailable.
+// ─────────────────────────────────────────────────────────────────────────────
+export function usePreviousPlansWithMeta(enabled = true) {
+  return useQuery<PreviousPlansResult, Error>({
+    queryKey: [...travelPlanKeys.previous(), 'meta'],
+    queryFn: fetch_previous_plans_with_meta,
+    enabled,
+    staleTime: 1000 * 60,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // useUpcomingPlans
 // Fetches the current user's upcoming/draft travel plans.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,6 +82,19 @@ export function usePublicPlans() {
   return useQuery<TravelPlan[], Error>({
     queryKey: travelPlanKeys.public(),
     queryFn: fetch_public_plans,
+    staleTime: 1000 * 30,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// usePublicPlansWithMeta
+// Fetches publicly visible travel plans with degraded state metadata.
+// Use this when you need to display a banner when database is unavailable.
+// ─────────────────────────────────────────────────────────────────────────────
+export function usePublicPlansWithMeta() {
+  return useQuery<PublicPlansResult, Error>({
+    queryKey: [...travelPlanKeys.public(), 'meta'],
+    queryFn: fetch_public_plans_with_meta,
     staleTime: 1000 * 30,
   });
 }

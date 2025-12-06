@@ -207,7 +207,7 @@ Activities are simpler - they have no formal state machine, but follow these rul
 │  │ GOOGLE_OAUTH   │ OAuth callback received                       │
 │  └───────┬────────┘                                               │
 │          │                                                        │
-│          │ POST /user/oauth                                       │
+│          │ authenticateToken middleware                           │
 │          ▼                                                        │
 │  ┌────────────────┐                                               │
 │  │ CHECK_USER     │ Is user in local DB?                          │
@@ -218,24 +218,25 @@ Activities are simpler - they have no formal state machine, but follow these rul
 │    │ NO        │ YES                                              │
 │    ▼           ▼                                                  │
 │  ┌────────────────┐    ┌────────────────┐                         │
-│  │ NOT_REGISTERED │    │ CHECK_PROFILE  │                         │
-│  │ (403 error)    │    │ Is profile_completed?                    │
-│  └────────────────┘    └───────┬────────┘                         │
-│                          ┌─────┴─────┐                            │
-│                          │           │                            │
-│                          │ NO        │ YES                        │
-│                          ▼           ▼                            │
-│                    ┌────────────────┐  ┌────────────────┐         │
-│                    │ NEEDS_PROFILE  │  │ PROFILE_DONE   │         │
-│                    │ needsOnboarding│  │ redirect home  │         │
-│                    └───────┬────────┘  └────────────────┘         │
-│                            │                                      │
-│                            │ PUT /user/profile                    │
-│                            ▼                                      │
-│                    ┌────────────────┐                             │
-│                    │ PROFILE_DONE   │                             │
-│                    │ profile_completed=true                       │
-│                    └────────────────┘                             │
+│  │ AUTO_PROVISION │    │ CHECK_PROFILE  │                         │
+│  │ (create user)  │    │ Is profile_completed?                    │
+│  └───────┬────────┘    └───────┬────────┘                         │
+│          │               ┌─────┴─────┐                            │
+│          │               │           │                            │
+│          │               │ NO        │ YES                        │
+│          ▼               ▼           ▼                            │
+│    ┌────────────────┐  ┌────────────────┐  ┌────────────────┐     │
+│    │ NEEDS_PROFILE  │  │ NEEDS_PROFILE  │  │ PROFILE_DONE   │     │
+│    │ needsOnboarding│  │ needsOnboarding│  │ redirect home  │     │
+│    └───────┬────────┘  └───────┬────────┘  └────────────────┘     │
+│            │                   │                                  │
+│            └─────────┬─────────┘                                  │
+│                      │ PUT /user/profile                          │
+│                      ▼                                            │
+│               ┌────────────────┐                                  │
+│               │ PROFILE_DONE   │                                  │
+│               │ profile_completed=true                            │
+│               └────────────────┘                                  │
 │                                                                   │
 └───────────────────────────────────────────────────────────────────┘
 ```
@@ -244,9 +245,24 @@ Activities are simpler - they have no formal state machine, but follow these rul
 
 | State | `profile_completed` | `needsOnboarding` | Next Action |
 |-------|---------------------|-------------------|-------------|
-| NOT_REGISTERED | N/A | N/A | Show error, redirect to register |
+| AUTO_PROVISION | false | true | User created, redirect to /onboarding |
 | NEEDS_PROFILE | false | true | Redirect to /onboarding |
 | PROFILE_DONE | true | false | Redirect to intended destination |
+
+### 4.6.1 Auto-Provisioning Behavior
+
+When `authenticateToken` or `requireGoogleAuth` middleware verifies a valid Supabase OAuth token but finds no local user record:
+
+1. **AUTO_PROVISION transition is triggered**:
+   - Creates minimal user record with `auth_id`, `email`, and name from Supabase metadata
+   - Sets `auth_provider='google'` and `profile_completed=false`
+   - Logs `AUTO_PROVISIONED` event for audit trail
+
+2. **User proceeds to onboarding** as `needsOnboarding=true`
+
+3. **After profile completion**, `profile_completed` is set to `true` and user is fully authenticated
+
+This eliminates the previous `ACCOUNT_NOT_REGISTERED` (403) error for new OAuth users.
 
 ### 4.7 Authorization State Machine
 
@@ -583,6 +599,59 @@ Every HTTP request follows this state flow:
 | P2003 | 400 | Foreign key violation |
 | P2025 | 404 | Record not found |
 | Other P2xxx | 400 | Client/query errors |
+
+### 10.1 Graceful Degradation for Listings
+
+Public-facing listing endpoints (e.g., `/travel_plan/public_plans`, `/travel_plan/previous_plans`, `/blogs/overview`) implement graceful degradation when the database is unavailable:
+
+```
+┌─────────────────┐
+│   DB_QUERY      │  Prisma query executes
+└────────┬────────┘
+         │
+         │ P1xxx error (connection failure)
+         ▼
+┌─────────────────┐
+│  DB_DEGRADED    │  Database unreachable
+└────────┬────────┘
+         │
+         │ Return empty fallback (HTTP 200)
+         ▼
+┌─────────────────────────────────────────────────────┐
+│   FALLBACK_RESPONSE                                 │
+│   {                                                 │
+│     data: [],                                       │
+│     pagination: { page: 1, pageSize: 10, ... },     │
+│     dbUnavailable: true                             │
+│   }                                                 │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Degraded Response Shape
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | array | Empty array when degraded |
+| `pagination` | object | Standard pagination with `total: 0` |
+| `dbUnavailable` | boolean | `true` when database was unreachable |
+
+#### Response Headers
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `X-Cache` | `MISS` | Cache was not used |
+| `X-DB-Status` | `unavailable` / `connected` / `error` | Database connection state |
+
+#### Frontend Handling
+
+Frontend fetch utilities export `*_with_meta` variants (e.g., `fetch_public_plans_with_meta`) that return the `dbUnavailable` flag. Use these when displaying degraded state banners:
+
+```typescript
+const { plans, dbUnavailable } = await fetch_public_plans_with_meta();
+if (dbUnavailable) {
+  // Show non-blocking banner: "Some features temporarily unavailable"
+}
+```
 
 ---
 

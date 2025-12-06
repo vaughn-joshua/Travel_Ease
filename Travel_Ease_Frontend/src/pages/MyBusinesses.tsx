@@ -93,7 +93,7 @@ export default function MyBusinesses() {
               Manage your registered businesses
             </p>
           </div>
-          <Link to="/businesses/new" className="btn-primary">
+          <Link to="/businesses/onboarding" className="btn-primary">
             + Add Business
           </Link>
         </div>
@@ -130,7 +130,7 @@ export default function MyBusinesses() {
               You haven't registered any businesses. Start by adding your first
               one!
             </p>
-            <Link to="/businesses/new" className="btn-primary">
+            <Link to="/businesses/onboarding" className="btn-primary">
               Register a Business
             </Link>
           </div>
