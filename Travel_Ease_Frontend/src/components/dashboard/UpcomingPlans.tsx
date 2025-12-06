@@ -13,7 +13,6 @@ export default function UpcomingPlans(): React.ReactElement {
   // Use TanStack Query hook for fetching upcoming plans
   const {
     data: plans = [],
-    isLoading,
     isError,
     error,
     refetch,
@@ -29,15 +28,8 @@ export default function UpcomingPlans(): React.ReactElement {
         Upcoming Plans
       </h3>
 
-      {/* Loading state */}
-      {(authLoading || isLoading) && (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red"></div>
-        </div>
-      )}
-
       {/* Error state */}
-      {!authLoading && !isLoading && isError && (
+      {isError && (
         <div className="text-center py-4">
           <p className="text-red-500 mb-2">
             {(error as Error)?.message || "Failed to load upcoming plans"}
@@ -52,7 +44,7 @@ export default function UpcomingPlans(): React.ReactElement {
       )}
 
       {/* Empty state */}
-      {!authLoading && !isLoading && !isError && plans.length === 0 && (
+      {!isError && plans.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           <p>No upcoming plans</p>
           <p className="text-sm mt-1">
@@ -62,7 +54,7 @@ export default function UpcomingPlans(): React.ReactElement {
       )}
 
       {/* Plans grid */}
-      {!authLoading && !isLoading && !isError && plans.length > 0 && (
+      {!isError && plans.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {plans.map((plan) => (
             <div

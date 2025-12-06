@@ -45,7 +45,6 @@ export default function OngoingPlans(): React.ReactElement {
   // Use TanStack Query hook for fetching ongoing plans
   const {
     data: plans = [],
-    isLoading,
     isError,
     error,
     refetch,
@@ -127,15 +126,6 @@ export default function OngoingPlans(): React.ReactElement {
     setSelectedDay(1);
     setSelectedActivity(null);
   };
-
-  // Show loading while auth is resolving or plans are loading
-  if (authLoading || isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-      </div>
-    );
-  }
 
   // Show error state with retry option
   if (isError) {

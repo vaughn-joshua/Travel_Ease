@@ -32,6 +32,7 @@ import MainTravelSpots from "./pages/travel-spots/MainTravelSpots";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
+import Favorites from "./pages/Favorites";
 import Contact from "./pages/Contact";
 // Business landing
 import LandingPage from "./pages/LandingPage";
@@ -115,6 +116,7 @@ export default function App(): React.ReactElement {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/user/favorites" element={<Favorites />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/onboarding" element={<Onboarding />} />
 

@@ -27,7 +27,7 @@ const isEditorEnabled = () => {
 const Navbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, loading, isGoogleAuth, signOut } = useAuth();
+  const { user, loading, isGoogleAuth } = useAuth();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -42,11 +42,6 @@ const Navbar: React.FC = () => {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, []);
-
-  const handleSignOut = async () => {
-    // signOut handles errors internally (including benign AuthSessionMissingError)
-    await signOut();
-  };
 
   const isActive = (path: string) => {
     if (path === "/blogs") {
@@ -146,14 +141,6 @@ const Navbar: React.FC = () => {
               >
                 {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
               </Link>
-
-              {/* Sign Out */}
-              <button
-                onClick={handleSignOut}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-all hover:bg-red-50 hover:text-red-600"
-              >
-                Sign Out
-              </button>
             </div>
           )}
         </div>
@@ -263,14 +250,6 @@ const Navbar: React.FC = () => {
                   Publish a Blog
                 </Link>
               )}
-
-              {/* Sign Out */}
-              <button
-                onClick={handleSignOut}
-                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-center text-base font-medium text-gray-700 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-              >
-                Sign Out
-              </button>
             </div>
           )}
         </div>

@@ -9,7 +9,7 @@ import { useState } from "react";
 
 export default function Favorites(): React.ReactElement {
   const navigate = useNavigate();
-  const { user, loading: authLoading, isConfigured } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("businesses");
 
   // Use TanStack Query for fetching favorites
@@ -26,6 +26,11 @@ export default function Favorites(): React.ReactElement {
   const businessFavorites = data?.business_favorites ?? [];
   const planFavorites = data?.travel_plan_favorites ?? [];
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -41,18 +46,18 @@ export default function Favorites(): React.ReactElement {
     removeFavoriteMutation.mutate({ travel_plan_id: planId });
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary-red" />
-          <p className="text-gray-600">Loading favorites...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!isConfigured || !user) {
+  if (!user) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="max-w-md text-center">
@@ -70,217 +75,209 @@ export default function Favorites(): React.ReactElement {
     );
   }
 
-  const errorMessage =
-    isError && error
-      ? (error as any).response?.data?.error || "Failed to load favorites"
-      : null;
-
+  // Working on this feature - show placeholder
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Favorites</h1>
-          <p className="mt-2 text-gray-600">
-            Your saved businesses and travel plans
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-primary-red/10 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-8 h-8 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">
+            We're Working on This Feature!
+          </h1>
+          <p className="text-gray-600 mb-8">
+            The Favorites feature is currently under development. Check back soon to save your favorite businesses and travel plans!
           </p>
+          <Link
+            to="/profile"
+            className="inline-flex items-center gap-2 py-3 px-6 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Profile
+          </Link>
         </div>
-        <button
-          onClick={() => navigate("/profile")}
-          className="text-sm text-primary-red hover:underline"
-        >
-          ← Back to Profile
-        </button>
       </div>
 
-      {errorMessage && (
-        <div className="mb-6 rounded-lg bg-red-50 p-4 text-red-700">
-          {errorMessage}
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="mb-6 flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("businesses")}
-          className={`px-4 py-3 text-sm font-medium transition ${
-            activeTab === "businesses"
-              ? "border-b-2 border-primary-red text-primary-red"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Businesses ({businessFavorites.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("plans")}
-          className={`px-4 py-3 text-sm font-medium transition ${
-            activeTab === "plans"
-              ? "border-b-2 border-primary-red text-primary-red"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Travel Plans ({planFavorites.length})
-        </button>
-      </div>
-
-      {/* Business Favorites */}
-      {activeTab === "businesses" && (
-        <div className="space-y-4">
-          {businessFavorites.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-              <svg
-                className="mx-auto mb-4 h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-              <h3 className="mb-2 text-lg font-medium text-gray-900">
-                No favorite businesses yet
-              </h3>
-              <p className="mb-4 text-gray-500">
-                Explore businesses and add them to your favorites
+      {/* TODO: Remove this hidden div wrapper when favorites feature is implemented */}
+      <div style={{ display: "none" }}>
+        {/* Original Favorites Implementation - Keep for future use */}
+        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Favorites</h1>
+              <p className="mt-2 text-gray-600">
+                Your saved businesses and travel plans
               </p>
-              <Link
-                to="/businesses"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary-red px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-red-dark"
-              >
-                Browse Businesses
-              </Link>
             </div>
-          ) : (
-            businessFavorites.map((fav) => (
-              <div
-                key={fav.favorite_id}
-                className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
-              >
-                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                  {fav.business?.picture ? (
-                    <img
-                      src={fav.business.picture}
-                      alt={fav.business.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-gray-400">
-                      <svg
-                        className="h-8 w-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Link
-                    to={`/businesses/${fav.business?.business_id}`}
-                    className="font-semibold text-gray-900 hover:text-primary-red"
+            <button
+              onClick={() => navigate("/profile")}
+              className="text-sm text-primary-red hover:underline"
+            >
+              ← Back to Profile
+            </button>
+          </div>
+
+          {isError && error && (
+            <div className="mb-6 rounded-lg bg-red-50 p-4 text-red-700">
+              {(error as any).response?.data?.error || "Failed to load favorites"}
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="mb-6 flex gap-2 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab("businesses")}
+              className={`px-4 py-3 text-sm font-medium transition ${
+                activeTab === "businesses"
+                  ? "border-b-2 border-primary-red text-primary-red"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Businesses ({businessFavorites.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("plans")}
+              className={`px-4 py-3 text-sm font-medium transition ${
+                activeTab === "plans"
+                  ? "border-b-2 border-primary-red text-primary-red"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Travel Plans ({planFavorites.length})
+            </button>
+          </div>
+
+          {/* Business Favorites */}
+          {activeTab === "businesses" && (
+            <div className="space-y-4">
+              {businessFavorites.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+                  <svg
+                    className="mx-auto mb-4 h-12 w-12 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    {fav.business?.name}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                  <h3 className="mb-2 text-lg font-medium text-gray-900">
+                    No favorite businesses yet
+                  </h3>
+                  <p className="mb-4 text-gray-500">
+                    Explore businesses and add them to your favorites
+                  </p>
+                  <Link
+                    to="/businesses"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-red px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-red-dark"
+                  >
+                    Browse Businesses
                   </Link>
-                  {fav.business?.city && (
-                    <p className="text-sm text-gray-500">{fav.business.city}</p>
-                  )}
-                  {fav.business?.rating !== null &&
-                    fav.business?.rating !== undefined && (
-                      <div className="mt-1 flex items-center gap-1 text-sm">
+                </div>
+              ) : (
+                businessFavorites.map((fav) => (
+                  <div
+                    key={fav.favorite_id}
+                    className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
+                  >
+                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      {fav.business?.picture ? (
+                        <img
+                          src={fav.business.picture}
+                          alt={fav.business.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-gray-400">
+                          <svg
+                            className="h-8 w-8"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        to={`/businesses/${fav.business?.business_id}`}
+                        className="font-semibold text-gray-900 hover:text-primary-red"
+                      >
+                        {fav.business?.name}
+                      </Link>
+                      {fav.business?.city && (
+                        <p className="text-sm text-gray-500">{fav.business.city}</p>
+                      )}
+                      {fav.business?.rating !== null &&
+                        fav.business?.rating !== undefined && (
+                          <div className="mt-1 flex items-center gap-1 text-sm">
+                            <svg
+                              className="h-4 w-4 text-yellow-500"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            <span className="text-gray-600">
+                              {Number(fav.business.rating).toFixed(1)}
+                            </span>
+                          </div>
+                        )}
+                    </div>
+                    <button
+                      onClick={() =>
+                        fav.business?.business_id &&
+                        handleRemoveBusinessFavorite(fav.business.business_id)
+                      }
+                      disabled={removeFavoriteMutation.isPending}
+                      className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                      title="Remove from favorites"
+                    >
+                      {removeFavoriteMutation.isPending ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary-red" />
+                      ) : (
                         <svg
-                          className="h-4 w-4 text-yellow-500"
+                          className="h-5 w-5"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          <path
+                            fillRule="evenodd"
+                            d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                            clipRule="evenodd"
+                          />
                         </svg>
-                        <span className="text-gray-600">
-                          {Number(fav.business.rating).toFixed(1)}
-                        </span>
-                      </div>
-                    )}
-                </div>
-                <button
-                  onClick={() =>
-                    fav.business?.business_id &&
-                    handleRemoveBusinessFavorite(fav.business.business_id)
-                  }
-                  disabled={removeFavoriteMutation.isPending}
-                  className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                  title="Remove from favorites"
-                >
-                  {removeFavoriteMutation.isPending ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary-red" />
-                  ) : (
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Travel Plan Favorites */}
-      {activeTab === "plans" && (
-        <div className="space-y-4">
-          {planFavorites.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-              <svg
-                className="mx-auto mb-4 h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              <h3 className="mb-2 text-lg font-medium text-gray-900">
-                No favorite travel plans yet
-              </h3>
-              <p className="mb-4 text-gray-500">
-                Browse public plans and save the ones you like
-              </p>
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary-red px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-red-dark"
-              >
-                Explore Plans
-              </Link>
+                      )}
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
-          ) : (
-            planFavorites.map((fav) => (
-              <div
-                key={fav.favorite_id}
-                className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
-              >
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-primary-red/10 text-primary-red">
+          )}
+
+          {/* Travel Plan Favorites */}
+          {activeTab === "plans" && (
+            <div className="space-y-4">
+              {planFavorites.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
                   <svg
-                    className="h-8 w-8"
+                    className="mx-auto mb-4 h-12 w-12 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -292,57 +289,92 @@ export default function Favorites(): React.ReactElement {
                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                     />
                   </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Link
-                    to={`/planner/view/${fav.travel_plan?.travel_plan_id}`}
-                    className="font-semibold text-gray-900 hover:text-primary-red"
-                  >
-                    {fav.travel_plan?.name}
-                  </Link>
-                  {fav.travel_plan?.location && (
-                    <p className="text-sm text-gray-500">
-                      {fav.travel_plan.location}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-400">
-                    {fav.travel_plan?.start_date &&
-                      new Date(fav.travel_plan.start_date).toLocaleDateString()}{" "}
-                    -{" "}
-                    {fav.travel_plan?.end_date &&
-                      new Date(fav.travel_plan.end_date).toLocaleDateString()}
+                  <h3 className="mb-2 text-lg font-medium text-gray-900">
+                    No favorite travel plans yet
+                  </h3>
+                  <p className="mb-4 text-gray-500">
+                    Browse public plans and save the ones you like
                   </p>
+                  <Link
+                    to="/"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-red px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-red-dark"
+                  >
+                    Explore Plans
+                  </Link>
                 </div>
-                <button
-                  onClick={() =>
-                    fav.travel_plan?.travel_plan_id &&
-                    handleRemovePlanFavorite(fav.travel_plan.travel_plan_id)
-                  }
-                  disabled={removeFavoriteMutation.isPending}
-                  className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                  title="Remove from favorites"
-                >
-                  {removeFavoriteMutation.isPending ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary-red" />
-                  ) : (
-                    <svg
-                      className="h-5 w-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+              ) : (
+                planFavorites.map((fav) => (
+                  <div
+                    key={fav.favorite_id}
+                    className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-md"
+                  >
+                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-primary-red/10 text-primary-red">
+                      <svg
+                        className="h-8 w-8"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        to={`/planner/view/${fav.travel_plan?.travel_plan_id}`}
+                        className="font-semibold text-gray-900 hover:text-primary-red"
+                      >
+                        {fav.travel_plan?.name}
+                      </Link>
+                      {fav.travel_plan?.location && (
+                        <p className="text-sm text-gray-500">
+                          {fav.travel_plan.location}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-gray-400">
+                        {fav.travel_plan?.start_date &&
+                          new Date(fav.travel_plan.start_date).toLocaleDateString()}{" "}
+                        -{" "}
+                        {fav.travel_plan?.end_date &&
+                          new Date(fav.travel_plan.end_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() =>
+                        fav.travel_plan?.travel_plan_id &&
+                        handleRemovePlanFavorite(fav.travel_plan.travel_plan_id)
+                      }
+                      disabled={removeFavoriteMutation.isPending}
+                      className="flex-shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                      title="Remove from favorites"
                     >
-                      <path
-                        fillRule="evenodd"
-                        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            ))
+                      {removeFavoriteMutation.isPending ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary-red" />
+                      ) : (
+                        <svg
+                          className="h-5 w-5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

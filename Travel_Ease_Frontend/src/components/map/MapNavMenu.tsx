@@ -52,7 +52,7 @@ export default function MapNavMenu(): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -77,15 +77,6 @@ export default function MapNavMenu(): React.ReactElement {
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      setIsOpen(false);
-    } catch (error) {
-      console.error("Sign out failed:", error);
-    }
-  };
 
   return (
     <div ref={menuRef} className="absolute top-4 left-4 z-[9999]">
@@ -172,15 +163,6 @@ export default function MapNavMenu(): React.ReactElement {
                   </span>
                 </div>
               </Link>
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span className="font-medium">Sign Out</span>
-              </button>
             </>
           ) : (
             <>
