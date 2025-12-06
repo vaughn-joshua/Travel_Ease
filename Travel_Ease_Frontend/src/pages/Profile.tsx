@@ -3,7 +3,10 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDeleteAccount } from "../features/user/mutations";
 import { useMyBusinesses } from "../features/businesses/queries";
+<<<<<<< HEAD
 import { supabase } from "../lib/supabaseClient";
+=======
+>>>>>>> hotfix/dev_2_at_9b81b2
 
 // Storage key for intended redirect after Google OAuth
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
@@ -52,6 +55,9 @@ export default function Profile() {
   // Fetch user's businesses to determine if "Create Business" should be shown
   const { data: businessesData, isLoading: businessesLoading } = useMyBusinesses();
   const hasBusinesses = (businessesData?.data?.length ?? 0) > 0;
+
+  // Delete account mutation
+  const deleteAccountMutation = useDeleteAccount();
 
   // Pre-fill form with user data
   useEffect(() => {
@@ -227,6 +233,17 @@ export default function Profile() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccountMutation.mutateAsync();
+      await signOut();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+      setSubmitError("Failed to delete account. Please try again.");
+    }
   };
 
   const handleCreateBusinessClick = async () => {
