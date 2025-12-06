@@ -1,23 +1,27 @@
 /**
  * Authentication Tests
  * 
+ * Tests for:
+ * - Validation of auth endpoints
+ * - Protected routes and token verification
+ * - Profile management and onboarding flow
+ * - OAuth sync and profile_completed states
+ * 
  * Note: Registration and login use Supabase Auth in production.
- * These tests verify validation, middleware, and protected routes.
- * For Supabase integration tests, use a test Supabase instance.
+ * These tests use local JWT (NODE_ENV=test) for unit testing.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
-import user_routes from '../routes/user_routes.js';
+import userRoutes from '../src/routes/userRoutes.js';
 import { createTestUser } from './setup.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
-import type { User } from '@prisma/client';
 
 const app: Express = express();
 app.use(express.json());
-app.use('/api/user', user_routes);
+app.use('/api/user', userRoutes);
 app.use(errorHandler);
 
 describe('Authentication', () => {
@@ -201,6 +205,118 @@ describe('Authentication', () => {
         .send({ business_id: businessId });
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe('Profile Management', () => {
+    let authToken: string;
+    let userId: number;
+    let testEmail: string;
+
+    beforeEach(async () => {
+      testEmail = `profile_test_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { user, token } = await createTestUser({ 
+        email: testEmail,
+        profile_completed: false, // Start with incomplete profile
+      });
+      authToken = token;
+      userId = user.user_id;
+    });
+
+    it('should get current user profile with /me endpoint', async () => {
+      const response = await request(app)
+        .get('/api/user/me')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.email).toBe(testEmail);
+      expect(response.body).toHaveProperty('auth_provider');
+      expect(response.body).toHaveProperty('profile_completed');
+    });
+
+    it('should update profile and set profile_completed to true', async () => {
+      const response = await request(app)
+        .put('/api/user/profile')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          first_name: 'Updated',
+          last_name: 'User',
+          contact_no: '+1234567890',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.first_name).toBe('Updated');
+      expect(response.body.user.last_name).toBe('User');
+      expect(response.body.user.profile_completed).toBe(true);
+    });
+
+    it('should return profile_completed in /me response', async () => {
+      // First update profile to complete it
+      await request(app)
+        .put('/api/user/profile')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ first_name: 'Test', last_name: 'User' });
+
+      // Then verify /me returns correct state
+      const response = await request(app)
+        .get('/api/user/me')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.profile_completed).toBe(true);
+    });
+  });
+
+  describe('OAuth Sync', () => {
+    let authToken: string;
+    let userId: number;
+    let testEmail: string;
+
+    beforeEach(async () => {
+      testEmail = `oauth_test_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { user, token } = await createTestUser({ 
+        email: testEmail,
+        auth_provider: 'google',
+        profile_completed: false,
+      });
+      authToken = token;
+      userId = user.user_id;
+    });
+
+    it('should sync OAuth user and return needsOnboarding for incomplete profile', async () => {
+      const response = await request(app)
+        .post('/api/user/oauth')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.email).toBe(testEmail);
+      expect(response.body.needsOnboarding).toBe(true);
+      expect(response.body.isNewUser).toBe(true);
+    });
+
+    it('should return needsOnboarding=false for completed profile', async () => {
+      // First complete the profile
+      await prisma.user.update({
+        where: { user_id: userId },
+        data: { profile_completed: true },
+      });
+
+      const response = await request(app)
+        .post('/api/user/oauth')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.needsOnboarding).toBe(false);
+      expect(response.body.isNewUser).toBe(false);
+    });
+
+    it('should include auth_provider in OAuth sync response', async () => {
+      const response = await request(app)
+        .post('/api/user/oauth')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.auth_provider).toBe('google');
     });
   });
 });

@@ -37,13 +37,14 @@ export default function Onboarding() {
     if (!loading) {
       if (!user) {
         navigate("/login", { replace: true });
-      } else if (!needsOnboarding && user.profileCompleted !== false) {
+      } else if (user.profileCompleted) {
+        // Profile is already complete, no need for onboarding
         const redirectTo = localStorage.getItem("auth_redirect") || "/";
         localStorage.removeItem("auth_redirect");
         navigate(redirectTo, { replace: true });
       }
     }
-  }, [user, loading, needsOnboarding, navigate]);
+  }, [user, loading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

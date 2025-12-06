@@ -1,5 +1,9 @@
 import api from "./api";
 
+// ============================================================================
+// Auth Payloads
+// ============================================================================
+
 export interface RegisterPayload {
   first_name: string;
   last_name: string;
@@ -19,8 +23,14 @@ export interface UpdateProfilePayload {
   contact_no?: string;
 }
 
+// ============================================================================
+// Auth Types (synchronized with backend)
+// ============================================================================
+
+/** Auth provider type - matches backend AuthProvider */
 export type AuthProvider = "password" | "google";
 
+/** Auth user DTO - matches backend AuthUserDTO */
 export interface AuthUser {
   user_id: number;
   auth_id?: string | null;
@@ -30,8 +40,10 @@ export interface AuthUser {
   contact_no?: string | null;
   auth_provider?: AuthProvider;
   profile_completed?: boolean;
+  created_at?: string;
 }
 
+/** Login response - matches backend LoginResponse */
 export interface AuthResponse {
   message: string;
   user: AuthUser;
@@ -40,11 +52,19 @@ export interface AuthResponse {
   expires_at?: number;
 }
 
+/** OAuth sync response - matches backend OAuthSyncResponse */
 export interface OAuthSyncResponse {
   message: string;
   user: AuthUser;
   isNewUser: boolean;
   needsOnboarding: boolean;
+}
+
+/** Register response */
+export interface RegisterResponse {
+  message: string;
+  user: AuthUser;
+  supabase_user_id?: string;
 }
 
 export const authApi = {

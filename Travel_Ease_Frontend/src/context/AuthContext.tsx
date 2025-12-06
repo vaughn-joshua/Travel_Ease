@@ -11,8 +11,10 @@ import {
 } from "../services/auth";
 import { authEvents } from "../services/api";
 
+/** Auth source type - indicates how the user authenticated */
 type AuthSource = "supabase" | "password" | "google";
 
+/** App user - frontend representation of authenticated user */
 export interface AppUser {
   id?: number;
   authId?: string | null;
@@ -20,7 +22,9 @@ export interface AppUser {
   firstName?: string | null;
   lastName?: string | null;
   contactNo?: string | null;
+  /** Whether the user has completed their profile (set via onboarding) */
   profileCompleted?: boolean;
+  /** How the user authenticated */
   source: AuthSource;
 }
 
@@ -80,16 +84,27 @@ const mapSupabaseUser = (supabaseUser: User | null): AppUser | null => {
   };
 };
 
-const mapApiUser = (user: AuthUser, source: AuthSource = "password"): AppUser => ({
-  id: user.user_id,
-  authId: user.auth_id ?? null,
-  email: user.email,
-  firstName: user.first_name,
-  lastName: user.last_name,
-  contactNo: user.contact_no ?? null,
-  profileCompleted: user.profile_completed ?? true,
-  source,
-});
+/**
+ * Map backend AuthUser to frontend AppUser
+ * @param user - Backend user DTO
+ * @param source - Auth source override (defaults to auth_provider or 'password')
+ */
+const mapApiUser = (user: AuthUser, source?: AuthSource): AppUser => {
+  // Determine source from auth_provider if not explicitly provided
+  const authSource: AuthSource = source ?? (user.auth_provider === "google" ? "google" : "password");
+  
+  return {
+    id: user.user_id,
+    authId: user.auth_id ?? null,
+    email: user.email,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    contactNo: user.contact_no ?? null,
+    // Use backend profile_completed flag
+    profileCompleted: user.profile_completed ?? false,
+    source: authSource,
+  };
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -97,12 +112,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
+  /**
+   * Persist auth state to localStorage and update React state
+   * @param profile - User profile or null to clear
+   * @param token - Token to store, null to clear, undefined to keep existing
+   */
   const persistAuth = (profile: AppUser | null, token?: string | null) => {
     setUser(profile);
 
     if (profile) {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-      setNeedsOnboarding(!profile.profileCompleted && profile.source === "google");
+      // User needs onboarding if profile_completed is false
+      // This applies to both Google OAuth users (who skip registration form)
+      // and any user who hasn't completed their profile
+      setNeedsOnboarding(!profile.profileCompleted);
     } else {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
       setNeedsOnboarding(false);
@@ -135,7 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const parsed = JSON.parse(storedProfile) as AppUser;
         setUser(parsed);
-        setNeedsOnboarding(!parsed.profileCompleted && parsed.source === "google");
+        // Set onboarding state based on profile_completed flag
+        setNeedsOnboarding(!parsed.profileCompleted);
       } catch (error) {
         localStorage.removeItem(PROFILE_STORAGE_KEY);
       }
@@ -306,7 +330,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithEmail = async (payload: LoginPayload) => {
     const data = await authApi.login(payload);
-    const profile = mapApiUser(data.user, "password");
+    // Backend returns auth_provider, mapApiUser will derive source from it
+    const profile = mapApiUser(data.user);
 
     persistAuth(profile, data.token);
     setSession(null);
@@ -330,9 +355,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (payload: UpdateProfilePayload) => {
     const data = await authApi.updateProfile(payload);
-    const profile = mapApiUser(data.user, user?.source || "password");
+    // Map user, preserving the source from current user if available
+    const profile = mapApiUser(data.user, user?.source);
     persistAuth(profile);
-    setNeedsOnboarding(false);
+    // Backend sets profile_completed=true, so needsOnboarding should be false
+    // This is handled by persistAuth based on profile.profileCompleted
   };
 
   const signOut = async () => {

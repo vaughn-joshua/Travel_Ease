@@ -107,32 +107,208 @@ Activities are simpler - they have no formal state machine, but follow these rul
 
 ---
 
-## 4. Authentication State Machine
+## 4. Authentication State Machine (Comprehensive)
+
+### 4.1 Core Authentication Flow
 
 ```
-┌───────────────────┐    login()     ┌───────────────────┐
-│  Unauthenticated  │ ───────────────► Authenticated     │
-│  (no token)       │                │  (valid JWT)      │
-└───────────────────┘                └───────────────────┘
-                                            │
-                                            │ logout() / token expired
-                                            ▼
-                                     ┌───────────────────┐
-                                     │  Unauthenticated  │
-                                     └───────────────────┘
+┌───────────────────┐                                    ┌───────────────────┐
+│  UNAUTHENTICATED  │                                    │   SESSION_INIT    │
+│  (no token)       │                                    │  (OAuth redirect) │
+└────────┬──────────┘                                    └─────────┬─────────┘
+         │                                                         │
+         │ email/password login ──────────────────┐                │ OAuth callback
+         │                                        │                │
+         │ Google OAuth start ────────────────────┼───────────────►│
+         │                                        │                │
+         ▼                                        ▼                ▼
+┌───────────────────┐     auth success     ┌───────────────────────────────┐
+│   AUTHENTICATING  │ ────────────────────►│   SESSION_ACTIVE              │
+│  (verifying...)   │                      │  (valid Supabase JWT)         │
+└────────┬──────────┘                      └───────────────┬───────────────┘
+         │                                                 │
+         │ auth failed                                     │ backend sync required?
+         ▼                                                 ▼
+┌───────────────────┐                      ┌───────────────────────────────┐
+│   AUTH_FAILED     │                      │   BACKEND_SYNCING             │
+│  (error shown)    │                      │  (POST /user/oauth)           │
+└───────────────────┘                      └───────────────┬───────────────┘
+                                                           │
+         ┌─────────────────────────────────────────────────┼─────────────────┐
+         │                                                 │                 │
+         │ new user (needs profile)                        │ existing user   │ sync failed
+         ▼                                                 ▼                 ▼
+┌───────────────────┐                      ┌───────────────────┐   ┌─────────────────┐
+│   ONBOARDING      │                      │   AUTHENTICATED   │   │   SYNC_FAILED   │
+│  (profile form)   │                      │  (fully logged in)│   │  (not registered)│
+└────────┬──────────┘                      └─────────┬─────────┘   └─────────────────┘
+         │                                           │
+         │ profile saved                             │ logout / token expired
+         ▼                                           ▼
+┌───────────────────┐                      ┌───────────────────┐
+│   AUTHENTICATED   │                      │  UNAUTHENTICATED  │
+└───────────────────┘                      └───────────────────┘
 ```
 
-### Auth Modes
+### 4.2 Authentication States
 
-1. **Supabase Auth** (Production): Uses Supabase for auth, JWT from Supabase
-2. **Local JWT** (Development): Uses bcrypt + local JWT signing
+| State | Description | Token Present | Backend Synced |
+|-------|-------------|---------------|----------------|
+| UNAUTHENTICATED | No active session | No | No |
+| SESSION_INIT | OAuth redirect in progress | No | No |
+| AUTHENTICATING | Verifying credentials | Pending | No |
+| AUTH_FAILED | Authentication error | No | No |
+| SESSION_ACTIVE | Valid Supabase JWT | Yes | Pending |
+| BACKEND_SYNCING | Syncing with backend | Yes | In Progress |
+| SYNC_FAILED | User not in local DB | Yes | Failed |
+| ONBOARDING | New user needs profile | Yes | Partial |
+| AUTHENTICATED | Fully authenticated | Yes | Yes |
 
-### Protected Resources
+### 4.3 Token Lifecycle State Machine
 
-- All travel plan create/edit/delete operations
-- Business create/edit operations
-- Favorites, reviews, blog create/update/delete
-- Quick Join request (search is public, joining requires auth)
+```
+┌─────────────┐      supabase login      ┌─────────────────┐
+│  NO_TOKEN   │ ─────────────────────────►│  TOKEN_VALID    │
+└─────────────┘                          └────────┬────────┘
+      ▲                                           │
+      │                                           │ approaching expiry
+      │ logout / clear                            ▼
+      │                                  ┌─────────────────┐
+      │                                  │ TOKEN_EXPIRING  │
+      │                                  └────────┬────────┘
+      │                                           │
+      │         ┌─────────────────────────────────┼─────────────────┐
+      │         │ auto-refresh success            │                 │ refresh failed
+      │         ▼                                 │                 ▼
+      │ ┌─────────────────┐                       │         ┌─────────────────┐
+      │ │  TOKEN_VALID    │                       │         │  TOKEN_EXPIRED  │
+      │ └─────────────────┘                       │         └────────┬────────┘
+      │                                           │                  │
+      └───────────────────────────────────────────┴──────────────────┘
+```
+
+### 4.4 Token States
+
+| State | Description | API Calls Allowed | Auto-Refresh |
+|-------|-------------|-------------------|--------------|
+| NO_TOKEN | No token in storage | No (401) | N/A |
+| TOKEN_VALID | Token present and valid | Yes | Monitored |
+| TOKEN_EXPIRING | Token nearing expiry | Yes | In Progress |
+| TOKEN_EXPIRED | Token is invalid | No (403) | Retry once |
+
+### 4.5 User Onboarding State Machine
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                     ONBOARDING FLOW                                │
+├───────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌────────────────┐                                               │
+│  │ GOOGLE_OAUTH   │ OAuth callback received                       │
+│  └───────┬────────┘                                               │
+│          │                                                        │
+│          │ POST /user/oauth                                       │
+│          ▼                                                        │
+│  ┌────────────────┐                                               │
+│  │ CHECK_USER     │ Is user in local DB?                          │
+│  └───────┬────────┘                                               │
+│          │                                                        │
+│    ┌─────┴─────┐                                                  │
+│    │           │                                                  │
+│    │ NO        │ YES                                              │
+│    ▼           ▼                                                  │
+│  ┌────────────────┐    ┌────────────────┐                         │
+│  │ NOT_REGISTERED │    │ CHECK_PROFILE  │                         │
+│  │ (403 error)    │    │ Is profile_completed?                    │
+│  └────────────────┘    └───────┬────────┘                         │
+│                          ┌─────┴─────┐                            │
+│                          │           │                            │
+│                          │ NO        │ YES                        │
+│                          ▼           ▼                            │
+│                    ┌────────────────┐  ┌────────────────┐         │
+│                    │ NEEDS_PROFILE  │  │ PROFILE_DONE   │         │
+│                    │ needsOnboarding│  │ redirect home  │         │
+│                    └───────┬────────┘  └────────────────┘         │
+│                            │                                      │
+│                            │ PUT /user/profile                    │
+│                            ▼                                      │
+│                    ┌────────────────┐                             │
+│                    │ PROFILE_DONE   │                             │
+│                    │ profile_completed=true                       │
+│                    └────────────────┘                             │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### 4.6 Onboarding States
+
+| State | `profile_completed` | `needsOnboarding` | Next Action |
+|-------|---------------------|-------------------|-------------|
+| NOT_REGISTERED | N/A | N/A | Show error, redirect to register |
+| NEEDS_PROFILE | false | true | Redirect to /onboarding |
+| PROFILE_DONE | true | false | Redirect to intended destination |
+
+### 4.7 Authorization State Machine
+
+```
+┌─────────────────┐                              ┌─────────────────┐
+│ UNAUTHENTICATED │  authenticateToken           │  AUTHENTICATED  │
+│ (no req.user)   │ ─────────────────────────────►│ (req.user set)  │
+└─────────────────┘                              └────────┬────────┘
+                                                          │
+                                                          │ requireGoogleAuth?
+                                                          ▼
+                                               ┌─────────────────────┐
+                                               │ CHECK_GOOGLE_AUTH   │
+                                               │ Is provider=google? │
+                                               └──────────┬──────────┘
+                                                    ┌─────┴─────┐
+                                                    │           │
+                                                    │ NO        │ YES
+                                                    ▼           ▼
+                                              ┌───────────┐ ┌───────────────┐
+                                              │ FORBIDDEN │ │ GOOGLE_AUTHED │
+                                              │ (403)     │ │ (proceed)     │
+                                              └───────────┘ └───────┬───────┘
+                                                                    │
+                                                                    │ resource permission?
+                                                                    ▼
+                                                          ┌─────────────────┐
+                                                          │ AUTHORIZED      │
+                                                          │ (access granted)│
+                                                          └─────────────────┘
+```
+
+### 4.8 Authorization Levels
+
+| Level | Middleware | Description |
+|-------|------------|-------------|
+| Public | None | No authentication required |
+| Authenticated | `authenticateToken` | Valid JWT required |
+| Google Auth | `requireGoogleAuth` | Must have provider=google (for business creation) |
+| Owner | `requirePlanOwnership` | Must be plan owner or Admin participant |
+| Editor | `requireActivityAccess` | Must be owner, Admin, or Editor participant |
+
+### 4.9 Auth Configuration
+
+| Mode | Condition | Token Verification |
+|------|-----------|-------------------|
+| **Supabase** (Production) | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` set | `supabaseAdmin.auth.getUser(token)` |
+| **Local JWT** (Test only) | `NODE_ENV=test` + `JWT_SECRET` set | `jwt.verify(token, JWT_SECRET)` |
+
+### 4.10 Protected Resources
+
+| Resource | Auth Level | Notes |
+|----------|------------|-------|
+| Travel plan CRUD | Authenticated | Owner/Admin for edit |
+| Activity CRUD | Authenticated | Editor+ for edit |
+| Business create | Google Auth | Requires Google verification |
+| Business edit | Authenticated | Owner only |
+| Favorites | Authenticated | User's own |
+| Reviews | Authenticated | User's own |
+| Blogs | Authenticated | Author only |
+| Quick Join search | Public | No auth |
+| Quick Join request | Authenticated | Creates pending participant |
 
 ---
 

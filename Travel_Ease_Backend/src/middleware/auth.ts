@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { supabaseAdmin, isSupabaseConfigured } from "../lib/supabase.js";
 import { prisma, executeWithRetry } from "../lib/prismaHelpers.js";
+import type { AuthProvider } from "../types/index.js";
 
 // Test mode uses local JWT for testing without Supabase
 const isTestMode = process.env.NODE_ENV === "test";
@@ -10,6 +11,14 @@ const JWT_SECRET = process.env.JWT_SECRET;
 interface JwtPayload {
   id: number;
   email?: string;
+}
+
+/**
+ * Helper to map Supabase provider string to our AuthProvider type
+ */
+function mapAuthProvider(provider?: string): AuthProvider {
+  if (provider === 'google') return 'google';
+  return 'password';
 }
 
 /**
@@ -50,6 +59,8 @@ export const requireGoogleAuth = async (
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
+        auth_provider: mapAuthProvider(user.auth_provider ?? undefined),
+        profile_completed: user.profile_completed ?? false,
       };
       return next();
     } catch (error) {
@@ -111,6 +122,8 @@ export const requireGoogleAuth = async (
       email: googleEmail,
       first_name: user.first_name,
       last_name: user.last_name,
+      auth_provider: 'google',
+      profile_completed: user.profile_completed ?? false,
     };
 
     next();
@@ -173,6 +186,8 @@ export const authenticateToken = async (
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
+        auth_provider: mapAuthProvider(user.auth_provider ?? undefined),
+        profile_completed: user.profile_completed ?? false,
       };
       return next();
     }
@@ -214,10 +229,9 @@ export const authenticateToken = async (
       });
     }
 
-    if (!user.auth_id || user.auth_id !== data.user.id) {
-      const provider =
-        (data.user.app_metadata?.provider as string | undefined) ?? "google";
-
+    // Sync auth_id and provider if needed
+    const provider = mapAuthProvider(data.user.app_metadata?.provider);
+    if (!user.auth_id || user.auth_id !== data.user.id || user.auth_provider !== provider) {
       user = await executeWithRetry(() =>
         prisma.user.update({
           where: { user_id: user!.user_id },
@@ -235,6 +249,8 @@ export const authenticateToken = async (
       email: data.user.email || "",
       first_name: user.first_name,
       last_name: user.last_name,
+      auth_provider: mapAuthProvider(user.auth_provider ?? undefined),
+      profile_completed: user.profile_completed ?? false,
     };
     next();
   } catch (error) {

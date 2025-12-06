@@ -30,13 +30,58 @@ declare global {
   }
 }
 
-// Authenticated user object attached to request
+// ============================================================================
+// Authentication Types
+// ============================================================================
+
+/** Auth provider type */
+export type AuthProvider = 'password' | 'google';
+
+/** Authenticated user object attached to request */
 export interface AuthUser {
   id: number;
   auth_id?: string;
   email: string;
   first_name?: string;
   last_name?: string;
+  auth_provider?: AuthProvider;
+  profile_completed?: boolean;
+}
+
+/** OAuth sync response DTO */
+export interface OAuthSyncResponse {
+  message: string;
+  user: AuthUserDTO;
+  isNewUser: boolean;
+  needsOnboarding: boolean;
+}
+
+/** Auth user DTO returned to clients */
+export interface AuthUserDTO {
+  user_id: number;
+  auth_id?: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  contact_no?: string | null;
+  auth_provider?: AuthProvider;
+  profile_completed?: boolean;
+}
+
+/** Login response DTO */
+export interface LoginResponse {
+  message: string;
+  user: AuthUserDTO;
+  token: string;
+  refresh_token?: string;
+  expires_at?: number;
+}
+
+/** Register response DTO */
+export interface RegisterResponse {
+  message: string;
+  user: AuthUserDTO;
+  supabase_user_id?: string;
 }
 
 // Express handler types

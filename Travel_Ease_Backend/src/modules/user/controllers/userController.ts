@@ -45,6 +45,7 @@ export async function register(req: Request, res: Response) {
     }
 
     // Create user profile in our database
+    // Email/password registration collects all required fields, so profile is complete
     const user = await executeWithRetry(() =>
       prisma.user.create({
         data: {
@@ -53,7 +54,9 @@ export async function register(req: Request, res: Response) {
           first_name,
           last_name,
           contact_no,
-          password: '[SECURED BY SUPABASE]'
+          password: '[SECURED BY SUPABASE]',
+          auth_provider: 'password',
+          profile_completed: true, // Profile is complete for email/password registration
         }
       })
     );
@@ -66,7 +69,9 @@ export async function register(req: Request, res: Response) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no
+        contact_no: user.contact_no,
+        auth_provider: 'password',
+        profile_completed: true,
       },
       supabase_user_id: data.user.id
     });
@@ -108,7 +113,9 @@ export async function login(req: Request, res: Response) {
           first_name: true,
           last_name: true,
           email: true,
-          contact_no: true
+          contact_no: true,
+          auth_provider: true,
+          profile_completed: true,
         }
       })
     );
@@ -125,7 +132,9 @@ export async function login(req: Request, res: Response) {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        contact_no: user.contact_no
+        contact_no: user.contact_no,
+        auth_provider: user.auth_provider ?? 'password',
+        profile_completed: user.profile_completed ?? true, // Existing users default to true
       },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -338,6 +347,7 @@ export async function oauth_sync(req: Request, res: Response) {
           contact_no: true,
           created_at: true,
           auth_provider: true,
+          profile_completed: true,
         },
       })
     );
@@ -346,11 +356,16 @@ export async function oauth_sync(req: Request, res: Response) {
       return res.status(404).json({ error: 'User profile not found' });
     }
 
-    // Check if this is a newly created user (no contact info = likely new)
-    const isNewUser = !user.contact_no;
+    // Determine onboarding state based on profile_completed flag
+    // A user needs onboarding if profile_completed is false/null
+    const needsOnboarding = !user.profile_completed;
+    
+    // isNewUser: profile was just created via OAuth (first sign-in)
+    // We treat users without profile_completed as new users
+    const isNewUser = !user.profile_completed;
 
     res.json({
-      message: isNewUser ? 'Welcome! Please complete your profile.' : 'OAuth sync successful',
+      message: needsOnboarding ? 'Welcome! Please complete your profile.' : 'OAuth sync successful',
       user: {
         user_id: user.user_id,
         auth_id: user.auth_id,
@@ -359,9 +374,10 @@ export async function oauth_sync(req: Request, res: Response) {
         email: user.email,
         contact_no: user.contact_no,
         auth_provider: user.auth_provider ?? 'google',
+        profile_completed: user.profile_completed ?? false,
       },
       isNewUser,
-      needsOnboarding: isNewUser,
+      needsOnboarding,
     });
   } catch (error) {
     console.error('Error in oauth_sync:', error);
@@ -371,6 +387,7 @@ export async function oauth_sync(req: Request, res: Response) {
 
 /**
  * Update user profile (for onboarding or profile edits)
+ * Sets profile_completed = true when required fields (first_name, last_name) are provided
  */
 export async function update_profile(req: Request, res: Response) {
   try {
@@ -387,11 +404,22 @@ export async function update_profile(req: Request, res: Response) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Update fields
-    const updateData: Record<string, string> = {};
+    // Build update data
+    const updateData: Record<string, string | boolean> = {};
     if (first_name !== undefined) updateData.first_name = first_name;
     if (last_name !== undefined) updateData.last_name = last_name;
     if (contact_no !== undefined) updateData.contact_no = contact_no;
+
+    // Determine if profile should be marked as completed
+    // Profile is complete when first_name and last_name are set
+    const finalFirstName = first_name ?? user.first_name;
+    const finalLastName = last_name ?? user.last_name;
+    const isProfileComplete = Boolean(finalFirstName?.trim() && finalLastName?.trim());
+    
+    // Only set profile_completed to true, never revert to false on update
+    if (isProfileComplete && !user.profile_completed) {
+      updateData.profile_completed = true;
+    }
 
     const updatedUser = await executeWithRetry(() =>
       prisma.user.update({
@@ -408,7 +436,9 @@ export async function update_profile(req: Request, res: Response) {
         first_name: updatedUser.first_name,
         last_name: updatedUser.last_name,
         email: updatedUser.email,
-        contact_no: updatedUser.contact_no
+        contact_no: updatedUser.contact_no,
+        auth_provider: updatedUser.auth_provider ?? 'password',
+        profile_completed: updatedUser.profile_completed ?? false,
       }
     });
   } catch (error) {
@@ -434,7 +464,9 @@ export async function get_me(req: Request, res: Response) {
           last_name: true,
           email: true,
           contact_no: true,
-          created_at: true
+          created_at: true,
+          auth_provider: true,
+          profile_completed: true,
         }
       })
     );
@@ -443,7 +475,17 @@ export async function get_me(req: Request, res: Response) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    res.json({
+      user_id: user.user_id,
+      auth_id: user.auth_id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      contact_no: user.contact_no,
+      created_at: user.created_at,
+      auth_provider: user.auth_provider ?? 'password',
+      profile_completed: user.profile_completed ?? true,
+    });
   } catch (error) {
     console.error('Error fetching profile:', error);
     return handlePrismaError(error, res, 'Fetching profile');

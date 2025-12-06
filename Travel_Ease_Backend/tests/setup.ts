@@ -6,6 +6,11 @@ import { beforeAll, afterAll } from 'vitest';
 import type { User } from '@prisma/client';
 
 // ============================================
+// Load environment variables from .env FIRST
+// ============================================
+import 'dotenv/config';
+
+// ============================================
 // SSL / TLS configuration for test environment
 // ============================================
 // Allow self-signed certificates when connecting to Supabase or other SSL DBs
@@ -38,6 +43,8 @@ interface CreateTestUserData {
   email?: string;
   contact_no?: string;
   password?: string;
+  auth_provider?: 'password' | 'google';
+  profile_completed?: boolean;
 }
 
 interface TestUserResult {
@@ -45,7 +52,10 @@ interface TestUserResult {
   token: string;
 }
 
-// Helper function to create a test user and get token
+/**
+ * Helper function to create a test user and get a JWT token
+ * Supports configuring auth_provider and profile_completed for testing auth flows
+ */
 export async function createTestUser(userData: CreateTestUserData = {}): Promise<TestUserResult> {
   const bcrypt = await import('bcryptjs');
   const jwt = await import('jsonwebtoken');
@@ -60,7 +70,9 @@ export async function createTestUser(userData: CreateTestUserData = {}): Promise
       last_name: userData.last_name || 'User',
       email: userData.email || `test${Date.now()}@example.com`,
       contact_no: userData.contact_no || '1234567890',
-      password: hashedPassword
+      password: hashedPassword,
+      auth_provider: userData.auth_provider || 'password',
+      profile_completed: userData.profile_completed ?? true, // Default to true for backward compatibility
     }
   });
 

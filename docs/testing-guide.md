@@ -330,7 +330,161 @@ curl -X PUT http://localhost:3001/api/travel_plan/activity_edit/1 \
 
 ---
 
+## 3.7 Authentication Testing
+
+### 3.7.1 Email/Password Registration
+
+```bash
+curl -X POST http://localhost:3001/api/user/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "Test",
+    "last_name": "User",
+    "email": "test@example.com",
+    "password": "SecurePass123",
+    "contact_no": "+1234567890"
+  }'
+```
+
+**Expected:**
+- Status: 201
+- Body includes `user.profile_completed: true` (email/password registration completes profile)
+- Body includes `user.auth_provider: "password"`
+
+### 3.7.2 Email/Password Login
+
+```bash
+curl -X POST http://localhost:3001/api/user/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "SecurePass123"
+  }'
+```
+
+**Expected:**
+- Status: 200
+- Body includes `token`, `refresh_token`, `expires_at`
+- Body includes `user.profile_completed`
+
+### 3.7.3 OAuth Sync (after Google sign-in)
+
+```bash
+# Use the token from Supabase OAuth callback
+curl -X POST http://localhost:3001/api/user/oauth \
+  -H "Authorization: Bearer $SUPABASE_TOKEN"
+```
+
+**Expected for new user:**
+- Status: 200
+- `isNewUser: true`
+- `needsOnboarding: true`
+- `user.profile_completed: false`
+
+**Expected for existing user:**
+- Status: 200
+- `isNewUser: false`
+- `needsOnboarding: false`
+- `user.profile_completed: true`
+
+### 3.7.4 Profile Update (Onboarding Completion)
+
+```bash
+curl -X PUT http://localhost:3001/api/user/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "first_name": "John",
+    "last_name": "Doe",
+    "contact_no": "+1234567890"
+  }'
+```
+
+**Expected:**
+- Status: 200
+- `user.profile_completed: true` (set automatically when first_name and last_name are provided)
+
+### 3.7.5 Get Current User Profile
+
+```bash
+curl http://localhost:3001/api/user/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Expected:**
+- Status: 200
+- Body includes `auth_provider`, `profile_completed`, `created_at`
+
+### 3.7.6 Token Validation Errors
+
+**No token:**
+```bash
+curl http://localhost:3001/api/user/me
+```
+**Expected:** Status 401, `error: "Authentication required"`
+
+**Invalid token:**
+```bash
+curl http://localhost:3001/api/user/me \
+  -H "Authorization: Bearer invalid-token"
+```
+**Expected:** Status 403, `error: "Invalid or expired token"`
+
+---
+
 ## 4. UI Flow Testing
+
+### 4.0 Authentication Flow
+
+#### Email/Password Registration
+
+1. Navigate to `/signup`
+2. Fill in all required fields (first name, last name, email, password)
+3. Submit the form
+4. Verify redirect to home page (profile_completed = true automatically)
+5. Check localStorage for `token` and `travelEaseUser`
+
+#### Email/Password Login
+
+1. Navigate to `/login`
+2. Enter registered email and password
+3. Submit the form
+4. Verify redirect to home or saved redirect path
+5. Verify user context is populated
+
+#### Google OAuth Sign-in (New User)
+
+1. Navigate to `/login`
+2. Click "Continue with Google"
+3. Complete Google OAuth flow
+4. Verify redirect to `/auth/callback`
+5. Verify redirect to `/onboarding` (new user, profile_completed = false)
+6. Complete onboarding form
+7. Verify redirect to home page
+8. Verify `profile_completed = true` in user context
+
+#### Google OAuth Sign-in (Existing User)
+
+1. Navigate to `/login`
+2. Click "Continue with Google"
+3. Complete Google OAuth flow
+4. Verify redirect to `/auth/callback`
+5. Verify direct redirect to home (profile already complete)
+6. Verify user context is populated with correct auth_provider
+
+#### Session Persistence
+
+1. Sign in with any method
+2. Close browser tab
+3. Open new tab and navigate to app
+4. Verify user is still authenticated (from localStorage)
+
+#### Sign Out
+
+1. Click sign out button
+2. Verify localStorage is cleared (`token`, `travelEaseUser`)
+3. Verify redirect to login or home
+4. Verify protected routes redirect to login
 
 ### 4.1 Plan Lifecycle
 
