@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useDeleteAccount } from "../features/user/mutations";
+import { supabase } from "../lib/supabaseClient";
 
 // Storage key for intended redirect after Google OAuth
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
@@ -10,6 +10,12 @@ interface FormData {
   first_name: string;
   last_name: string;
   contact_no: string;
+}
+
+interface PasswordFormData {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
 }
 
 export default function Profile() {
@@ -27,10 +33,16 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // TanStack Query mutation for account deletion
-  const deleteAccountMutation = useDeleteAccount();
+  // Password change states
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordFormData, setPasswordFormData] = useState<PasswordFormData>({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
   // Pre-fill form with user data
   useEffect(() => {
@@ -60,6 +72,16 @@ export default function Profile() {
     setSuccessMessage("");
   };
 
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordFormData((prev) => ({ ...prev, [name]: value }));
+    if (passwordErrors[name]) {
+      setPasswordErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+    setSubmitError("");
+    setSuccessMessage("");
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -74,8 +96,28 @@ export default function Profile() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validatePassword = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!passwordFormData.current_password) {
+      newErrors.current_password = "Current password is required";
+    }
+    if (!passwordFormData.new_password) {
+      newErrors.new_password = "New password is required";
+    } else if (passwordFormData.new_password.length < 6) {
+      newErrors.new_password = "Password must be at least 6 characters";
+    }
+    if (!passwordFormData.confirm_password) {
+      newErrors.confirm_password = "Please confirm your new password";
+    } else if (passwordFormData.new_password !== passwordFormData.confirm_password) {
+      newErrors.confirm_password = "Passwords do not match";
+    }
+
+    setPasswordErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveProfile = async () => {
     setSubmitError("");
     setSuccessMessage("");
 
@@ -100,18 +142,53 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    deleteAccountMutation.mutate(undefined, {
-      onSuccess: async () => {
-        await signOut();
-        navigate("/", { replace: true });
-      },
-      onError: (err: unknown) => {
-        console.error("Delete account error:", err);
-        setSubmitError("Failed to delete account. Please try again.");
-        setShowDeleteConfirm(false);
-      },
-    });
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError("");
+    setSuccessMessage("");
+
+    if (!validatePassword()) return;
+
+    setPasswordSubmitting(true);
+
+    try {
+      // Step 1: Verify current password by attempting to sign in
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user?.email || "",
+        password: passwordFormData.current_password,
+      });
+
+      if (verifyError) {
+        setPasswordErrors({ current_password: "Current password is incorrect" });
+        setPasswordSubmitting(false);
+        return;
+      }
+
+      // Step 2: Update to new password (keeps user logged in)
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordFormData.new_password,
+      });
+
+      if (updateError) {
+        setSubmitError("Failed to update password. Please try again.");
+        setPasswordSubmitting(false);
+        return;
+      }
+
+      // Success - clear form and show confirmation
+      setSuccessMessage("Password updated successfully!");
+      setPasswordFormData({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+      setShowPasswordForm(false);
+    } catch (err: unknown) {
+      console.error("Password update error:", err);
+      setSubmitError("Failed to update password. Please try again.");
+    } finally {
+      setPasswordSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -125,6 +202,22 @@ export default function Profile() {
     setIsEditing(false);
     setErrors({});
     setSubmitError("");
+  };
+
+  const handleCancelPassword = () => {
+    setPasswordFormData({
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
+    setPasswordErrors({});
+    setShowPasswordForm(false);
+    setSubmitError("");
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
   };
 
   const handleCreateBusinessClick = async () => {
@@ -228,8 +321,8 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Profile Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Profile Details */}
+          <div className="p-6 space-y-6">
             {/* Email (read-only) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -327,7 +420,8 @@ export default function Profile() {
               {isEditing ? (
                 <>
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSaveProfile}
                     disabled={submitting}
                     className="flex-1 py-3 px-4 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -352,7 +446,105 @@ export default function Profile() {
                 </button>
               )}
             </div>
-          </form>
+          </div>
+
+          {/* Password Change Section - Only for password users, not Google OAuth */}
+          {user?.source !== "google" && (
+            <div className="border-t border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
+              
+              {!showPasswordForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordForm(true)}
+                  className="py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
+                >
+                  Change Password
+                </button>
+              ) : (
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  {/* Current Password */}
+                  <div>
+                    <label htmlFor="current_password" className="block text-sm font-medium text-gray-700 mb-2">
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      id="current_password"
+                      name="current_password"
+                      value={passwordFormData.current_password}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors ${
+                        passwordErrors.current_password ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {passwordErrors.current_password && (
+                      <p className="mt-1 text-sm text-red-600">{passwordErrors.current_password}</p>
+                    )}
+                  </div>
+
+                  {/* New Password */}
+                  <div>
+                    <label htmlFor="new_password" className="block text-sm font-medium text-gray-700 mb-2">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      id="new_password"
+                      name="new_password"
+                      value={passwordFormData.new_password}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors ${
+                        passwordErrors.new_password ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {passwordErrors.new_password && (
+                      <p className="mt-1 text-sm text-red-600">{passwordErrors.new_password}</p>
+                    )}
+                  </div>
+
+                  {/* Confirm New Password */}
+                  <div>
+                    <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      id="confirm_password"
+                      name="confirm_password"
+                      value={passwordFormData.confirm_password}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red transition-colors ${
+                        passwordErrors.confirm_password ? "border-red-500 bg-red-50" : "border-gray-300"
+                      }`}
+                    />
+                    {passwordErrors.confirm_password && (
+                      <p className="mt-1 text-sm text-red-600">{passwordErrors.confirm_password}</p>
+                    )}
+                  </div>
+
+                  {/* Password Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="submit"
+                      disabled={passwordSubmitting}
+                      className="flex-1 py-3 px-4 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {passwordSubmitting ? "Updating..." : "Update Password"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelPassword}
+                      disabled={passwordSubmitting}
+                      className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
 
           {/* Quick Links */}
           <div className="border-t border-gray-200 p-6">
@@ -415,57 +607,21 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Danger Zone */}
+          {/* Sign Out Section */}
           <div className="border-t border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Danger Zone</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Once you delete your account, there is no going back. Please be certain.
-            </p>
             <button
               type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="py-2 px-4 border border-red-500 text-red-500 font-medium rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+              onClick={handleSignOut}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
             >
-              Delete Account
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Sign Out
             </button>
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Account?</h3>
-              <p className="text-gray-600 mb-6">
-                This action cannot be undone. All your data, including favorites and preferences, will be permanently deleted.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteAccount}
-                  disabled={deleteAccountMutation.isPending}
-                  className="flex-1 py-2 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                >
-                  {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

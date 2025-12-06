@@ -5,20 +5,13 @@ export default function PublicPlans(): React.ReactElement {
   const navigate = useNavigate();
 
   // Use TanStack Query hook for fetching public plans
-  const { data: plans = [], isLoading, isError } = usePublicPlans();
+  const { data: plans = [], isError } = usePublicPlans();
 
   const handle_click = (id: number): void => {
     navigate(`/planner/join/${id}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red"></div>
-      </div>
-    );
-  }
-
+  // Error state
   if (isError) {
     return (
       <div className="text-center py-4">
@@ -27,9 +20,18 @@ export default function PublicPlans(): React.ReactElement {
     );
   }
 
+  // Empty state
+  if (plans.length === 0) {
+    return (
+      <div className="text-center py-4 text-gray-500">
+        <p>No public plans available</p>
+      </div>
+    );
+  }
+
+  // Plans list
   return (
     <div className="grid grid-cols-1 gap-4">
-      {plans.length === 0 && <p>No public plans available</p>}
       {plans.map((plan) => (
         <div
           key={plan.id}
