@@ -36,12 +36,12 @@ const MESSAGE_INTERVAL_MS = 2500;
 
 export default function MainPage(): React.ReactElement {
   const queryClient = useQueryClient();
-  const { loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  // Check for token in localStorage to determine if user is authenticated
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const isAuthenticated = !authLoading && Boolean(token);
+  // Use the user from AuthContext to determine authentication
+  // This is more reliable than checking localStorage directly because
+  // AuthContext validates the session and clears invalid tokens
+  const isAuthenticated = !authLoading && Boolean(user);
 
   // Use TanStack Query hooks to track loading states (data will be cached for children)
   const { isLoading: ongoingLoading, isFetched: ongoingFetched } = useOngoingPlans(isAuthenticated);
@@ -74,6 +74,12 @@ export default function MainPage(): React.ReactElement {
   const [messageIndex, setMessageIndex] = useState(0);
   // State for timeout - force show content after timeout
   const [forceShowContent, setForceShowContent] = useState(false);
+
+  // Reset forceShowContent when auth state changes (user logs in/out)
+  useEffect(() => {
+    setForceShowContent(false);
+    setMessageIndex(0);
+  }, [isAuthenticated]);
 
   // Rotate loading messages during loading
   useEffect(() => {

@@ -64,6 +64,7 @@ model User {
   businesses            Business[]
   business_favorites    BusinessFavorite[]
   business_reviews      BusinessReview[]
+  notifications         Notification[]
   participants          Participant[]
   travel_plans          TravelPlan[]
   travel_plan_favorites TravelPlanFavorite[]
@@ -307,4 +308,24 @@ model TravelPlanReview {
   user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("travel_plan_review")
+}
+
+// Notifications
+model Notification {
+  notification_id Int       @id @default(autoincrement())
+  user_id         Int
+  type            String    @db.VarChar(50) // "plan_invitation", "join_request_approved", "join_request_denied"
+  title           String    @db.VarChar(200)
+  message         String
+  data            Json?     // { travel_plan_id, inviter_id, inviter_name, plan_name, etc. }
+  is_read         Boolean   @default(false)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  
+  // Relations
+  user            User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_notification_user_id")
+  @@index([is_read], map: "idx_notification_is_read")
+  @@index([created_at], map: "idx_notification_created_at")
+  @@map("notification")
 }

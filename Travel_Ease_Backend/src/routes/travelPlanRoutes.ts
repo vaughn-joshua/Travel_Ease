@@ -31,6 +31,7 @@ import {
 } from '../schemas/validation.js';
 import {
   activity_edit,
+  toggle_activity_priority,
   collaborators_edit,
   create_plan,
   finished_plan,
@@ -51,6 +52,7 @@ import {
   deny_join,
   delete_activity,
   update_activity,
+  get_user_role,
   get_participants,
   add_participant,
   update_participant,
@@ -84,6 +86,7 @@ router.get('/:id/pending_requests', authenticateToken, requirePlanOwnership, get
 // Edit routes (auth + ownership + validation)
 router.put('/edit_plan/:id', authenticateToken, requirePlanOwnership, validate(editPlanSchema), plan_edit);
 router.put('/activity_edit/:id', authenticateToken, requireActivityAccess, validate(editActivitySchema), activity_edit);
+router.patch('/activity/:id/priority', authenticateToken, requireActivityAccess, toggle_activity_priority);
 router.put('/collaborators_edit/:id', authenticateToken, requirePlanOwnership, collaborators_edit);
 router.put('/update_activity/:id', authenticateToken, requirePlanOwnership, update_activity);
 
@@ -94,6 +97,7 @@ router.put('/join_plan', authenticateToken, validate(joinPlanSchema), join_plan)
 router.delete('/delete_activity/:id', authenticateToken, requireActivityAccess, delete_activity);
 
 // Participant management routes
+router.get('/:id/user-role', authenticateToken, get_user_role);
 router.get('/:id/participants', authenticateToken, get_participants);
 router.post('/:id/participants', authenticateToken, requirePlanOwnership, validate(addParticipantSchema), add_participant);
 router.put('/:id/participants/:userId', authenticateToken, requirePlanOwnership, validate(updateParticipantSchema), update_participant);

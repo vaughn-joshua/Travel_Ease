@@ -18,6 +18,7 @@ export { plans_id } from './controllers/plansId.js';
 export { create_activity } from './controllers/createActivity.js';
 export { fetch_activities } from './controllers/fetchActivities.js';
 export { activity_edit } from './controllers/activityEdit.js';
+export { toggle_activity_priority } from './controllers/toggleActivityPriority.js';
 export { plan_edit } from './controllers/planEdit.js';
 export { 
   quick_join, 
@@ -29,6 +30,7 @@ export {
 export { delete_activity } from './controllers/deleteActivity.js';
 export { update_activity } from './controllers/updateActivity.js';
 export {
+  get_user_role,
   get_participants,
   add_participant,
   update_participant,
