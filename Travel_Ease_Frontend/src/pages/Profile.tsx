@@ -3,10 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDeleteAccount } from "../features/user/mutations";
 import { useMyBusinesses } from "../features/businesses/queries";
-<<<<<<< HEAD
 import { supabase } from "../lib/supabaseClient";
-=======
->>>>>>> hotfix/dev_2_at_9b81b2
 
 // Storage key for intended redirect after Google OAuth
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
