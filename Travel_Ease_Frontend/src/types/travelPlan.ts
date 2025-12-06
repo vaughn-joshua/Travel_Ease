@@ -49,6 +49,8 @@ export interface TravelPlan {
   accommodation?: {
     business_id: number;
     name: string;
+    lat?: number | null;
+    lng?: number | null;
   } | null;
 }
 
@@ -129,6 +131,7 @@ export interface CreateActivityPayload {
   target_date?: string;
   budget_range?: BudgetRange;
   notes?: string;
+  business_id?: number; // Optional: link activity to a business
 }
 
 export interface UpdateActivityPayload {

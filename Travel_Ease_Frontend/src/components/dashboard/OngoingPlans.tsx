@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useOngoingPlans, useTravelPlanActivities } from "../../features/travelPlans/queries";
-import LandingPage from "../../pages/LandingPage";
+import LandingPage, { type MapMarker } from "../../pages/LandingPage";
 import type { Activity } from "../../types/travelPlan";
 import type { RouteInfo } from "../map/RoutingMachine";
 
@@ -96,6 +96,33 @@ export default function OngoingPlans(): React.ReactElement {
       return activityDate.toDateString() === targetDate.toDateString();
     });
   }, [allActivities, selectedPlan?.start_date, selectedDay]);
+
+  // Prepare markers for map (activities + accommodation)
+  const mapMarkers = useMemo((): MapMarker[] => {
+    const markers: MapMarker[] = [];
+
+    // Add activity markers for the selected day
+    activitiesForDay.forEach((activity) => {
+      if (activity.lat && activity.lng) {
+        markers.push({
+          position: [activity.lat, activity.lng],
+          type: activity.is_priority ? 'priority' : 'activity',
+          name: activity.name || activity.location || undefined,
+        });
+      }
+    });
+
+    // Add accommodation marker if available and has coordinates
+    if (selectedPlan?.accommodation?.lat && selectedPlan?.accommodation?.lng) {
+      markers.push({
+        position: [selectedPlan.accommodation.lat, selectedPlan.accommodation.lng],
+        type: 'accommodation',
+        name: selectedPlan.accommodation.name,
+      });
+    }
+
+    return markers;
+  }, [activitiesForDay, selectedPlan?.accommodation]);
 
   // Handle activity click - set route endpoint
   const handleActivityClick = (activity: Activity) => {
@@ -216,6 +243,7 @@ export default function OngoingPlans(): React.ReactElement {
               className="w-full h-full"
               start={TAGAYTAY_CENTER}
               end={selectedActivity}
+              markers={mapMarkers}
               onRouteFound={handleRouteFound}
             />
           </div>

@@ -84,7 +84,14 @@ export default function SuggestedBusinesses({
   };
 
   const handleAddToPlan = (business: Business) => {
+    // Use business's latitude and longitude as coordinates
+    if (!business.latitude || !business.longitude) {
+      alert("This business does not have location coordinates available.");
+      return;
+    }
+
     // Convert to SearchResult format for CreateActivity
+    // Include business_id and use business's latitude/longitude as coordinates
     const searchResult: SearchResult = {
       name: business.name,
       label: business.name,
@@ -92,8 +99,9 @@ export default function SuggestedBusinesses({
         city: business.city || undefined,
         country: undefined,
       },
-      lat: business.latitude || 0,
-      lng: business.longitude || 0,
+      lat: Number(business.latitude),
+      lng: Number(business.longitude),
+      business_id: business.business_id, // Pass business_id to link the activity
     };
     onAddToActivity(searchResult);
     setSelectedBusiness(null);

@@ -81,10 +81,21 @@ export default function Create_Activity({
       return;
     }
 
+    // Validate coordinates
+    if (typeof search_result.lat !== 'number' || typeof search_result.lng !== 'number') {
+      alert("Invalid location coordinates. Please select a valid location.");
+      return;
+    }
+
+    if (isNaN(search_result.lat) || isNaN(search_result.lng)) {
+      alert("Invalid location coordinates. Please select a valid location.");
+      return;
+    }
+
     const payload: CreateActivityPayload = {
       travel_plan_id: typeof id === "string" ? parseInt(id) : id,
-      lat: search_result.lat,
-      lng: search_result.lng,
+      lat: Number(search_result.lat),
+      lng: Number(search_result.lng),
       location: search_result.name,
       name: search_result.name,
       brgy: search_result.address?.barangay || "",
@@ -93,6 +104,7 @@ export default function Create_Activity({
       target_date: formatDateForBackend(value),
       budget_range: data.budget_range || undefined,
       notes: data.notes || undefined,
+      business_id: search_result.business_id, // Include business_id if provided (from suggested businesses)
     };
 
     createActivityMutation.mutate(payload, {
@@ -107,7 +119,21 @@ export default function Create_Activity({
   };
 
   const handleSearch = (result: SearchResult): void => {
-    set_search_result(result);
+    // Ensure coordinates are numbers
+    const validatedResult: SearchResult = {
+      ...result,
+      lat: typeof result.lat === 'string' ? parseFloat(result.lat) : Number(result.lat),
+      lng: typeof result.lng === 'string' ? parseFloat(result.lng) : Number(result.lng),
+    };
+    
+    // Validate coordinates are valid numbers
+    if (isNaN(validatedResult.lat) || isNaN(validatedResult.lng)) {
+      console.error("Invalid coordinates in search result:", result);
+      alert("Invalid location coordinates. Please try selecting the location again.");
+      return;
+    }
+    
+    set_search_result(validatedResult);
   };
 
   return (

@@ -40,6 +40,8 @@ interface PlanDTO {
   accommodation?: {
     business_id: number;
     name: string;
+    lat?: number | null;
+    lng?: number | null;
   } | null;
 }
 

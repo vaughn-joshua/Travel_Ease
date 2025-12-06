@@ -10,12 +10,13 @@ import CreateActivity from "../components/dashboard/CreateActivity";
 import Collaborators from "../components/dashboard/Collaborators";
 import SuggestedBusinesses from "../components/dashboard/SuggestedBusinesses";
 import React from "react";
-import LandingPage from "./LandingPage";
+import LandingPage, { type MapMarker } from "./LandingPage";
 import type { TravelPlanDates } from "../types/travelPlan";
 import type { RouteInfo } from "../components/map/RoutingMachine";
 import type { SearchResult } from "../types/map";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
+import { useTravelPlanActivities } from "../features/travelPlans/queries";
 
 const itineraryRoute = {
   start: [14.1154, 120.9618] as [number, number],
@@ -145,6 +146,9 @@ export default function Planner(): React.ReactElement {
 
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
+  // Fetch activities for the plan
+  const { data: allActivities = [] } = useTravelPlanActivities(id);
+
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {
     if (info.distance > 0 && info.time > 0) {
@@ -153,6 +157,54 @@ export default function Planner(): React.ReactElement {
       setRouteInfo(null);
     }
   }, []);
+
+  // Filter activities by selected day
+  const activitiesForDay = useMemo(() => {
+    if (!allActivities.length || !dates.start) return [];
+
+    const starting_date = new Date(dates.start);
+    let current_day: Date;
+
+    if (daySelected === 1) {
+      current_day = starting_date;
+    } else {
+      const selected_day_ms = 1000 * 60 * 60 * 24 * (daySelected - 1);
+      current_day = new Date(starting_date.getTime() + selected_day_ms);
+    }
+
+    return allActivities.filter((item) => {
+      if (!item.target_date) return false;
+      const activity_date = new Date(item.target_date);
+      return activity_date.toDateString() === current_day.toDateString();
+    });
+  }, [allActivities, dates.start, daySelected]);
+
+  // Prepare markers for map (activities + accommodation)
+  const mapMarkers = useMemo((): MapMarker[] => {
+    const markers: MapMarker[] = [];
+
+    // Add activity markers for the selected day
+    activitiesForDay.forEach((activity) => {
+      if (activity.lat && activity.lng) {
+        markers.push({
+          position: [activity.lat, activity.lng],
+          type: activity.is_priority ? 'priority' : 'activity',
+          name: activity.name || activity.location || undefined,
+        });
+      }
+    });
+
+    // Add accommodation marker if available and has coordinates
+    if (plan?.accommodation?.lat && plan?.accommodation?.lng) {
+      markers.push({
+        position: [plan.accommodation.lat, plan.accommodation.lng],
+        type: 'accommodation',
+        name: plan.accommodation.name,
+      });
+    }
+
+    return markers;
+  }, [activitiesForDay, plan?.accommodation]);
 
   const handle_close = (): void => {
     // Invalidate and refetch instead of full page reload
@@ -348,7 +400,8 @@ export default function Planner(): React.ReactElement {
             <LandingPage
               start={itineraryRoute.start}
               end={clickedActivity.end}
-                className="w-full h-full"
+              markers={mapMarkers}
+              className="w-full h-full"
               onRouteFound={handleRouteFound}
             />
           </div>
