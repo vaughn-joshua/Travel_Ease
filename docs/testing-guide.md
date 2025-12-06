@@ -1,6 +1,87 @@
 # TravelEase Testing Guide
 
-This document provides testing instructions for verifying the travel plan state machine implementation.
+This document provides testing instructions for verifying the travel plan state machine implementation, system health, and runtime verification.
+
+---
+
+## 0. System Verification (Phase 0 Baseline)
+
+### 0.1 Health Check
+
+Verify the backend is running and database is connected:
+
+```bash
+curl http://localhost:3001/api/health
+```
+
+**Expected Response:**
+
+```json
+{
+  "status": "OK",
+  "timestamp": "2025-01-01T00:00:00.000Z",
+  "port": 3001,
+  "database": "connected"
+}
+```
+
+If database shows "disconnected", check:
+- `DATABASE_URL` is set in `.env`
+- PostgreSQL is running
+- Network connectivity to database host
+
+### 0.2 Frontend Proxy Verification
+
+With both servers running:
+
+```bash
+# Terminal 1: Backend
+cd Travel_Ease_Backend && npm run dev
+
+# Terminal 2: Frontend
+cd Travel_Ease_Frontend && npm run dev
+```
+
+Open http://localhost:5173 and check browser DevTools:
+1. Network tab shows `/api/` requests
+2. Requests proxy to `localhost:3001`
+3. No CORS errors in Console
+
+### 0.3 Environment Configuration Check
+
+Backend environment validation:
+
+```bash
+cd Travel_Ease_Backend
+node -e "require('dotenv').config(); console.log({
+  db: !!process.env.DATABASE_URL,
+  supabase: !!process.env.SUPABASE_URL,
+  cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+  redis: process.env.REDIS_ENABLED,
+  port: process.env.PORT || 3001
+})"
+```
+
+**Expected:** Shows which services are configured.
+
+### 0.4 Database Connectivity
+
+```bash
+cd Travel_Ease_Backend
+npx prisma db push --dry-run
+```
+
+**Expected:** Schema validation without errors (dry-run doesn't modify DB).
+
+### 0.5 Quick Smoke Test
+
+Test a public endpoint:
+
+```bash
+curl http://localhost:3001/api/travel_plan/public_plans
+```
+
+**Expected:** JSON response with array of public plans (may be empty).
 
 ---
 

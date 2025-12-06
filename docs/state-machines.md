@@ -247,3 +247,240 @@ type BudgetRange = '0-100' | '100-200' | '200-400' | '400-700' | '700-1000' | '1
 ✓ = Allowed transition
 ✗ = Forbidden transition
 
+---
+
+## 9. App Boot Sequence State Machine
+
+The backend server follows a deterministic boot sequence:
+
+```
+┌─────────────────┐
+│   INITIALIZING  │  dotenv/config loads env vars
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   ENV_LOADED    │  process.env populated
+└────────┬────────┘
+         │
+         │ Check DATABASE_URL
+         ▼
+┌─────────────────┐     missing      ┌─────────────────┐
+│   DB_CHECKING   │ ────────────────► │   DB_DEGRADED   │ (warn, continue)
+└────────┬────────┘                  └────────┬────────┘
+         │                                    │
+         │ connected (5s timeout)             │
+         ▼                                    │
+┌─────────────────┐                           │
+│   DB_CONNECTED  │◄──────────────────────────┘
+└────────┬────────┘
+         │
+         │ Register middleware & routes
+         ▼
+┌─────────────────┐
+│  ROUTES_READY   │
+└────────┬────────┘
+         │
+         │ app.listen(PORT)
+         ▼
+┌─────────────────┐
+│    LISTENING    │  Server accepting requests
+└────────┬────────┘
+         │
+         │ Process termination signal
+         ▼
+┌─────────────────┐
+│   SHUTTING_DOWN │  prisma.$disconnect()
+└─────────────────┘
+```
+
+### Boot States
+
+| State | Description | Side Effects |
+|-------|-------------|--------------|
+| INITIALIZING | Process started, loading dotenv | — |
+| ENV_LOADED | Environment variables available | — |
+| DB_CHECKING | Testing database connectivity | 5s timeout |
+| DB_CONNECTED | Database connection successful | Prisma ready |
+| DB_DEGRADED | Database unavailable, server continues | Warning logged |
+| ROUTES_READY | All middleware and routes registered | — |
+| LISTENING | Server accepting HTTP requests | Port bound |
+| SHUTTING_DOWN | Graceful shutdown in progress | Connections closed |
+
+### Boot Invariants
+
+1. Server MUST start even if database is unavailable (degraded mode)
+2. CORS origins MUST be validated before route handlers
+3. Prisma client is singleton, cached in development
+4. Health endpoint MUST report database status
+
+---
+
+## 10. API Request Lifecycle State Machine
+
+Every HTTP request follows this state flow:
+
+```
+┌─────────────────┐
+│    RECEIVED     │  Express receives request
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     CORS fail      ┌─────────────────┐
+│   CORS_CHECK    │ ──────────────────► │   ERROR (403)   │
+└────────┬────────┘                    └─────────────────┘
+         │ pass
+         ▼
+┌─────────────────┐
+│  BODY_PARSING   │  express.json()
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  REQUEST_LOG    │  requestLogger middleware
+└────────┬────────┘
+         │
+         │ Route requires auth?
+         ▼
+┌─────────────────┐     no token       ┌─────────────────┐
+│   AUTH_CHECK    │ ──────────────────► │   ERROR (401)   │
+└────────┬────────┘     invalid/expired └─────────────────┘
+         │                    │
+         │ token valid        │
+         ▼                    ▼
+┌─────────────────┐     ┌─────────────────┐
+│   AUTHORIZED    │     │   ERROR (403)   │
+└────────┬────────┘     └─────────────────┘
+         │
+         │ Zod validation?
+         ▼
+┌─────────────────┐     validation fail ┌─────────────────┐
+│   VALIDATING    │ ──────────────────► │   ERROR (400)   │
+└────────┬────────┘                    └─────────────────┘
+         │ pass
+         ▼
+┌─────────────────┐
+│   HANDLING      │  Route handler executes
+└────────┬────────┘
+         │
+         │ Prisma query
+         ▼
+┌─────────────────┐     P1xxx error    ┌─────────────────┐
+│   DB_QUERY      │ ──────────────────► │   ERROR (503)   │
+└────────┬────────┘     P2xxx error    └─────────────────┘
+         │                    │
+         │ success            ▼
+         ▼              ┌─────────────────┐
+┌─────────────────┐     │   ERROR (400)   │
+│   RESPONDING    │     └─────────────────┘
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   COMPLETED     │  Response sent, logged
+└─────────────────┘
+```
+
+### Request States
+
+| State | HTTP Status | Description |
+|-------|-------------|-------------|
+| RECEIVED | — | Request received by Express |
+| CORS_CHECK | 403 on fail | Origin validation |
+| BODY_PARSING | 400 on fail | JSON body parsing |
+| REQUEST_LOG | — | Structured logging |
+| AUTH_CHECK | 401/403 | Token validation (if required) |
+| AUTHORIZED | — | User context attached |
+| VALIDATING | 400 on fail | Zod schema validation |
+| HANDLING | — | Business logic execution |
+| DB_QUERY | 400/503 | Prisma database operations |
+| RESPONDING | 2xx | Success response |
+| ERROR | 4xx/5xx | Error response via errorHandler |
+| COMPLETED | — | Request finished |
+
+### Error Code Mapping
+
+| Prisma Code | HTTP Status | Meaning |
+|-------------|-------------|---------|
+| P1xxx | 503 | Connection/server errors |
+| P2002 | 400 | Duplicate constraint |
+| P2003 | 400 | Foreign key violation |
+| P2025 | 404 | Record not found |
+| Other P2xxx | 400 | Client/query errors |
+
+---
+
+## 11. Environment Configuration State Machine
+
+Environment configuration follows validation states:
+
+```
+┌─────────────────┐
+│   UNCONFIGURED  │  .env not loaded
+└────────┬────────┘
+         │
+         │ dotenv/config
+         ▼
+┌─────────────────┐
+│    LOADING      │  Parsing .env file
+└────────┬────────┘
+         │
+         │ Check required vars
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     CONFIGURATION CHECKS                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  DATABASE_URL ─────┬─── present ──► DB_READY                    │
+│                    └─── missing ──► DB_UNAVAILABLE (warn)       │
+│                                                                 │
+│  SUPABASE_URL ─────┬─── present ──► AUTH_SUPABASE               │
+│  + SERVICE_KEY     └─── missing ──► AUTH_LOCAL (test mode)      │
+│                                                                 │
+│  CLOUDINARY_* ─────┬─── present ──► UPLOADS_READY               │
+│                    └─── missing ──► UPLOADS_DISABLED (warn)     │
+│                                                                 │
+│  REDIS_ENABLED ────┬─── true + URL ► CACHE_REDIS                │
+│                    └─── false ─────► CACHE_MEMORY               │
+│                                                                 │
+│  ALLOWED_ORIGINS ──┬─── present ──► CORS_CUSTOM                 │
+│                    └─── missing ──► CORS_DEFAULT (localhost)    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│    CONFIGURED   │  Ready for boot
+└─────────────────┘
+```
+
+### Configuration States
+
+| Component | State | Fallback |
+|-----------|-------|----------|
+| Database | DB_READY / DB_UNAVAILABLE | Server starts, queries fail |
+| Auth | AUTH_SUPABASE / AUTH_LOCAL | Local JWT in test mode |
+| Uploads | UPLOADS_READY / UPLOADS_DISABLED | Image routes return error |
+| Cache | CACHE_REDIS / CACHE_MEMORY | In-memory LRU cache |
+| CORS | CORS_CUSTOM / CORS_DEFAULT | localhost:3000, localhost:5173 |
+
+### Environment Invariants
+
+1. Server MUST start with minimal config (PORT only)
+2. Missing DATABASE_URL → degraded mode, not crash
+3. Missing Supabase config + NODE_ENV=test → use local JWT
+4. Missing Cloudinary → upload endpoints return 503
+5. CORS defaults MUST include Vite dev server port (5173)
+
+### Required vs Optional
+
+| Variable | Required For | Fallback |
+|----------|--------------|----------|
+| DATABASE_URL | Data persistence | Degraded (queries fail) |
+| PORT | Server binding | 3001 |
+| NODE_ENV | Mode selection | development |
+| SUPABASE_* | Production auth | Local JWT (test) |
+| CLOUDINARY_* | Image uploads | 503 on upload |
+| REDIS_* | Distributed cache | In-memory |
+| ALLOWED_ORIGINS | CORS | localhost defaults |
+
