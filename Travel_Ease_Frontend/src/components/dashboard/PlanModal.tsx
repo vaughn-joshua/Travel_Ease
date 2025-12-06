@@ -122,6 +122,11 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
                         <p className="text-sm text-gray-500 flex items-center gap-1">
                           <span>📅</span> {formatDate(plan.start_date)} - {formatDate(plan.end_date)}
                         </p>
+                        {plan.accommodation && (
+                          <p className="text-sm text-gray-600 flex items-center gap-1">
+                            <span>🛏️</span> {plan.accommodation.name}
+                          </p>
+                        )}
                         <p className={`text-sm font-medium ${slotInfo.color}`}>
                           {slotInfo.text}
                         </p>

@@ -4,17 +4,17 @@ import type { SearchResult } from "../../types/map";
 import type { TravelPlanDates } from "../../types/travelPlan";
 import BusinessDetailModal from "./BusinessDetailModal";
 
-// Categories from the database enum
+// Main categories from the database enum
 const CATEGORIES = [
-  { id: "food", label: "Food", icon: "🍽️" },
-  { id: "drinks", label: "Drinks", icon: "🍹" },
-  { id: "accomodation", label: "Accommodation", icon: "🏨" },
-  { id: "souvenir shop", label: "Souvenirs", icon: "🛍️" },
-  { id: "nature", label: "Nature", icon: "🌿" },
-  { id: "night life", label: "Night Life", icon: "🌙" },
-  { id: "leisure", label: "Leisure", icon: "🎯" },
-  { id: "activities", label: "Activities", icon: "🎪" },
-  { id: "local offers", label: "Local Offers", icon: "🏷️" },
+  { id: "accommodation", label: "Accommodation", icon: "🏨" },
+  { id: "food_drinks", label: "Food & Drinks", icon: "🍽️" },
+  { id: "tours_activities", label: "Tours & Activities", icon: "🎯" },
+  { id: "transport_transfers", label: "Transport & Transfers", icon: "🚗" },
+  { id: "travel_services", label: "Travel Services", icon: "✈️" },
+  { id: "shopping_souvenirs", label: "Shopping & Souvenirs", icon: "🛍️" },
+  { id: "wellness_medical", label: "Wellness & Medical", icon: "💆" },
+  { id: "events_experiences", label: "Events & Experiences", icon: "🎪" },
+  { id: "outdoor_gear_rental", label: "Outdoor / Gear Rental", icon: "🎒" },
 ];
 
 // Price ranges (UI only for now)
@@ -86,15 +86,14 @@ export default function SuggestedBusinesses({
   const handleAddToPlan = (business: Business) => {
     // Convert to SearchResult format for CreateActivity
     const searchResult: SearchResult = {
-      display_name: business.name,
+      name: business.name,
+      label: business.name,
       address: {
-        name: business.name,
         city: business.city || undefined,
-        state: undefined,
         country: undefined,
       },
-      lat: String(business.latitude || 0),
-      lon: String(business.longitude || 0),
+      lat: business.latitude || 0,
+      lng: business.longitude || 0,
     };
     onAddToActivity(searchResult);
     setSelectedBusiness(null);

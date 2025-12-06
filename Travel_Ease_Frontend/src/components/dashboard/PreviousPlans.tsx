@@ -57,6 +57,11 @@ export default function Previous_Plans(): React.ReactElement {
             >
               <h4 className="font-medium text-gray-900 text-sm">{plan.title}</h4>
               <p className="text-xs text-gray-600 mt-1">{plan.location}</p>
+              {plan.accommodation && (
+                <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                  <span>🛏️</span> {plan.accommodation.name}
+                </p>
+              )}
               <p className="text-xs text-gray-400 mt-1">
                 {plan.start_date} - {plan.end_date}
               </p>

@@ -49,6 +49,7 @@ export default function Planner(): React.ReactElement {
     locationState?.prefillActivity || null
   );
 
+
   // Track token availability - re-check when auth loading changes or session changes
   const [tokenReady, setTokenReady] = useState(false);
   const [tokenChecked, setTokenChecked] = useState(false);
@@ -233,6 +234,7 @@ export default function Planner(): React.ReactElement {
     }
   }, [prefillActivity, plan, dates.start, permissions.canEdit]);
 
+
   const click_day = (i: number): void => {
     setLoadActivity((prev) => !prev);
     setDaySelected(i);
@@ -240,6 +242,7 @@ export default function Planner(): React.ReactElement {
 
   // Use TanStack Query mutation for updating plan status
   const updatePlanMutation = useUpdatePlan();
+
 
   // Use TanStack Query mutation for requesting to join
   const requestJoinMutation = useRequestJoin();
@@ -342,91 +345,91 @@ export default function Planner(): React.ReactElement {
           {/* Map Container */}
           <div className="flex-1 relative rounded-xl overflow-hidden shadow-lg border border-gray-200">
             <div id="map-container" className="w-full h-full">
-              <LandingPage
-                start={itineraryRoute.start}
-                end={clickedActivity.end}
+            <LandingPage
+              start={itineraryRoute.start}
+              end={clickedActivity.end}
                 className="w-full h-full"
-                onRouteFound={handleRouteFound}
-              />
-            </div>
+              onRouteFound={handleRouteFound}
+            />
+          </div>
             {/* Plan title overlay */}
-            <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-lg z-[1000] pointer-events-none">
-              <h3 className="font-semibold text-gray-900">{plan.title}</h3>
-              <p className="text-xs text-gray-500">{plan.location}</p>
-            </div>
+          <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-lg z-[1000] pointer-events-none">
+            <h3 className="font-semibold text-gray-900">{plan.title}</h3>
+            <p className="text-xs text-gray-500">{plan.location}</p>
+          </div>
             {/* ETA overlay */}
-            {routeInfo && clickedActivity.end && (
-              <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg z-[1000] pointer-events-none">
-                <p className="text-xs text-gray-500 mb-1">Estimated Travel</p>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-semibold text-gray-900">{routeInfo.time} min</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="font-semibold text-gray-900">{routeInfo.distance} km</span>
-                  </div>
+          {routeInfo && clickedActivity.end && (
+            <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg z-[1000] pointer-events-none">
+              <p className="text-xs text-gray-500 mb-1">Estimated Travel</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">{routeInfo.time} min</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">{routeInfo.distance} km</span>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
           {/* Plan Details Card */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div className="flex justify-between items-start mb-3">
-              <div>
+            <div>
                 <h1 className="text-xl font-bold text-gray-900">{plan.title}</h1>
                 <p className="text-gray-500 text-sm">{plan.location}</p>
-              </div>
+            </div>
               <div className="flex gap-2">
                 {showStartNow && (
-                  <button
+                <button
                     className="hard_btn text-sm"
-                    onClick={handle_start}
-                    disabled={updatePlanMutation.isPending}
-                  >
-                    {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
-                  </button>
+                  onClick={handle_start}
+                  disabled={updatePlanMutation.isPending}
+                >
+                  {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
+                </button>
                 )}
                 {showEditPlan && (
-                  <button
-                    onClick={() => setActiveModal("plan")}
+                <button
+                  onClick={() => setActiveModal("plan")}
                     className="soft_btn text-sm"
-                    disabled={updatePlanMutation.isPending}
-                  >
-                    Edit
-                  </button>
+                  disabled={updatePlanMutation.isPending}
+                >
+                  Edit
+                </button>
                 )}
                 {showRequestJoin && (
                   joinSuccess ? (
                     <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
-                      Request Sent!
-                    </span>
-                  ) : (
-                    <button
+                    Request Sent!
+                  </span>
+                ) : (
+                  <button
                       className="hard_btn text-sm"
-                      onClick={() =>
-                        requestJoinMutation.mutate(
-                          { travel_plan_id: Number(id) },
-                          {
-                            onSuccess: () => setJoinSuccess(true),
-                            onError: (error) => {
-                              console.error("Join request error:", error);
-                              alert("Failed to send join request. Please try again.");
-                            },
-                          }
-                        )
-                      }
-                      disabled={requestJoinMutation.isPending}
-                    >
-                      {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
-                    </button>
+                    onClick={() =>
+                      requestJoinMutation.mutate(
+                        { travel_plan_id: Number(id) },
+                        {
+                          onSuccess: () => setJoinSuccess(true),
+                          onError: (error) => {
+                            console.error("Join request error:", error);
+                            alert("Failed to send join request. Please try again.");
+                          },
+                        }
+                      )
+                    }
+                    disabled={requestJoinMutation.isPending}
+                  >
+                    {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
+                  </button>
                   )
                 )}
                 <button
@@ -438,9 +441,26 @@ export default function Planner(): React.ReactElement {
               </div>
             </div>
             <p className="text-gray-600 text-sm mb-2">{plan.description}</p>
-            <div className="flex gap-4 text-xs text-gray-500">
-              <span>📅 {plan.start_date} - {plan.end_date}</span>
-              {plan.slots && <span>👥 {plan.slots} slots</span>}
+            {/* Plan Details Below Border Line */}
+            <div className="pt-2 border-t border-gray-200 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="font-medium">Date:</span>
+                <span className="text-gray-500">📅 {plan.start_date} - {plan.end_date}</span>
+              </div>
+              {plan.slots && (
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <span className="font-medium">Slots:</span>
+                  <span className="text-gray-500">👥 {plan.slots} slots</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="font-medium">Accommodation:</span>
+                {plan.accommodation ? (
+                  <span className="text-gray-700">🛏️ {plan.accommodation.name}</span>
+                ) : (
+                  <span className="text-gray-400 italic">No accommodation set</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -449,7 +469,7 @@ export default function Planner(): React.ReactElement {
         <div className="w-96 flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           {/* Tab Navigation */}
           <div className="flex border-b border-gray-200">
-            <button
+                <button
               onClick={() => setActiveRightTab("activities")}
               className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
                 activeRightTab === "activities"
@@ -458,8 +478,8 @@ export default function Planner(): React.ReactElement {
               }`}
             >
               Activities
-            </button>
-            <button
+                </button>
+                <button
               onClick={() => setActiveRightTab("suggested")}
               className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
                 activeRightTab === "suggested"
@@ -468,7 +488,7 @@ export default function Planner(): React.ReactElement {
               }`}
             >
               Suggested
-            </button>
+                </button>
           </div>
 
           {/* Tab Content */}
@@ -479,7 +499,7 @@ export default function Planner(): React.ReactElement {
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {Array.from({ length: days }, (_, i) => (
-                      <button
+                <button
                         key={i}
                         onClick={() => click_day(i + 1)}
                         className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
@@ -489,16 +509,16 @@ export default function Planner(): React.ReactElement {
                         }`}
                       >
                         Day {i + 1}
-                      </button>
+                </button>
                     ))}
                   </div>
                   {showAddActivity && (
-                    <button
+                <button
                       onClick={() => setActiveModal("activity")}
                       className="hard_btn text-sm whitespace-nowrap ml-2"
-                    >
+                >
                       + Add
-                    </button>
+                </button>
                   )}
                 </div>
 
@@ -556,6 +576,7 @@ export default function Planner(): React.ReactElement {
           on_close={() => setActiveModal("")}
         />
       )}
+
     </div>
   );
 }

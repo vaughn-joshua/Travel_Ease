@@ -104,7 +104,7 @@ export default function MainPage(): React.ReactElement {
 
     return () => clearTimeout(timeout);
   }, [isAnyLoading, allFetched, forceShowContent]);
-
+  
   // Tracks which modal is currently open
   const [activeModal, setActiveModal] = useState<ModalType>("");
 

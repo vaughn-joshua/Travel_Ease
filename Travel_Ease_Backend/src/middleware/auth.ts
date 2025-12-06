@@ -142,6 +142,78 @@ export const authenticateApiKey = (
   next();
 };
 
+/**
+ * Optional authentication middleware.
+ * Sets req.user if a valid token is provided, but doesn't fail if no token.
+ * Use this for public endpoints that can optionally show user-specific data.
+ */
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.split(" ")[1];
+
+  if (!token) {
+    // No token provided - continue without user
+    return next();
+  }
+
+  try {
+    // Test mode: use local JWT verification
+    if (isTestMode && JWT_SECRET) {
+      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const user = await executeWithRetry(() =>
+        prisma.user.findUnique({
+          where: { user_id: decoded.id },
+        })
+      );
+
+      if (user) {
+        req.user = {
+          id: user.user_id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+        };
+      }
+      return next();
+    }
+
+    // Production: require Supabase configuration
+    if (!isSupabaseConfigured()) {
+      return next(); // Continue without user if Supabase not configured
+    }
+
+    // Verify token with Supabase
+    const { data, error } = await supabaseAdmin!.auth.getUser(token);
+
+    if (!error && data.user?.email) {
+      const user = await executeWithRetry(() =>
+        prisma.user.findUnique({
+          where: { email: data.user!.email! },
+        })
+      );
+
+      if (user) {
+        req.user = {
+          id: user.user_id,
+          auth_id: data.user.id,
+          email: data.user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+        };
+      }
+    }
+    next();
+  } catch (error) {
+    // Token invalid or expired - continue without user
+    console.log("Optional auth: token verification failed, continuing without user");
+    next();
+  }
+};
+
 export const authenticateToken = async (
   req: Request,
   res: Response,

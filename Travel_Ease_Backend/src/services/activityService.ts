@@ -179,12 +179,15 @@ export function formatActivityToDTO(activity: any): ActivityDTO {
 // ============================================================================
 
 /**
- * Get all activities for a travel plan
+ * Get all activities for a travel plan (excluding accommodation activities)
  */
 export async function getActivitiesByPlan(planId: number): Promise<ActivityDTO[]> {
   const activities = await executeWithRetry(() =>
     prisma.activity.findMany({
-      where: { travel_plan_id: planId },
+      where: { 
+        travel_plan_id: planId,
+        is_accommodation: { not: true } // Exclude accommodation activities
+      },
       select: ACTIVITY_WITH_BUSINESS_SELECT,
       orderBy: [
         { target_date: 'asc' },
@@ -195,6 +198,38 @@ export async function getActivitiesByPlan(planId: number): Promise<ActivityDTO[]
   );
 
   return activities.map(formatActivityToDTO);
+}
+
+/**
+ * Get accommodation activity for a travel plan
+ */
+export async function getAccommodationByPlan(planId: number): Promise<{ business_id: number; name: string } | null> {
+  const accommodation = await executeWithRetry(() =>
+    prisma.activity.findFirst({
+      where: {
+        travel_plan_id: planId,
+        is_accommodation: true
+      },
+      select: {
+        business_id: true,
+        business: {
+          select: {
+            business_id: true,
+            name: true
+          }
+        }
+      }
+    })
+  );
+
+  if (!accommodation || !accommodation.business) {
+    return null;
+  }
+
+  return {
+    business_id: accommodation.business.business_id,
+    name: accommodation.business.name
+  };
 }
 
 /**

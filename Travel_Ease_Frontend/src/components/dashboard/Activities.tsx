@@ -181,26 +181,26 @@ export default function Activities({
               )}
 
               <div className="pr-8">
-                {/* Display location name if available */}
-                {plan.location && (
-                  <h1 className="font-semibold">{plan.location}</h1>
-                )}
-                {/* Display address components if available */}
-                {(plan.brgy || plan.city || plan.province) && (
-                  <p className="text-sm text-gray-600">
-                    {[plan.brgy, plan.city, plan.province].filter(Boolean).join(", ")}
-                  </p>
-                )}
-                {/* Notes */}
-                {plan.notes && <p className="text-sm">{plan.notes}</p>}
-                {/* Target date */}
-                {plan.target_date && (
-                  <p className="text-sm text-gray-500">{plan.target_date}</p>
-                )}
-                {/* Budget range - formatted for display */}
-                {plan.budget_range && (
-                  <p className="text-sm text-gray-500">{formatBudgetRange(plan.budget_range)}</p>
-                )}
+              {/* Display location name if available */}
+              {plan.location && (
+                <h1 className="font-semibold">{plan.location}</h1>
+              )}
+              {/* Display address components if available */}
+              {(plan.brgy || plan.city || plan.province) && (
+                <p className="text-sm text-gray-600">
+                  {[plan.brgy, plan.city, plan.province].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {/* Notes */}
+              {plan.notes && <p className="text-sm">{plan.notes}</p>}
+              {/* Target date */}
+              {plan.target_date && (
+                <p className="text-sm text-gray-500">{plan.target_date}</p>
+              )}
+              {/* Budget range - formatted for display */}
+              {plan.budget_range && (
+                <p className="text-sm text-gray-500">{formatBudgetRange(plan.budget_range)}</p>
+              )}
               </div>
 
               {showActions && (

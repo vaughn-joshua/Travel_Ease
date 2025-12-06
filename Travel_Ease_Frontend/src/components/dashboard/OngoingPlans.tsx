@@ -184,6 +184,11 @@ export default function OngoingPlans(): React.ReactElement {
               <p className="text-xs text-gray-400">
                 📅 {plan.start_date} - {plan.end_date}
               </p>
+              {plan.accommodation && (
+                <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                  <span>🛏️</span> {plan.accommodation.name}
+                </p>
+              )}
               {plan.approvedParticipants !== undefined && (
                 <p className="text-xs text-gray-400 mt-1">
                   👥 {plan.approvedParticipants}/{plan.max_slots} participants

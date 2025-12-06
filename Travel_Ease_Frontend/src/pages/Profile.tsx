@@ -712,8 +712,8 @@ export default function Profile() {
                     >
                       Cancel
                     </button>
-                  </div>
-                </form>
+            </div>
+          </form>
               )}
             </div>
           )}

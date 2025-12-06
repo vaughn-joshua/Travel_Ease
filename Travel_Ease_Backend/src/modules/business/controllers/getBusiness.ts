@@ -49,10 +49,14 @@ export async function get_businesses(req: Request, res: Response) {
 
     // For category filter, we need a subquery
     if (category) {
-      // Get business IDs with this category
+      // Get business IDs with this main category via subcategory relation
       const businessesWithCategory = await executeWithRetry(() =>
         prisma.businessCategory.findMany({
-          where: { category_name: category as any },
+          where: {
+            subcategory: {
+              main_category: category as any, // Cast to enum type
+            },
+          },
           select: { business_id: true }
         })
       );

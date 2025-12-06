@@ -365,7 +365,13 @@ export async function getBusinesses(
   const where: any = {};
 
   if (filters.category) {
-    where.categories = { some: { category_name: filters.category } };
+    where.categories = {
+      some: {
+        subcategory: {
+          main_category: filters.category as any, // Cast to enum type
+        },
+      },
+    };
   }
   if (filters.city) {
     where.city = { contains: filters.city, mode: "insensitive" };

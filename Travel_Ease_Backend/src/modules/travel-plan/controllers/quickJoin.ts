@@ -4,6 +4,7 @@ import {
   handlePrismaError,
 } from "../../../lib/prismaHelpers.js";
 import { formatPlan } from "../utils/formatPlan.js";
+import { getAccommodationForPlans } from "../utils/getAccommodation.js";
 import { Request, Response } from "express";
 
 /**
@@ -74,6 +75,9 @@ export async function quick_join(req: Request, res: Response) {
       }
     });
 
+    // Fetch accommodation for all plans
+    const accommodationMap = await getAccommodationForPlans(planIds);
+
     // Add slot availability with normalized DTO
     const data = plans.map((p) => {
       const approvedCount = countMap[p.travel_plan_id] || 0;
@@ -81,6 +85,7 @@ export async function quick_join(req: Request, res: Response) {
         approvedParticipants: approvedCount,
         slotsAvailable: p.max_slots ? p.max_slots - approvedCount : null,
         isFull: p.max_slots ? approvedCount >= p.max_slots : false,
+        accommodation: accommodationMap.get(p.travel_plan_id) || null,
       });
     });
 

@@ -4,17 +4,17 @@ import SpotSearchBox from "../../components/travel-spots/SpotSearchBox";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useTravelSpots } from "../../features/businesses/queries";
 
-// Categories from backend enum
+// Main categories from backend enum
 const CATEGORIES = [
-  { value: "food", label: "Food" },
-  { value: "drinks", label: "Drinks" },
-  { value: "accomodation", label: "Accommodation" },
-  { value: "souvenir shop", label: "Souvenir Shop" },
-  { value: "nature", label: "Nature" },
-  { value: "night life", label: "Night Life" },
-  { value: "leisure", label: "Leisure" },
-  { value: "activities", label: "Activities" },
-  { value: "local offers", label: "Local Offers" },
+  { value: "accommodation", label: "Accommodation" },
+  { value: "food_drinks", label: "Food & Drinks" },
+  { value: "tours_activities", label: "Tours & Activities" },
+  { value: "transport_transfers", label: "Transport & Transfers" },
+  { value: "travel_services", label: "Travel Services" },
+  { value: "shopping_souvenirs", label: "Shopping & Souvenirs" },
+  { value: "wellness_medical", label: "Wellness & Medical" },
+  { value: "events_experiences", label: "Events & Experiences" },
+  { value: "outdoor_gear_rental", label: "Outdoor / Gear Rental" },
 ] as const;
 
 // Price ranges from backend enum (UI only for now)

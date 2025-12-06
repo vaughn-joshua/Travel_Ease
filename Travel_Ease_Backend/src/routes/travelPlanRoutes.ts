@@ -17,7 +17,7 @@ get plans (for quick join)
 put join plan (for anyone na magjjoin)*/
 
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, optionalAuth } from '../middleware/auth.js';
 import { requirePlanOwnership, requireActivityAccess } from '../middleware/ownership.js';
 import {
   validate,
@@ -61,8 +61,8 @@ import {
 
 const router = Router();
 
-// Public routes (no auth required)
-router.get('/public_plans', public_plans);
+// Public routes (optional auth to show user-specific data like participation status)
+router.get('/public_plans', optionalAuth, public_plans);
 router.post('/quick_join', quick_join); // Search is public, joining requires auth
 
 // Quick join queue routes (auth required)

@@ -195,11 +195,13 @@ router.get(
       if (city) {
         where.city = { contains: city, mode: "insensitive" };
       }
-      // Filter by category - businesses must have this category in their categories relation
+      // Filter by category - businesses must have a subcategory with this main_category
       if (category) {
         where.categories = {
           some: {
-            category_name: category,
+            subcategory: {
+              main_category: category as any, // Cast to enum type
+            },
           },
         };
       }

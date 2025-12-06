@@ -31,6 +31,7 @@ export async function plan_edit(req: Request, res: Response) {
     end_date,
     visibility,
     status,
+    accommodation_id,
   } = req.body;
 
   const planId = parseInt(id);
@@ -121,6 +122,54 @@ export async function plan_edit(req: Request, res: Response) {
       if (visibility === false && currentPlan.visibility === true) {
         updateData.visibility_timestamp = null;
       }
+    }
+
+    // Handle accommodation update
+    if (accommodation_id !== undefined) {
+      await prisma.$transaction(async (tx) => {
+        // Find existing accommodation activity
+        const existingAccommodation = await tx.activity.findFirst({
+          where: {
+            travel_plan_id: planId,
+            is_accommodation: true
+          }
+        });
+
+        if (accommodation_id === null) {
+          // Delete existing accommodation if any
+          if (existingAccommodation) {
+            await tx.activity.delete({
+              where: { activity_id: existingAccommodation.activity_id }
+            });
+          }
+        } else {
+          // Update or create accommodation activity
+          if (existingAccommodation) {
+            await tx.activity.update({
+              where: { activity_id: existingAccommodation.activity_id },
+              data: {
+                business_id: accommodation_id,
+                target_date: null
+              }
+            });
+          } else {
+            // Get plan owner for user_id
+            const plan = await tx.travelPlan.findUnique({
+              where: { travel_plan_id: planId },
+              select: { user_id: true }
+            });
+            await tx.activity.create({
+              data: {
+                travel_plan_id: planId,
+                business_id: accommodation_id,
+                is_accommodation: true,
+                target_date: null,
+                user_id: plan?.user_id ?? null
+              }
+            });
+          }
+        }
+      });
     }
 
     // Perform update

@@ -9,6 +9,7 @@ import {
   paginatedResponse,
 } from "../utils/pagination.js";
 import { formatPlan } from "../utils/formatPlan.js";
+import { getAccommodationForPlans } from "../utils/getAccommodation.js";
 import { cacheResult, buildCacheKey } from "../../../lib/cache.js";
 import { logger } from "../../../lib/logger.js";
 import { Request, Response } from "express";
@@ -20,6 +21,7 @@ const PUBLIC_PLANS_CACHE_TTL = 30; // 30 seconds - plans change frequently with 
  * Fetch public plans (visibility=true, not expired)
  * Read-only listing; joining requires auth
  * Supports pagination and filtering
+ * If authenticated, includes user's participation status for each plan
  *
  * Cache key: travel_plans:public:<page>:<pageSize>:<filters>
  * TTL: 30 seconds
@@ -74,6 +76,7 @@ export async function public_plans(req: Request, res: Response) {
                 visibility: true,
                 visibility_timestamp: true,
                 status: true,
+                user_id: true, // Include user_id to check ownership
                 user: {
                   select: {
                     user_id: true,
@@ -113,12 +116,16 @@ export async function public_plans(req: Request, res: Response) {
           }
         });
 
+        // Fetch accommodation for all plans
+        const accommodationMap = await getAccommodationForPlans(planIdList);
+
         // Add slot availability info with normalized DTO
         const data = plans.map((p) => {
           const approvedCount = countMap[p.travel_plan_id] || 0;
           return formatPlan(p, {
             approvedParticipants: approvedCount,
             slotsAvailable: p.max_slots ? p.max_slots - approvedCount : null,
+            accommodation: accommodationMap.get(p.travel_plan_id) || null,
           });
         });
 
@@ -126,10 +133,55 @@ export async function public_plans(req: Request, res: Response) {
       },
     });
 
+    // If user is authenticated, add participation info (not cached - user-specific)
+    let dataWithParticipation = result.data;
+    if (req.user?.id && result.data.length > 0) {
+      const planIdList = result.data.map((p: any) => p.id || p.travel_plan_id);
+      
+      // Check if user is owner of any plans
+      const ownershipMap: Record<number, boolean> = {};
+      result.data.forEach((p: any) => {
+        const planId = p.id || p.travel_plan_id;
+        ownershipMap[planId] = p.user_id === req.user!.id;
+      });
+      
+      // Get user's participation in these plans
+      const userParticipants = await executeWithRetry(() =>
+        prisma.participant.findMany({
+          where: {
+            travel_plan_id: { in: planIdList },
+            user_id: req.user!.id,
+            status: true,
+          },
+          select: { travel_plan_id: true, role: true },
+        })
+      );
+
+      const participationMap: Record<number, { isParticipant: boolean; role: string }> = {};
+      userParticipants.forEach((p) => {
+        if (p.travel_plan_id !== null) {
+          participationMap[p.travel_plan_id] = { isParticipant: true, role: p.role };
+        }
+      });
+
+      // Add participation info to each plan
+      dataWithParticipation = result.data.map((plan: any) => {
+        const planId = plan.id || plan.travel_plan_id;
+        const isOwner = ownershipMap[planId] || false;
+        const participation = participationMap[planId];
+        return {
+          ...plan,
+          isOwner,
+          isParticipant: isOwner || !!participation,
+          participantRole: isOwner ? "Owner" : (participation?.role || null),
+        };
+      });
+    }
+
     // Set cache header for debugging
     res.set("X-Cache", fromCache ? `HIT:${cacheBackend}` : "MISS");
     res.json(
-      paginatedResponse(result.data, result.total, {
+      paginatedResponse(dataWithParticipation, result.total, {
         page: result.page,
         pageSize: result.pageSize,
       })

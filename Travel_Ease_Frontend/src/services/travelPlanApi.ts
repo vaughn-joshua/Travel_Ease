@@ -109,6 +109,7 @@ export const travelPlanApi = {
     if (data.slots !== undefined) payload.max_slots = data.slots;
     if (data.is_public !== undefined) payload.visibility = data.is_public;
     if (data.status !== undefined) payload.status = data.status;
+    if (data.accommodation_id !== undefined) payload.accommodation_id = data.accommodation_id;
 
     const response = await api.put<UpdatePlanResponse>(
       endpoints.travelPlan.editPlan(id),
