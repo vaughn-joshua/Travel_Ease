@@ -1,12 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-<<<<<<< HEAD
 import { useDeleteAccount } from "../features/user/mutations";
 import { useMyBusinesses } from "../features/businesses/queries";
-=======
-import { supabase } from "../lib/supabaseClient";
->>>>>>> origin/hotfix/dev_1
 
 // Storage key for intended redirect after Google OAuth
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
@@ -38,12 +34,9 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-<<<<<<< HEAD
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDisconnectGoogle, setShowDisconnectGoogle] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-=======
->>>>>>> origin/hotfix/dev_1
 
   // Password change states
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -58,6 +51,9 @@ export default function Profile() {
   // Fetch user's businesses to determine if "Create Business" should be shown
   const { data: businessesData, isLoading: businessesLoading } = useMyBusinesses();
   const hasBusinesses = (businessesData?.data?.length ?? 0) > 0;
+
+  // Delete account mutation
+  const deleteAccountMutation = useDeleteAccount();
 
   // Pre-fill form with user data
   useEffect(() => {
@@ -233,6 +229,17 @@ export default function Profile() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccountMutation.mutateAsync();
+      await signOut();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+      setSubmitError("Failed to delete account. Please try again.");
+    }
   };
 
   const handleCreateBusinessClick = async () => {
@@ -638,7 +645,20 @@ export default function Profile() {
 
           {/* Sign Out Section */}
           <div className="border-t border-gray-200 p-6">
-<<<<<<< HEAD
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Sign Out
+            </button>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="border-t border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Danger Zone</h3>
             <p className="text-sm text-gray-600 mb-4">
               These actions are permanent and cannot be undone.
@@ -760,21 +780,6 @@ export default function Profile() {
           </div>
         </div>
       )}
-=======
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
->>>>>>> origin/hotfix/dev_1
     </div>
   );
 }
