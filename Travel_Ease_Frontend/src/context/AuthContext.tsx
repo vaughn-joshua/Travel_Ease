@@ -171,12 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      console.log("AuthContext: getSession result", { 
-        hasSession: !!currentSession, 
-        hasAccessToken: !!currentSession?.access_token,
-        userEmail: currentSession?.user?.email 
-      });
-      
       // If we're in a business auth flow, check for email mismatch BEFORE updating any state
       if (isInBusinessAuthFlow && currentSession?.user?.email) {
         const sessionEmail = currentSession.user.email.toLowerCase();
@@ -185,7 +179,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessionEmail !== expectedEmail) {
           // Email mismatch - DON'T update session or user state
           // Keep the original user from localStorage intact
-          console.log("Business auth email mismatch on mount - preserving original user");
           setLoading(false);
           return;
         }
@@ -196,14 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ALWAYS sync the token when we have a valid Supabase session
       // This ensures API calls can work immediately after auth loads
       if (currentSession?.access_token) {
-        console.log("AuthContext: Syncing token from Supabase session to localStorage");
         localStorage.setItem(TOKEN_STORAGE_KEY, currentSession.access_token);
       } else {
-        console.log("AuthContext: No Supabase session or access_token available");
         // If we have a stored profile but no valid Supabase session,
         // the session has expired - clear the stored auth state
         if (storedProfile) {
-          console.log("AuthContext: Stored profile exists but Supabase session expired - clearing auth state");
           localStorage.removeItem(PROFILE_STORAGE_KEY);
           localStorage.removeItem(TOKEN_STORAGE_KEY);
           setUser(null);
@@ -234,7 +224,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (currentBusinessAuthEmail.toLowerCase() !== newSessionEmail.toLowerCase()) {
           // Email mismatch during business auth - don't update session state
           // The AuthCallback component will handle showing the error
-          console.log("Business auth email mismatch - preserving original session");
           return;
         }
       }

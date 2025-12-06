@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
-import business_routes from '../routes/business_routes.js';
+import { businessRoutes as business_routes } from '../src/routes/index.js';
 import { createTestUser, cleanupTestData } from './setup.js';
 import type { User } from '@prisma/client';
 
@@ -189,6 +189,143 @@ describe('Business', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('categories');
       expect(Array.isArray(response.body.categories)).toBe(true);
+    });
+  });
+
+  describe('Price Range Filtering', () => {
+    beforeEach(async () => {
+      // Create businesses with different price ranges
+      const biz1 = await prisma.business.create({
+        data: {
+          name: 'Budget Restaurant',
+          user_id: user1.user_id,
+          city: 'Manila',
+          status: true,
+        }
+      });
+      const cat1 = await prisma.businessCategory.create({
+        data: {
+          business_id: biz1.business_id,
+          category_name: 'food'
+        }
+      });
+      await prisma.priceRange.create({
+        data: {
+          category_id: cat1.category_id,
+          min_price: 50,
+          max_price: 150
+        }
+      });
+
+      const biz2 = await prisma.business.create({
+        data: {
+          name: 'Mid-Range Restaurant',
+          user_id: user1.user_id,
+          city: 'Manila',
+          status: true,
+        }
+      });
+      const cat2 = await prisma.businessCategory.create({
+        data: {
+          business_id: biz2.business_id,
+          category_name: 'food'
+        }
+      });
+      await prisma.priceRange.create({
+        data: {
+          category_id: cat2.category_id,
+          min_price: 200,
+          max_price: 400
+        }
+      });
+
+      const biz3 = await prisma.business.create({
+        data: {
+          name: 'Expensive Restaurant',
+          user_id: user1.user_id,
+          city: 'Manila',
+          status: true,
+        }
+      });
+      const cat3 = await prisma.businessCategory.create({
+        data: {
+          business_id: biz3.business_id,
+          category_name: 'food'
+        }
+      });
+      await prisma.priceRange.create({
+        data: {
+          category_id: cat3.category_id,
+          min_price: 500,
+          max_price: 1000
+        }
+      });
+    });
+
+    it('should filter businesses by minimum price', async () => {
+      const response = await request(app)
+        .get('/api/business/businesses?minPrice=300');
+
+      expect(response.status).toBe(200);
+      expect(response.body.items.length).toBeGreaterThanOrEqual(2);
+      // Should include mid-range and expensive, excluding budget
+      const names = response.body.items.map((b: any) => b.name);
+      expect(names).toContain('Mid-Range Restaurant');
+      expect(names).toContain('Expensive Restaurant');
+    });
+
+    it('should filter businesses by maximum price', async () => {
+      const response = await request(app)
+        .get('/api/business/businesses?maxPrice=200');
+
+      expect(response.status).toBe(200);
+      expect(response.body.items.length).toBeGreaterThanOrEqual(2);
+      // Should include budget and mid-range (min_price <= 200)
+      const names = response.body.items.map((b: any) => b.name);
+      expect(names).toContain('Budget Restaurant');
+      expect(names).toContain('Mid-Range Restaurant');
+    });
+
+    it('should filter businesses by price range', async () => {
+      const response = await request(app)
+        .get('/api/business/businesses?minPrice=100&maxPrice=300');
+
+      expect(response.status).toBe(200);
+      // Should include budget (max >= 100) and mid-range (min <= 300)
+      const names = response.body.items.map((b: any) => b.name);
+      expect(names).toContain('Budget Restaurant');
+      expect(names).toContain('Mid-Range Restaurant');
+    });
+
+    it('should return aggregated price range in response', async () => {
+      const response = await request(app)
+        .get('/api/business/businesses');
+
+      expect(response.status).toBe(200);
+      // Each item should have priceRange
+      const itemsWithPriceRange = response.body.items.filter(
+        (b: any) => b.priceRange !== null
+      );
+      expect(itemsWithPriceRange.length).toBeGreaterThan(0);
+      
+      // Verify priceRange structure
+      const item = itemsWithPriceRange[0];
+      expect(item.priceRange).toHaveProperty('min');
+      expect(item.priceRange).toHaveProperty('max');
+      expect(typeof item.priceRange.min).toBe('number');
+      expect(typeof item.priceRange.max).toBe('number');
+    });
+
+    it('should combine category and price filters', async () => {
+      const response = await request(app)
+        .get('/api/business/businesses?category=food&minPrice=100&maxPrice=300');
+
+      expect(response.status).toBe(200);
+      // All items should be food category
+      response.body.items.forEach((item: any) => {
+        const categoryNames = item.categories.map((c: any) => c.name);
+        expect(categoryNames).toContain('food');
+      });
     });
   });
 });

@@ -74,6 +74,33 @@ export interface BusinessListItemDTO {
   };
 }
 
+/**
+ * Extended list item DTO with hours and price range for detailed listings
+ */
+export interface BusinessListItemDetailedDTO {
+  id: number;
+  name: string;
+  description: string | null;
+  categories: Array<{ id: number; name: string }>;
+  hours: Record<string, { open: string | null; close: string | null }>;
+  priceRange: { min: number; max: number } | null;
+  media: {
+    cover: string | null;
+    gallery: string[];
+  };
+  location: {
+    lat: number | null;
+    lng: number | null;
+    address: string;
+  };
+  rating: number | null;
+  status: boolean | null;
+  owner: {
+    id: number;
+    name: string;
+  } | null;
+}
+
 export interface CreateBusinessInput {
   name: string;
   house_no?: string;
@@ -188,6 +215,94 @@ const BUSINESS_DETAIL_SELECT = {
 } as const;
 
 // ============================================================================
+// Price Range Aggregation
+// ============================================================================
+
+interface AggregatedPriceRange {
+  business_id: number;
+  min_price: number | null;
+  max_price: number | null;
+}
+
+/**
+ * Compute aggregated min/max price ranges for multiple businesses in a single query.
+ * This replaces the O(categories × price_ranges) in-memory loop with DB aggregation.
+ * Falls back gracefully to null price ranges on error.
+ */
+export async function computePriceRangesForBusinesses(
+  businessIds: number[]
+): Promise<Map<number, { min: number; max: number } | null>> {
+  const priceMap = new Map<number, { min: number; max: number } | null>();
+  
+  // Initialize all with null
+  for (const id of businessIds) {
+    priceMap.set(id, null);
+  }
+
+  if (businessIds.length === 0) {
+    return priceMap;
+  }
+
+  try {
+    // Fetch price ranges with their category's business_id in a single query
+    const priceRanges = await prisma.priceRange.findMany({
+      where: {
+        category: {
+          business_id: { in: businessIds }
+        }
+      },
+      select: {
+        min_price: true,
+        max_price: true,
+        category: {
+          select: {
+            business_id: true
+          }
+        }
+      }
+    });
+
+    // Aggregate by business_id
+    const bizAggregates = new Map<number, { min: number; max: number }>();
+    for (const pr of priceRanges) {
+      const bizId = pr.category?.business_id;
+      if (bizId === null || bizId === undefined) continue;
+
+      const existing = bizAggregates.get(bizId);
+      if (existing) {
+        bizAggregates.set(bizId, {
+          min: Math.min(existing.min, pr.min_price),
+          max: Math.max(existing.max, pr.max_price),
+        });
+      } else {
+        bizAggregates.set(bizId, { min: pr.min_price, max: pr.max_price });
+      }
+    }
+
+    // Update price map with results
+    bizAggregates.forEach((range, bizId) => {
+      priceMap.set(bizId, range);
+    });
+  } catch (error) {
+    // Log but don't fail - price ranges will be null
+    console.warn('Failed to compute price ranges, falling back to null:', error);
+  }
+
+  return priceMap;
+}
+
+/**
+ * Compute aggregated price range for a single business.
+ * Uses the batch function internally for consistency.
+ */
+export async function computePriceRangeForBusiness(
+  businessId: number
+): Promise<{ min: number; max: number } | null> {
+  const priceMap = await computePriceRangesForBusinesses([businessId]);
+  return priceMap.get(businessId) ?? null;
+}
+
+// ============================================================================
 // Formatters
 // ============================================================================
 
@@ -233,19 +348,38 @@ function parsePicture(picture: string | null): {
 }
 
 /**
- * Format raw Prisma business to full DTO
+ * Compute price range from nested relations (fallback when pre-computed not available).
+ * Used internally by formatters when price data is included in the query.
  */
-export function formatBusinessToDTO(business: any): BusinessDTO {
-  // Calculate price range across all categories
+function computePriceRangeFromRelations(
+  categories: Array<{ price_ranges?: Array<{ min_price: number; max_price: number }> }> | undefined
+): { min: number; max: number } | null {
   let minPrice: number | null = null;
   let maxPrice: number | null = null;
 
-  for (const cat of business.categories || []) {
+  for (const cat of categories || []) {
     for (const pr of cat.price_ranges || []) {
       if (minPrice === null || pr.min_price < minPrice) minPrice = pr.min_price;
       if (maxPrice === null || pr.max_price > maxPrice) maxPrice = pr.max_price;
     }
   }
+
+  return minPrice !== null ? { min: minPrice, max: maxPrice! } : null;
+}
+
+/**
+ * Format raw Prisma business to full DTO
+ * @param business - Raw Prisma business object
+ * @param precomputedPriceRange - Optional pre-computed price range (from SQL aggregation)
+ */
+export function formatBusinessToDTO(
+  business: any,
+  precomputedPriceRange?: { min: number; max: number } | null
+): BusinessDTO {
+  // Use pre-computed price range if available, otherwise compute from relations
+  const priceRange = precomputedPriceRange !== undefined
+    ? precomputedPriceRange
+    : computePriceRangeFromRelations(business.categories);
 
   const media = parsePicture(business.picture);
 
@@ -296,7 +430,7 @@ export function formatBusinessToDTO(business: any): BusinessDTO {
       name: c.category_name,
     })),
     hours,
-    priceRange: minPrice !== null ? { min: minPrice, max: maxPrice! } : null,
+    priceRange,
     media,
     menuItems,
     reviews,
@@ -348,6 +482,68 @@ export function formatBusinessListItem(business: any): BusinessListItemDTO {
       lng: business.longitude,
       city: business.city,
     },
+  };
+}
+
+/**
+ * Format raw Prisma business to detailed list item DTO (includes hours and priceRange)
+ * Used by listing endpoints that need more details than the basic list item.
+ * @param business - Raw Prisma business object
+ * @param precomputedPriceRange - Optional pre-computed price range (from SQL aggregation)
+ */
+export function formatBusinessListItemDetailed(
+  business: any,
+  precomputedPriceRange?: { min: number; max: number } | null
+): BusinessListItemDetailedDTO {
+  // Use pre-computed price range if available, otherwise compute from relations
+  const priceRange = precomputedPriceRange !== undefined
+    ? precomputedPriceRange
+    : computePriceRangeFromRelations(business.categories);
+
+  const media = parsePicture(business.picture);
+
+  // Normalize hours
+  const hours: Record<string, { open: string | null; close: string | null }> = {};
+  for (const h of business.business_hours || []) {
+    const day = h.day_of_week?.toLowerCase();
+    if (day) {
+      hours[day] = {
+        open: h.open_time ? formatTime(h.open_time) : null,
+        close: h.close_time ? formatTime(h.close_time) : null,
+      };
+    }
+  }
+
+  return {
+    id: business.business_id,
+    name: business.name,
+    description: business.description,
+    categories: (business.categories || []).map((c: any) => ({
+      id: c.category_id,
+      name: c.category_name,
+    })),
+    hours,
+    priceRange,
+    media: {
+      cover: media.cover,
+      gallery: media.gallery,
+    },
+    location: {
+      lat: business.latitude,
+      lng: business.longitude,
+      address: [
+        business.house_number,
+        business.street,
+        business.brgy,
+        business.city,
+      ].filter(Boolean).join(', '),
+    },
+    rating: business.rating ? parseFloat(business.rating) : null,
+    status: business.status,
+    owner: business.user ? {
+      id: business.user.user_id,
+      name: `${business.user.first_name} ${business.user.last_name}`.trim(),
+    } : null,
   };
 }
 
@@ -674,6 +870,9 @@ export async function getAllCategories(): Promise<string[]> {
 export default {
   formatBusinessToDTO,
   formatBusinessListItem,
+  formatBusinessListItemDetailed,
+  computePriceRangesForBusinesses,
+  computePriceRangeForBusiness,
   getBusinesses,
   getBusinessById,
   getBusinessesByOwner,

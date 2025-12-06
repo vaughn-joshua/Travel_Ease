@@ -27,7 +27,6 @@ export default function AuthCallback() {
     const handleCallback = async () => {
       // If Supabase is not configured, redirect to home
       if (!isSupabaseConfigured) {
-        console.warn("Supabase not configured, redirecting to home");
         navigate("/", { replace: true });
         return;
       }
@@ -52,7 +51,6 @@ export default function AuthCallback() {
           });
           
           if (setSessionError) {
-            console.error("Set session error:", setSessionError);
             setError(setSessionError.message);
             return;
           }
@@ -65,7 +63,6 @@ export default function AuthCallback() {
           );
 
           if (exchangeError) {
-            console.error("Session exchange error:", exchangeError);
             setError(exchangeError.message);
             return;
           }
@@ -75,7 +72,6 @@ export default function AuthCallback() {
           const { data: { session: exchangedSession }, error: sessionError } = await supabase.auth.getSession();
 
           if (sessionError) {
-            console.error("Get session error:", sessionError);
             setError(sessionError.message);
             return;
           }
@@ -145,7 +141,6 @@ export default function AuthCallback() {
               navigate(savedRedirect || "/", { replace: true });
             }
           } catch (syncError) {
-            console.error("OAuth sync error:", syncError);
             localStorage.removeItem("auth_redirect");
             localStorage.removeItem("token");
             localStorage.removeItem(BUSINESS_AUTH_EMAIL_KEY);
@@ -162,8 +157,7 @@ export default function AuthCallback() {
         } else {
           setError("No session token received. Please try again.");
         }
-      } catch (err) {
-        console.error("Auth callback error:", err);
+      } catch {
         setError("Authentication failed. Please try again.");
       }
     };

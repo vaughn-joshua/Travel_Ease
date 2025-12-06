@@ -88,8 +88,7 @@ export default function Onboarding() {
       const redirectTo = localStorage.getItem("auth_redirect") || "/";
       localStorage.removeItem("auth_redirect");
       navigate(redirectTo, { replace: true });
-    } catch (err: unknown) {
-      console.error("Onboarding error:", err);
+    } catch {
       setSubmitError("Failed to save profile. Please try again.");
     } finally {
       setSubmitting(false);
