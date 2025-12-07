@@ -41,10 +41,6 @@ interface Pin {
 interface BusinessCategory {
   category_id: number;
   category_name: string;
-  price_range?: {
-    min_price: number;
-    max_price: number;
-  };
 }
 
 interface BusinessHour {
@@ -63,6 +59,9 @@ interface Business {
   house_number: string;
   categories: BusinessCategory[];
   business_hours: BusinessHour[];
+  // Price range is now on the business level
+  min_price?: number | null;
+  max_price?: number | null;
 }
 
 interface EditBusinessProps {
@@ -458,63 +457,54 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
 
               {counter === 3 && (
                 <>
-                  {(selectedCategories as string[]).map(
-                    (cat: string, index: number) => {
-                      // Find matching existing category
-                      const existing = business.categories.find(
-                        (c) => c.category_name === cat
-                      );
-
-                      return (
-                        <div key={index}>
-                          <label className="label">
-                            {cat} Price Range:
-                            <div className="flex gap-3">
-                              <input
-                                {...register(`categories.${index}.min_price`, {
-                                  min: 1,
-                                })}
-                                className="text_box"
-                                type="number"
-                                defaultValue={
-                                  business.categories[index]?.price_range
-                                    ?.min_price
-                                }
-                              />
-                              <input
-                                {...register(`categories.${index}.max_price`, {
-                                  min: 1,
-                                })}
-                                className="text_box"
-                                type="number"
-                                defaultValue={
-                                  business.categories[index]?.price_range
-                                    ?.max_price
-                                }
-                              />
-                              <input
-                                type="hidden"
-                                {...register(
-                                  `categories.${index}.category_name`
-                                )}
-                                value={cat}
-                              />
-
-                              {/* existing category? give its id, else null */}
-                              <input
-                                type="hidden"
-                                {...register(`categories.${index}.category_id`)}
-                                value={existing?.category_id || ""}
-                              />
-                            </div>
-                          </label>
-                          {errors.category && (
-                            <p>{(errors.category as any).message}</p>
-                          )}
+                  {/* Business-level price range */}
+                  <div className="mb-4">
+                    <label className="label">
+                      Business Price Range:
+                      <div className="flex gap-3 mt-2">
+                        <div className="flex-1">
+                          <input
+                            {...register("min_price", {
+                              min: { value: 0, message: "Min price must be >= 0" },
+                            })}
+                            className="text_box"
+                            type="number"
+                            placeholder="Minimum price"
+                            defaultValue={business.min_price ?? ""}
+                          />
+                          <span className="text-xs text-gray-500">Min Price</span>
                         </div>
-                      );
-                    }
-                  )}
+                        <div className="flex-1">
+                          <input
+                            {...register("max_price", {
+                              min: { value: 0, message: "Max price must be >= 0" },
+                            })}
+                            className="text_box"
+                            type="number"
+                            placeholder="Maximum price"
+                            defaultValue={business.max_price ?? ""}
+                          />
+                          <span className="text-xs text-gray-500">Max Price</span>
+                        </div>
+                      </div>
+                    </label>
+                    {errors.min_price && (
+                      <p className="text-red-500">{(errors.min_price as any).message}</p>
+                    )}
+                    {errors.max_price && (
+                      <p className="text-red-500">{(errors.max_price as any).message}</p>
+                    )}
+                  </div>
+
+                  {/* Display selected categories */}
+                  <div className="mb-4">
+                    <p className="label">Selected Categories:</p>
+                    <ul className="list-disc list-inside text-sm text-gray-600">
+                      {(selectedCategories as string[]).map((cat: string, index: number) => (
+                        <li key={index}>{cat}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </>
               )}
 

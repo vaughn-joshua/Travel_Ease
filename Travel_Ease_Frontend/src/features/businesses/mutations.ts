@@ -174,12 +174,20 @@ export function useDeleteMenuItem() {
 // Creates price ranges for business categories.
 // Invalidates the business detail on success.
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * @deprecated Price range is now stored directly on business table.
+ * Use useEditBusiness with min_price/max_price instead.
+ */
 interface PriceRangePayload {
   id?: number;
   business_id?: string | number;
   categories?: Array<{ category_id: number; min_price: number; max_price: number }>;
 }
 
+/**
+ * @deprecated Price range is now stored directly on business table.
+ * Use useEditBusiness with min_price/max_price instead.
+ */
 export function useCreatePriceRange() {
   const queryClient = useQueryClient();
 

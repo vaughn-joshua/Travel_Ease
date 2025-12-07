@@ -73,6 +73,8 @@ interface TravelSpotsResponse {
     status: boolean | null;
     picture: string | null;
     reviewCount: number;
+    min_price: number | null;
+    max_price: number | null;
   }>;
   fromCache?: boolean;
 }

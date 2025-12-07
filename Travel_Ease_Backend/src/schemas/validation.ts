@@ -99,6 +99,11 @@ export const editActivitySchema = z.object({
 });
 
 // Business Schemas
+// Price State Machine:
+//   - both null: price not set
+//   - only min_price set: minimum price known
+//   - only max_price set: maximum price known
+//   - both set: min_price <= max_price enforced by validation
 export const createBusinessSchema = z.object({
   name: z.string().min(1, 'Business name is required').max(200),
   house_no: z.string().optional(),
@@ -117,7 +122,15 @@ export const createBusinessSchema = z.object({
   })).optional(),
   min_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
   max_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
-});
+}).refine(
+  (data) => {
+    if (data.min_price !== undefined && data.max_price !== undefined) {
+      return data.min_price <= data.max_price;
+    }
+    return true;
+  },
+  { message: 'min_price must be less than or equal to max_price', path: ['min_price'] }
+);
 
 export const editBusinessSchema = z.object({
   name: z.string().max(200).optional(),
@@ -146,10 +159,18 @@ export const editBusinessSchema = z.object({
     start: z.string().optional(),
     end: z.string().optional()
   })).optional(),
-  // Price range fields
+  // Price range fields - stored directly on business table
   min_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
   max_price: z.number().int().min(0).optional().or(z.string().transform(Number).pipe(z.number().int().min(0)).optional()),
-});
+}).refine(
+  (data) => {
+    if (data.min_price !== undefined && data.max_price !== undefined) {
+      return data.min_price <= data.max_price;
+    }
+    return true;
+  },
+  { message: 'min_price must be less than or equal to max_price', path: ['min_price'] }
+);
 
 // Review Schemas
 export const createReviewSchema = z.object({

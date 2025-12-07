@@ -100,6 +100,11 @@ model Blog {
 }
 
 // Business and Related Tables
+// Price State Machine:
+//   - both null: price not set
+//   - only min_price set: minimum price known
+//   - only max_price set: maximum price known  
+//   - both set: min_price <= max_price enforced by validation
 model Business {
   business_id          Int                @id @default(autoincrement())
   user_id              Int?
@@ -115,6 +120,8 @@ model Business {
   google_authenticator String?            @db.VarChar(100)
   status               Boolean?           @default(false)
   picture              String?
+  min_price            Int?
+  max_price            Int?
 
   // Relations
   activities           Activity[]

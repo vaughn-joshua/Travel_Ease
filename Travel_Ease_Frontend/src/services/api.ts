@@ -268,6 +268,8 @@ interface TravelSpotsResponse {
     status: boolean | null;
     picture: string | null;
     reviewCount: number;
+    min_price: number | null;
+    max_price: number | null;
   }>;
   fromCache?: boolean;
 }
@@ -327,7 +329,10 @@ export const businessApi = {
     return response.data;
   },
 
-  // Create price range for business categories
+  /**
+   * @deprecated Price range is now stored directly on business table (min_price, max_price).
+   * Use editBusiness to update price range instead.
+   */
   createPriceRange: async (data: {
     id?: number;
     business_id?: string | number;
@@ -337,8 +342,9 @@ export const businessApi = {
       max_price: number;
     }>;
   }): Promise<any> => {
-    const response = await api.post("/business/price_range", data);
-    return response.data;
+    console.warn("createPriceRange is deprecated. Use editBusiness with min_price/max_price instead.");
+    // This endpoint no longer exists - use editBusiness
+    throw new Error("createPriceRange is deprecated. Use editBusiness with min_price/max_price instead.");
   },
 
   // Menu Items

@@ -11,8 +11,9 @@ export async function business_fetch(req: Request, res: Response) {
         where: { business_id: parseInt(id) },
         include: {
           categories: {
-            include: {
-              price_ranges: true
+            select: {
+              category_id: true,
+              category_name: true,
             }
           },
           business_hours: true,

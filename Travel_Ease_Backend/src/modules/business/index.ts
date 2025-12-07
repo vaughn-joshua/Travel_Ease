@@ -17,7 +17,7 @@ export {
   updateMenuItem,
   deleteMenuItem,
 } from "./controllers/menuItems.js";
-export { price_range } from "./controllers/priceRange.js";
+// price_range controller deprecated - price data now stored directly on business table
 
 // Utils
 export { updateBusinessCategories } from "./utils/updateBusinessCategories.js";

@@ -55,7 +55,8 @@ export const endpoints: Endpoints = {
     categoriesById: (id) => `/business/fetch_categories/${id}`,
     edit: (id) => `/business/edit_business/${id}`,
     delete: (id) => `/business/delete_business/${id}`,
-    priceRange: `/business/price_range`,
+    // priceRange is deprecated - price data now stored directly on business table
+    // priceRange: `/business/price_range`,
     travelSpots: `/business/travel_spots`,
     reviews: (id) => `/business/travel_spots/reviews/${id}`,
     categories: `/business/categories`,

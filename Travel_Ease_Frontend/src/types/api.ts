@@ -80,7 +80,8 @@ export interface BusinessEndpoints {
   categoriesById: (id: number | string) => string;
   edit: (id: number | string) => string;
   delete: (id: number | string) => string;
-  priceRange: string;
+  /** @deprecated Price range is now stored directly on business table */
+  priceRange?: string;
   travelSpots: string;
   reviews: (id: number | string) => string;
   categories: string;

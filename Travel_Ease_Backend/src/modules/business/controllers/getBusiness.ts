@@ -1,7 +1,7 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
 import { parsePagination, buildPaginationMeta } from "../../../lib/prismaHelpers.js";
 import { Request, Response } from "express";
-import { formatBusinessListItemDetailed, computePriceRangesForBusinesses } from "../../../services/businessService.js";
+import { formatBusinessListItemDetailed } from "../../../services/businessService.js";
 
 interface BusinessWhere {
   status?: boolean;
@@ -9,29 +9,25 @@ interface BusinessWhere {
   categories?: {
     some: {
       category_name?: string;
-      price_ranges?: {
-        some: {
-          max_price?: { gte: number };
-          min_price?: { lte: number };
-        };
-      };
     };
   };
   AND?: Array<{
-    categories: {
+    categories?: {
       some: {
         category_name?: string;
-        price_ranges?: {
-          some: {
-            max_price?: { gte: number };
-            min_price?: { lte: number };
-          };
-        };
       };
     };
+    min_price?: { lte: number };
+    max_price?: { gte: number };
   }>;
+  min_price?: { lte: number };
+  max_price?: { gte: number };
 }
 
+/**
+ * Get businesses with filters and pagination.
+ * Price filtering uses business.min_price and business.max_price directly.
+ */
 export async function get_businesses(req: Request, res: Response) {
   try {
     const {
@@ -61,41 +57,22 @@ export async function get_businesses(req: Request, res: Response) {
       ];
     }
 
-    // Build category filters using nested Prisma where (single query, no roundtrip)
-    const categoryFilters: Array<{ categories: { some: { category_name?: string; price_ranges?: { some: { max_price?: { gte: number }; min_price?: { lte: number } } } } } }> = [];
-
-    // Filter by category using nested where
+    // Filter by category
     if (category) {
-      categoryFilters.push({
-        categories: {
-          some: { category_name: category as string }
-        }
-      });
+      where.categories = {
+        some: { category_name: category as string }
+      };
     }
 
-    // Filter by price range at database level (fixes pagination count mismatch)
-    if (minPrice || maxPrice) {
-      const priceFilter: { max_price?: { gte: number }; min_price?: { lte: number } } = {};
-      if (minPrice) {
-        priceFilter.max_price = { gte: parseInt(minPrice as string, 10) };
-      }
-      if (maxPrice) {
-        priceFilter.min_price = { lte: parseInt(maxPrice as string, 10) };
-      }
-      categoryFilters.push({
-        categories: {
-          some: {
-            price_ranges: {
-              some: priceFilter
-            }
-          }
-        }
-      });
+    // Filter by price range using business fields directly
+    // A business matches if its price range overlaps with the filter range
+    if (minPrice) {
+      // Business max_price must be >= filter minPrice
+      where.max_price = { gte: parseInt(minPrice as string, 10) };
     }
-
-    // Combine category filters with AND
-    if (categoryFilters.length > 0) {
-      where.AND = categoryFilters;
+    if (maxPrice) {
+      // Business min_price must be <= filter maxPrice
+      where.min_price = { lte: parseInt(maxPrice as string, 10) };
     }
 
     const [businesses, total] = await executeWithRetry(() =>
@@ -126,14 +103,9 @@ export async function get_businesses(req: Request, res: Response) {
       ])
     );
 
-    // Compute price ranges in a single SQL aggregation query
-    const businessIds = businesses.map(b => b.business_id);
-    const priceRangeMap = await computePriceRangesForBusinesses(businessIds);
-
-    // Normalize response using centralized formatter with pre-computed price ranges
-    const items = businesses.map(b => 
-      formatBusinessListItemDetailed(b, priceRangeMap.get(b.business_id))
-    );
+    // Normalize response using centralized formatter
+    // Price range is now read directly from business fields
+    const items = businesses.map(b => formatBusinessListItemDetailed(b));
 
     res.status(200).json({
       items,
@@ -165,4 +137,3 @@ export async function getCategories(req: Request, res: Response) {
     return handlePrismaError(error, res, 'Fetching categories');
   }
 }
-

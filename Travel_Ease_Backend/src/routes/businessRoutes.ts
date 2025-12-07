@@ -7,11 +7,9 @@ import {
   validate,
   createBusinessSchema,
   editBusinessSchema,
-  priceRangeSchema,
 } from "../schemas/validation.js";
 import {
   create_business,
-  price_range,
   business_fetch,
   categories_fetch,
   edit_business,
@@ -44,17 +42,12 @@ const CACHE_TTL = {
 
 // Create routes (authentication required + validation)
 // Business creation is available to all authenticated users (Google or password)
+// Price range (min_price/max_price) is now stored directly on the business table
 router.post(
   "/create_business",
   authenticateToken,
   validate(createBusinessSchema),
   create_business
-);
-router.post(
-  "/price_range",
-  authenticateToken,
-  validate(priceRangeSchema),
-  price_range
 );
 
 // Public read routes
@@ -104,6 +97,7 @@ router.get(
 );
 
 // Delete business (auth + ownership required)
+// Price range data is stored directly on business table (no separate table to clean up)
 router.delete(
   "/delete_business/:id",
   authenticateToken,
@@ -113,22 +107,7 @@ router.delete(
 
     try {
       await prisma.$transaction(async (tx) => {
-        // Get category IDs for this business
-        const categories = await tx.businessCategory.findMany({
-          where: { business_id: businessId },
-          select: { category_id: true },
-        });
-
-        const categoryIds = categories.map((c) => c.category_id);
-
-        // Delete price ranges
-        if (categoryIds.length > 0) {
-          await tx.priceRange.deleteMany({
-            where: { category_id: { in: categoryIds } },
-          });
-        }
-
-        // Delete related records
+        // Delete related records (cascade handles most, but explicit for safety)
         await Promise.all([
           tx.businessCategory.deleteMany({
             where: { business_id: businessId },
@@ -223,6 +202,8 @@ router.get(
                 rating: true,
                 status: true,
                 picture: true,
+                min_price: true,
+                max_price: true,
               },
               orderBy: [{ rating: "desc" }],
               take: maxLimit,

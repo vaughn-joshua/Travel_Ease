@@ -181,9 +181,12 @@ const BUSINESS_DETAIL_SELECT = {
   status: true,
   picture: true,
   user_id: true,
+  min_price: true,
+  max_price: true,
   categories: {
-    include: {
-      price_ranges: true,
+    select: {
+      category_id: true,
+      category_name: true,
     },
   },
   business_hours: true,
@@ -213,94 +216,6 @@ const BUSINESS_DETAIL_SELECT = {
     },
   },
 } as const;
-
-// ============================================================================
-// Price Range Aggregation
-// ============================================================================
-
-interface AggregatedPriceRange {
-  business_id: number;
-  min_price: number | null;
-  max_price: number | null;
-}
-
-/**
- * Compute aggregated min/max price ranges for multiple businesses in a single query.
- * This replaces the O(categories × price_ranges) in-memory loop with DB aggregation.
- * Falls back gracefully to null price ranges on error.
- */
-export async function computePriceRangesForBusinesses(
-  businessIds: number[]
-): Promise<Map<number, { min: number; max: number } | null>> {
-  const priceMap = new Map<number, { min: number; max: number } | null>();
-  
-  // Initialize all with null
-  for (const id of businessIds) {
-    priceMap.set(id, null);
-  }
-
-  if (businessIds.length === 0) {
-    return priceMap;
-  }
-
-  try {
-    // Fetch price ranges with their category's business_id in a single query
-    const priceRanges = await prisma.priceRange.findMany({
-      where: {
-        category: {
-          business_id: { in: businessIds }
-        }
-      },
-      select: {
-        min_price: true,
-        max_price: true,
-        category: {
-          select: {
-            business_id: true
-          }
-        }
-      }
-    });
-
-    // Aggregate by business_id
-    const bizAggregates = new Map<number, { min: number; max: number }>();
-    for (const pr of priceRanges) {
-      const bizId = pr.category?.business_id;
-      if (bizId === null || bizId === undefined) continue;
-
-      const existing = bizAggregates.get(bizId);
-      if (existing) {
-        bizAggregates.set(bizId, {
-          min: Math.min(existing.min, pr.min_price),
-          max: Math.max(existing.max, pr.max_price),
-        });
-      } else {
-        bizAggregates.set(bizId, { min: pr.min_price, max: pr.max_price });
-      }
-    }
-
-    // Update price map with results
-    bizAggregates.forEach((range, bizId) => {
-      priceMap.set(bizId, range);
-    });
-  } catch (error) {
-    // Log but don't fail - price ranges will be null
-    console.warn('Failed to compute price ranges, falling back to null:', error);
-  }
-
-  return priceMap;
-}
-
-/**
- * Compute aggregated price range for a single business.
- * Uses the batch function internally for consistency.
- */
-export async function computePriceRangeForBusiness(
-  businessId: number
-): Promise<{ min: number; max: number } | null> {
-  const priceMap = await computePriceRangesForBusinesses([businessId]);
-  return priceMap.get(businessId) ?? null;
-}
 
 // ============================================================================
 // Formatters
@@ -348,38 +263,35 @@ function parsePicture(picture: string | null): {
 }
 
 /**
- * Compute price range from nested relations (fallback when pre-computed not available).
- * Used internally by formatters when price data is included in the query.
+ * Extract price range from business object.
+ * Price State Machine:
+ *   - both null: price not set
+ *   - only min_price set: minimum price known
+ *   - only max_price set: maximum price known
+ *   - both set: min_price <= max_price (enforced by validation)
  */
-function computePriceRangeFromRelations(
-  categories: Array<{ price_ranges?: Array<{ min_price: number; max_price: number }> }> | undefined
+function extractPriceRange(
+  business: { min_price?: number | null; max_price?: number | null }
 ): { min: number; max: number } | null {
-  let minPrice: number | null = null;
-  let maxPrice: number | null = null;
-
-  for (const cat of categories || []) {
-    for (const pr of cat.price_ranges || []) {
-      if (minPrice === null || pr.min_price < minPrice) minPrice = pr.min_price;
-      if (maxPrice === null || pr.max_price > maxPrice) maxPrice = pr.max_price;
-    }
+  if (business.min_price != null && business.max_price != null) {
+    return { min: business.min_price, max: business.max_price };
   }
-
-  return minPrice !== null ? { min: minPrice, max: maxPrice! } : null;
+  if (business.min_price != null) {
+    return { min: business.min_price, max: business.min_price };
+  }
+  if (business.max_price != null) {
+    return { min: business.max_price, max: business.max_price };
+  }
+  return null;
 }
 
 /**
  * Format raw Prisma business to full DTO
  * @param business - Raw Prisma business object
- * @param precomputedPriceRange - Optional pre-computed price range (from SQL aggregation)
  */
-export function formatBusinessToDTO(
-  business: any,
-  precomputedPriceRange?: { min: number; max: number } | null
-): BusinessDTO {
-  // Use pre-computed price range if available, otherwise compute from relations
-  const priceRange = precomputedPriceRange !== undefined
-    ? precomputedPriceRange
-    : computePriceRangeFromRelations(business.categories);
+export function formatBusinessToDTO(business: any): BusinessDTO {
+  // Read price range directly from business fields
+  const priceRange = extractPriceRange(business);
 
   const media = parsePicture(business.picture);
 
@@ -489,16 +401,12 @@ export function formatBusinessListItem(business: any): BusinessListItemDTO {
  * Format raw Prisma business to detailed list item DTO (includes hours and priceRange)
  * Used by listing endpoints that need more details than the basic list item.
  * @param business - Raw Prisma business object
- * @param precomputedPriceRange - Optional pre-computed price range (from SQL aggregation)
  */
 export function formatBusinessListItemDetailed(
-  business: any,
-  precomputedPriceRange?: { min: number; max: number } | null
+  business: any
 ): BusinessListItemDetailedDTO {
-  // Use pre-computed price range if available, otherwise compute from relations
-  const priceRange = precomputedPriceRange !== undefined
-    ? precomputedPriceRange
-    : computePriceRangeFromRelations(business.categories);
+  // Read price range directly from business fields
+  const priceRange = extractPriceRange(business);
 
   const media = parsePicture(business.picture);
 
@@ -610,7 +518,10 @@ export async function getBusinessById(
           where: { business_id: businessId },
           include: {
             categories: {
-              include: { price_ranges: true },
+              select: {
+                category_id: true,
+                category_name: true,
+              },
             },
             business_hours: true,
             menu_items: {
@@ -695,7 +606,7 @@ export async function createBusiness(
     : null;
 
   const result = await prisma.$transaction(async (tx) => {
-    // Create business
+    // Create business with price range directly on the business
     const business = await tx.business.create({
       data: {
         name: input.name,
@@ -711,29 +622,20 @@ export async function createBusiness(
           ? JSON.stringify({ secure_url: input.secure_url })
           : null,
         status: false, // Default to not approved
+        min_price: input.min_price ?? null,
+        max_price: input.max_price ?? null,
       },
     });
 
     // Add categories
     if (input.category?.length > 0) {
       for (const categoryName of input.category) {
-        const category = await tx.businessCategory.create({
+        await tx.businessCategory.create({
           data: {
             business_id: business.business_id,
             category_name: categoryName as any,
           },
         });
-
-        // Add price range if provided
-        if (input.min_price !== undefined || input.max_price !== undefined) {
-          await tx.priceRange.create({
-            data: {
-              category_id: category.category_id,
-              min_price: input.min_price ?? 0,
-              max_price: input.max_price ?? 0,
-            },
-          });
-        }
       }
     }
 
@@ -800,6 +702,14 @@ export async function updateBusiness(
     updateData.picture = pictureUrl
       ? JSON.stringify({ secure_url: pictureUrl })
       : null;
+  }
+
+  // Handle price range - write directly to business
+  if (input.min_price !== undefined) {
+    updateData.min_price = input.min_price;
+  }
+  if (input.max_price !== undefined) {
+    updateData.max_price = input.max_price;
   }
 
   await executeWithRetry(() =>
@@ -871,8 +781,6 @@ export default {
   formatBusinessToDTO,
   formatBusinessListItem,
   formatBusinessListItemDetailed,
-  computePriceRangesForBusinesses,
-  computePriceRangeForBusiness,
   getBusinesses,
   getBusinessById,
   getBusinessesByOwner,
