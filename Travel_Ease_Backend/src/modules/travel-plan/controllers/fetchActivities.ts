@@ -22,7 +22,7 @@ export async function fetch_activities(req: Request, res: Response) {
               business_id: true,
               name: true,
               latitude: true,
-              longitude: true
+              longtitude: true // Note: DB column has typo
             }
           }
         },

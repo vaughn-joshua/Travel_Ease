@@ -256,7 +256,7 @@ router.get(
                 brgy: true,
                 city: true,
                 latitude: true,
-                longitude: true,
+                longtitude: true, // Note: DB column has typo 'longtitude' instead of 'longitude'
                 description: true,
                 rating: true,
                 status: true,
@@ -274,7 +274,7 @@ router.get(
           let reviewCounts: Record<number, number> = {};
           if (businessIds.length > 0) {
             const counts = await executeWithRetry(() =>
-              prisma.businessReview.groupBy({
+              prisma.business_review.groupBy({
                 by: ["business_id"],
                 where: { business_id: { in: businessIds } },
                 _count: { review_id: true },
@@ -315,7 +315,7 @@ router.get("/travel_spots/reviews/:id", async (req: Request, res: Response) => {
 
   try {
     const reviews = await executeWithRetry(() =>
-      prisma.businessReview.findMany({
+      prisma.business_review.findMany({
         where: { business_id: businessId },
         include: {
           user: {

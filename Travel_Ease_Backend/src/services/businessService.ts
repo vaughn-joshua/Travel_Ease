@@ -158,7 +158,7 @@ const BUSINESS_LIST_SELECT = {
   status: true,
   picture: true,
   latitude: true,
-  longitude: true,
+  longtitude: true, // Note: DB column has typo
   city: true,
   categories: {
     select: {
@@ -176,7 +176,7 @@ const BUSINESS_DETAIL_SELECT = {
   brgy: true,
   city: true,
   latitude: true,
-  longitude: true,
+  longtitude: true, // Note: DB column has typo
   rating: true,
   status: true,
   picture: true,
@@ -617,7 +617,7 @@ export async function createBusiness(
         city: input.city,
         description: input.description,
         latitude: lat,
-        longitude: lng,
+        longtitude: lng, // Note: DB column has typo
         picture: input.secure_url
           ? JSON.stringify({ secure_url: input.secure_url })
           : null,

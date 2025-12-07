@@ -130,7 +130,7 @@ const ACTIVITY_WITH_BUSINESS_SELECT = {
       name: true,
       description: true,
       latitude: true,
-      longitude: true,
+      longtitude: true, // Note: DB column has typo
       city: true,
       rating: true,
     }
@@ -167,7 +167,7 @@ export function formatActivityToDTO(activity: any): ActivityDTO {
       name: activity.business.name,
       description: activity.business.description,
       latitude: activity.business.latitude,
-      longitude: activity.business.longitude,
+      longitude: activity.business.longtitude, // Map DB typo to correct API field name
       city: activity.business.city,
       rating: activity.business.rating ? parseFloat(activity.business.rating) : null,
     } : null,

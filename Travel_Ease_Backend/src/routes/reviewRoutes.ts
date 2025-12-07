@@ -29,7 +29,7 @@ router.post('/business', authenticateToken, validate(createReviewSchema), async 
 
     // Create review
     const review = await executeWithRetry(() =>
-      prisma.businessReview.create({
+      prisma.business_review.create({
         data: {
           user_id,
           business_id,
@@ -41,7 +41,7 @@ router.post('/business', authenticateToken, validate(createReviewSchema), async 
 
     // Fetch with user info
     const reviewWithUser = await executeWithRetry(() =>
-      prisma.businessReview.findUnique({
+      prisma.business_review.findUnique({
         where: { review_id: review.review_id },
         include: {
           user: {

@@ -49,7 +49,7 @@ export async function create_business(req: Request, res: Response) {
           brgy,
           city,
           latitude: lat,
-          longitude: lng,
+          longtitude: lng, // Note: DB column has typo
           description,
           picture: secure_url,
           // Price range stored directly on business (not in separate table)
