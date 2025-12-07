@@ -1,5 +1,11 @@
 /**
- * Blog Authentication Tests
+ * Blog Authentication and State Machine Tests
+ * 
+ * Tests blog authentication, ownership, and status transitions.
+ * Blog State Machine:
+ *   - Draft: created but not published
+ *   - Published: visible to public
+ *   - Archived: soft-deleted (terminal state, no resurrection)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -10,6 +16,7 @@ import { blogRoutes } from '../src/routes/blogRoutes.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
 import { invalidateCachePattern } from '../src/lib/cache.js';
 import { createTestUser } from './setup.js';
+import { isValidBlogStatusTransition } from '../src/schemas/blogSchemas.js';
 import type { User } from '@prisma/client';
 
 const app: Express = express();
@@ -19,7 +26,7 @@ app.use(errorHandler);
 
 describe('Blog Authentication', () => {
   let user1: User, token1: string, user2: User, token2: string;
-  let testBlogId: number | null;
+  let testBlogId: string | null;
 
   const validBlogData = {
     title: 'Test Blog Post',
@@ -180,7 +187,7 @@ describe('Blog Authentication', () => {
 
       // Verify deletion
       const blog = await prisma.blog.findUnique({
-        where: { id: testBlogId as number }
+        where: { id: testBlogId as string }
       });
       expect(blog).toBeNull();
       testBlogId = null;
@@ -208,7 +215,7 @@ describe('Blog Authentication', () => {
   });
 
   describe('GET /api/blogs/featured (public)', () => {
-    let featuredBlogId: number | null;
+    let featuredBlogId: string | null;
 
     afterEach(async () => {
       // Clean up featured test blog
@@ -244,7 +251,8 @@ describe('Blog Authentication', () => {
           readingMinutes: 5,
           author: 'Test Author',
           isFeatured: true,
-          publishedAt: new Date()
+          publishedAt: new Date(),
+          status: 'Published'
         }
       });
       featuredBlogId = featuredBlog.id;
@@ -257,7 +265,7 @@ describe('Blog Authentication', () => {
       expect(response.body.length).toBeGreaterThanOrEqual(1);
       
       // Verify our featured blog is in the response
-      const found = response.body.find((blog: { id: number }) => blog.id === featuredBlogId);
+      const found = response.body.find((blog: { id: string }) => blog.id === featuredBlogId);
       expect(found).toBeDefined();
       expect(found.isFeatured).toBe(true);
     });
@@ -284,6 +292,153 @@ describe('Blog Authentication', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.length).toBeLessThanOrEqual(5);
+    });
+  });
+});
+
+/**
+ * Blog State Machine Tests
+ * 
+ * Tests the blog status transitions:
+ *   - Draft → Published (valid)
+ *   - Published → Archived (valid)
+ *   - Draft → Archived (valid)
+ *   - Archived → any (invalid - no resurrection)
+ */
+describe('Blog State Machine', () => {
+  describe('isValidBlogStatusTransition', () => {
+    it('should allow Draft → Published transition', () => {
+      expect(isValidBlogStatusTransition('Draft', 'Published')).toBe(true);
+    });
+
+    it('should allow Published → Archived transition', () => {
+      expect(isValidBlogStatusTransition('Published', 'Archived')).toBe(true);
+    });
+
+    it('should allow Draft → Archived transition', () => {
+      expect(isValidBlogStatusTransition('Draft', 'Archived')).toBe(true);
+    });
+
+    it('should allow same status (no change)', () => {
+      expect(isValidBlogStatusTransition('Draft', 'Draft')).toBe(true);
+      expect(isValidBlogStatusTransition('Published', 'Published')).toBe(true);
+      expect(isValidBlogStatusTransition('Archived', 'Archived')).toBe(true);
+    });
+
+    it('should reject Archived → Draft (no resurrection)', () => {
+      expect(isValidBlogStatusTransition('Archived', 'Draft')).toBe(false);
+    });
+
+    it('should reject Archived → Published (no resurrection)', () => {
+      expect(isValidBlogStatusTransition('Archived', 'Published')).toBe(false);
+    });
+
+    it('should reject Published → Draft (can only move forward)', () => {
+      expect(isValidBlogStatusTransition('Published', 'Draft')).toBe(false);
+    });
+  });
+
+  describe('Blog visibility by status', () => {
+    let user: User, token: string;
+    let draftBlogId: string | null;
+    let archivedBlogId: string | null;
+
+    beforeEach(async () => {
+      const result = await createTestUser({ email: `blog_state_${Date.now()}@example.com` });
+      user = result.user;
+      token = result.token;
+    });
+
+    afterEach(async () => {
+      // Clean up test blogs
+      if (draftBlogId) {
+        await prisma.blog.delete({ where: { id: draftBlogId } }).catch(() => {});
+        draftBlogId = null;
+      }
+      if (archivedBlogId) {
+        await prisma.blog.delete({ where: { id: archivedBlogId } }).catch(() => {});
+        archivedBlogId = null;
+      }
+    });
+
+    it('should not show Draft blogs in public listing', async () => {
+      // Create a draft blog
+      const draftBlog = await prisma.blog.create({
+        data: {
+          title: 'Draft Blog',
+          slug: `draft-blog-${Date.now()}`,
+          excerpt: 'This is a draft',
+          content: 'Draft content',
+          coverImageUrl: 'https://example.com/draft.jpg',
+          category: 'Travel',
+          readingMinutes: 3,
+          author: 'Test Author',
+          status: 'Draft',
+          user_id: user.user_id
+        }
+      });
+      draftBlogId = draftBlog.id;
+
+      const response = await request(app)
+        .get('/api/blogs');
+
+      expect(response.status).toBe(200);
+      // Draft blog should not be in the list
+      const found = response.body.items?.find((blog: { id: string }) => blog.id === draftBlogId);
+      expect(found).toBeUndefined();
+    });
+
+    it('should not show Archived blogs in public listing', async () => {
+      // Create an archived blog
+      const archivedBlog = await prisma.blog.create({
+        data: {
+          title: 'Archived Blog',
+          slug: `archived-blog-${Date.now()}`,
+          excerpt: 'This is archived',
+          content: 'Archived content',
+          coverImageUrl: 'https://example.com/archived.jpg',
+          category: 'Travel',
+          readingMinutes: 3,
+          author: 'Test Author',
+          status: 'Archived',
+          user_id: user.user_id
+        }
+      });
+      archivedBlogId = archivedBlog.id;
+
+      const response = await request(app)
+        .get('/api/blogs');
+
+      expect(response.status).toBe(200);
+      // Archived blog should not be in the list
+      const found = response.body.items?.find((blog: { id: string }) => blog.id === archivedBlogId);
+      expect(found).toBeUndefined();
+    });
+
+    it('should return 404 for non-published blog by slug', async () => {
+      // Create a draft blog
+      const slug = `draft-slug-${Date.now()}`;
+      const draftBlog = await prisma.blog.create({
+        data: {
+          title: 'Draft Blog',
+          slug,
+          excerpt: 'This is a draft',
+          content: 'Draft content',
+          coverImageUrl: 'https://example.com/draft.jpg',
+          category: 'Travel',
+          readingMinutes: 3,
+          author: 'Test Author',
+          status: 'Draft',
+          user_id: user.user_id
+        }
+      });
+      draftBlogId = draftBlog.id;
+
+      const response = await request(app)
+        .get(`/api/blogs/${slug}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Blog not found');
     });
   });
 });

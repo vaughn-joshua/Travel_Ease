@@ -1,6 +1,21 @@
 import { prisma, handlePrismaError } from "../../../lib/prismaHelpers.js";
 import { Request, Response } from "express";
 
+/**
+ * Create a new business.
+ * 
+ * Business State Machine:
+ *   - status: false (default) = Draft/Inactive - not visible in public listings
+ *   - status: true = Active - visible in public listings (travel_spots)
+ * 
+ * Price State Machine:
+ *   - both null: price not set
+ *   - only min_price set: minimum price known
+ *   - only max_price set: maximum price known
+ *   - both set: min_price <= max_price (enforced by validation)
+ * 
+ * Ownership: Business is always associated with the authenticated user (user_id)
+ */
 export async function create_business(req: Request, res: Response) {
   const {
     name,
@@ -24,7 +39,7 @@ export async function create_business(req: Request, res: Response) {
   try {
     // Create business with related records in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create business
+      // Create business with price fields directly on the business table
       const business = await tx.business.create({
         data: {
           user_id: userId,
@@ -37,6 +52,11 @@ export async function create_business(req: Request, res: Response) {
           longitude: lng,
           description,
           picture: secure_url,
+          // Price range stored directly on business (not in separate table)
+          min_price: min_price ?? null,
+          max_price: max_price ?? null,
+          // New businesses start as inactive (Draft state)
+          status: false,
         }
       });
 
@@ -52,28 +72,14 @@ export async function create_business(req: Request, res: Response) {
         });
       }
 
-      // Create business categories and price ranges
+      // Create business categories
       if (category && category.length > 0) {
-        // Create categories one by one to get IDs for price ranges
-        for (const cat of category) {
-          const createdCategory = await tx.businessCategory.create({
-            data: {
-              business_id: business.business_id,
-              category_name: cat,
-            }
-          });
-
-          // If price range provided, create price range for this category
-          if (min_price !== undefined || max_price !== undefined) {
-            await tx.priceRange.create({
-              data: {
-                category_id: createdCategory.category_id,
-                min_price: min_price || 0,
-                max_price: max_price || 0,
-              }
-            });
-          }
-        }
+        await tx.businessCategory.createMany({
+          data: category.map((cat: string) => ({
+            business_id: business.business_id,
+            category_name: cat,
+          }))
+        });
       }
 
       return business;

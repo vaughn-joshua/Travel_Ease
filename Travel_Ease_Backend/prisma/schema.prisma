@@ -44,6 +44,15 @@ enum status_enum {
   Cancelled
 }
 
+// Blog status enum for blog state machine
+// Valid transitions: Draft → Published, Published → Archived, Draft → Archived
+// Illegal: Archived → any other state (terminal state, no resurrection)
+enum blog_status {
+  Draft
+  Published
+  Archived
+}
+
 // User and Authentication
 model User {
   user_id               Int                  @id @default(autoincrement())
@@ -73,29 +82,37 @@ model User {
 }
 
 // New Blog Content (uppercase B - UUID based)
+// Blog State Machine:
+//   - Draft: created but not published (status = 'Draft')
+//   - Published: visible to public (status = 'Published')
+//   - Archived: soft-deleted, not visible (status = 'Archived')
+// Valid transitions: Draft → Published, Published → Archived, Draft → Archived
+// Illegal: Archived → any other state (no resurrection)
 model Blog {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id        Int?
-  title          String    @db.VarChar(200)
-  slug           String    @unique @db.VarChar(200)
-  excerpt        String    @db.VarChar(500)
+  title          String      @db.VarChar(200)
+  slug           String      @unique @db.VarChar(200)
+  excerpt        String      @db.VarChar(500)
   content        String
   coverImageUrl  String
-  category       String    @db.VarChar(100)
-  isFeatured     Boolean?  @default(false)
+  category       String      @db.VarChar(100)
+  isFeatured     Boolean?    @default(false)
   readingMinutes Int
-  publishedAt    DateTime? @default(now()) @db.Timestamp(6)
-  author         String    @db.VarChar(100)
-  createdAt      DateTime? @default(now()) @db.Timestamp(6)
-  updatedAt      DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+  publishedAt    DateTime?   @default(now()) @db.Timestamp(6)
+  author         String      @db.VarChar(100)
+  status         blog_status @default(Published)
+  createdAt      DateTime?   @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime?   @default(now()) @updatedAt @db.Timestamp(6)
   
   // Relations
-  user           User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([category], map: "idx_blog_category")
   @@index([isFeatured], map: "idx_blog_is_featured")
   @@index([publishedAt], map: "idx_blog_published_at")
   @@index([slug], map: "idx_blog_slug")
+  @@index([status], map: "idx_blog_status")
   @@map("Blog")
 }
 

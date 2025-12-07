@@ -249,7 +249,19 @@ export const businessQuerySchema = paginationSchema.extend({
   city: z.string().max(200).optional(),
   search: z.string().max(200).optional(),
   status: z.coerce.boolean().optional(),
-});
+  // Price filtering - filter businesses whose price range overlaps with given range
+  minPrice: z.coerce.number().int().min(0).optional(),
+  maxPrice: z.coerce.number().int().min(0).optional(),
+}).refine(
+  (data) => {
+    // If both minPrice and maxPrice are provided, ensure minPrice <= maxPrice
+    if (data.minPrice !== undefined && data.maxPrice !== undefined) {
+      return data.minPrice <= data.maxPrice;
+    }
+    return true;
+  },
+  { message: 'minPrice must be less than or equal to maxPrice', path: ['minPrice'] }
+);
 
 // ============================================================================
 // Route Parameter Schemas

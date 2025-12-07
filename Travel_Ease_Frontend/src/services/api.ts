@@ -248,6 +248,8 @@ interface TravelSpotsParams {
   search?: string;
   city?: string;
   limit?: number;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 // Travel spots response (matches backend enriched shape)

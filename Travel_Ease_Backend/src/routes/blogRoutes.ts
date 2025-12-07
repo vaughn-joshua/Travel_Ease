@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma, executeWithRetry, executeWithTimeout, handlePrismaError, parsePagination, buildPaginationMeta } from '../lib/prismaHelpers.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { createBlogSchema, updateBlogSchema, blogQuerySchema } from '../schemas/blogSchemas.js';
+import { createBlogSchema, updateBlogSchema, blogQuerySchema, isValidBlogStatusTransition } from '../schemas/blogSchemas.js';
 import { cacheResult, buildCacheKey, invalidateCachePattern } from '../lib/cache.js';
 
 export const blogRoutes = Router();
@@ -24,15 +24,23 @@ const requireGoogleAuth = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// GET /api/blogs - List blogs with pagination, filtering, and search (public)
+/**
+ * GET /api/blogs - List blogs with pagination, filtering, and search (public)
+ * 
+ * Blog State Machine Filter:
+ * Only Published blogs are shown in public listings.
+ * Draft and Archived blogs are hidden from public view.
+ */
 blogRoutes.get('/', async (req: Request, res: Response) => {
   try {
     const query = blogQuerySchema.parse(req.query);
     const { category, q } = query;
     const { page, pageSize, skip, take } = parsePagination(query);
 
-    // Build where clause
-    const where: Record<string, unknown> = {};
+    // Build where clause - only show Published blogs in public listings
+    const where: Record<string, unknown> = {
+      status: 'Published'
+    };
     if (category) {
       where.category = category;
     }
@@ -72,10 +80,16 @@ blogRoutes.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/blogs/featured - Get featured blogs (public, cached)
-// Cache key: blogs:featured
-// TTL: 2 minutes
-// Clear cache: Use invalidateCachePattern('blogs:') after blog create/update/delete
+/**
+ * GET /api/blogs/featured - Get featured blogs (public, cached)
+ * 
+ * Blog State Machine Filter:
+ * Only Published + Featured blogs are shown.
+ * 
+ * Cache key: blogs:featured
+ * TTL: 2 minutes
+ * Clear cache: Use invalidateCachePattern('blogs:') after blog create/update/delete
+ */
 blogRoutes.get('/featured', async (req: Request, res: Response) => {
   try {
     const { data: blogs, fromCache, cacheBackend } = await cacheResult({
@@ -83,7 +97,10 @@ blogRoutes.get('/featured', async (req: Request, res: Response) => {
       ttl: CACHE_TTL.FEATURED,
       fetchFn: () => executeWithRetry(() =>
         prisma.blog.findMany({
-          where: { isFeatured: true },
+          where: { 
+            isFeatured: true,
+            status: 'Published'  // Only show published featured blogs
+          },
           orderBy: { publishedAt: 'desc' },
           take: 5
         })
@@ -151,10 +168,11 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
       fetchFn: async () => {
         // Fetch all data concurrently with retry
         // Use Promise.allSettled to handle partial failures gracefully
+        // All queries filter by status: 'Published' (state machine rule)
         const results = await Promise.allSettled([
           executeWithRetry(() =>
             prisma.blog.findMany({
-              where: { isFeatured: true },
+              where: { isFeatured: true, status: 'Published' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 5
@@ -162,7 +180,7 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
           , 1), // Only 1 retry for faster response
           executeWithRetry(() =>
             prisma.blog.findMany({
-              where: { category: 'Destinations' },
+              where: { category: 'Destinations', status: 'Published' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 3
@@ -170,7 +188,7 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
           , 1),
           executeWithRetry(() =>
             prisma.blog.findMany({
-              where: { category: 'Tips' },
+              where: { category: 'Tips', status: 'Published' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 3
@@ -178,7 +196,7 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
           , 1),
           executeWithRetry(() =>
             prisma.blog.findMany({
-              where: { category: 'Client Education' },
+              where: { category: 'Client Education', status: 'Published' },
               select: listSelect,
               orderBy: { publishedAt: 'desc' },
               take: 3
@@ -244,7 +262,13 @@ blogRoutes.get('/overview', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/blogs/:slug - Get single blog by slug (public)
+/**
+ * GET /api/blogs/:slug - Get single blog by slug (public)
+ * 
+ * Blog State Machine:
+ * Only Published blogs are accessible via this public endpoint.
+ * Draft and Archived blogs return 404 to non-authors.
+ */
 blogRoutes.get('/:slug', async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
@@ -255,13 +279,24 @@ blogRoutes.get('/:slug', async (req: Request, res: Response) => {
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
     }
+    
+    // Only Published blogs are accessible publicly
+    if (blog.status !== 'Published') {
+      return res.status(404).json({ error: 'Blog not found' });
+    }
+    
     res.json(blog);
   } catch (error) {
     return handlePrismaError(error, res, 'Fetching blog');
   }
 });
 
-// POST /api/blogs - Create new blog (Google auth required)
+/**
+ * POST /api/blogs - Create new blog (auth required)
+ * 
+ * Blog State Machine:
+ * New blogs default to Published status unless explicitly set to Draft.
+ */
 blogRoutes.post('/', authenticateToken, requireGoogleAuth, async (req: Request, res: Response) => {
   try {
     const data = createBlogSchema.parse(req.body);
@@ -281,7 +316,8 @@ blogRoutes.post('/', authenticateToken, requireGoogleAuth, async (req: Request, 
           readingMinutes: data.readingMinutes,
           author: data.author,
           user_id: req.user!.id,
-          publishedAt
+          publishedAt,
+          status: data.status
         }
       })
     );
@@ -301,7 +337,15 @@ blogRoutes.post('/', authenticateToken, requireGoogleAuth, async (req: Request, 
   }
 });
 
-// PUT /api/blogs/:id - Update blog (Google auth + ownership required)
+/**
+ * PUT /api/blogs/:id - Update blog (auth + ownership required)
+ * 
+ * Blog State Machine Enforcement:
+ * - Draft → Published (valid)
+ * - Published → Archived (valid)
+ * - Draft → Archived (valid)
+ * - Archived → any (INVALID - no resurrection)
+ */
 blogRoutes.put('/:id', authenticateToken, requireGoogleAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -323,6 +367,17 @@ blogRoutes.put('/:id', authenticateToken, requireGoogleAuth, async (req: Request
     }
     
     const data = updateBlogSchema.parse(req.body);
+    
+    // Enforce state machine transitions
+    if (data.status && !isValidBlogStatusTransition(existingBlog.status, data.status)) {
+      return res.status(400).json({
+        error: 'Invalid status transition',
+        details: `Cannot transition from ${existingBlog.status} to ${data.status}. Archived blogs cannot be restored.`,
+        currentStatus: existingBlog.status,
+        requestedStatus: data.status
+      });
+    }
+    
     const updateData: Record<string, unknown> = { ...data };
     if (data.publishedAt) {
       updateData.publishedAt = new Date(data.publishedAt);

@@ -7,11 +7,21 @@ interface NotFoundError {
 
 /**
  * Edit a business.
+ * 
+ * Business State Machine:
+ *   - status: false = Draft/Inactive - not visible in public listings
+ *   - status: true = Active - visible in public listings (travel_spots)
+ *   - Transitions: Draft → Active (status = true), Active → Draft (status = false)
+ *   - No terminal states for business (unlike TravelPlan)
+ * 
  * Price State Machine:
  *   - both null: price not set
  *   - only min_price set: minimum price known
  *   - only max_price set: maximum price known
  *   - both set: min_price <= max_price (enforced by validation)
+ * 
+ * Ownership: Only the business owner (user_id) can edit
+ *            Enforced by requireBusinessOwnership middleware
  */
 export async function edit_business(req: Request, res: Response) {
   const { id } = req.params;

@@ -95,7 +95,7 @@ export async function cleanupTestData(): Promise<void> {
   await prisma.travelPlan.deleteMany();
   await prisma.businessReview.deleteMany();
   await prisma.businessFavorite.deleteMany();
-  await prisma.priceRange.deleteMany();
+  // Note: priceRange table removed - prices now stored directly on business table
   await prisma.businessCategory.deleteMany();
   await prisma.businessHours.deleteMany();
   await prisma.menuItem.deleteMany();
