@@ -15,6 +15,20 @@ interface JwtPayload {
 }
 
 /**
+ * Check if an error is a Prisma database connection error (P1xxx codes)
+ * These indicate the database is unreachable, not an auth problem
+ */
+function isDatabaseConnectionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; name?: string };
+  // P1xxx errors are connection/server errors
+  if (err.code?.startsWith('P1')) return true;
+  // Also check for initialization errors
+  if (err.name === 'PrismaClientInitializationError') return true;
+  return false;
+}
+
+/**
  * Helper to map Supabase provider string to our AuthProvider type
  */
 function mapAuthProvider(provider?: string): AuthProvider {
@@ -90,6 +104,19 @@ export const requireGoogleAuth = async (
       };
       return next();
     } catch (error) {
+      // Check if this is a database connection error
+      if (isDatabaseConnectionError(error)) {
+        logger.warn({
+          module: 'auth',
+          middleware: 'requireGoogleAuth',
+          mode: 'test',
+          error: String(error),
+        }, 'Database unavailable during test mode auth');
+        return res.status(503).json({
+          error: "Database temporarily unavailable. Please try again.",
+          code: "DB_UNAVAILABLE",
+        });
+      }
       console.error("Test mode auth error:", error);
       return res.status(403).json({ error: "Invalid or expired token" });
     }
@@ -106,7 +133,7 @@ export const requireGoogleAuth = async (
     const { data, error } = await supabaseAdmin!.auth.getUser(token);
 
     if (error || !data.user) {
-      return res.status(403).json({ error: "Invalid or expired token" });
+      return res.status(403).json({ error: "Invalid or expired token", code: "TOKEN_EXPIRED" });
     }
 
     // Check if this is a Google OAuth session
@@ -184,6 +211,19 @@ export const requireGoogleAuth = async (
 
     next();
   } catch (error) {
+    // Check if this is a database connection error
+    if (isDatabaseConnectionError(error)) {
+      logger.warn({
+        module: 'auth',
+        middleware: 'requireGoogleAuth',
+        error: String(error),
+      }, 'Database unavailable during Google auth');
+      return res.status(503).json({
+        error: "Database temporarily unavailable. Please try again.",
+        code: "DB_UNAVAILABLE",
+      });
+    }
+    
     console.error("Google auth verification error:", error);
     return res
       .status(403)
@@ -260,7 +300,7 @@ export const authenticateToken = async (
     const { data, error } = await supabaseAdmin!.auth.getUser(token);
 
     if (error || !data.user) {
-      return res.status(403).json({ error: "Invalid or expired token" });
+      return res.status(403).json({ error: "Invalid or expired token", code: "TOKEN_EXPIRED" });
     }
 
     const email = data.user.email;
@@ -329,6 +369,19 @@ export const authenticateToken = async (
     };
     next();
   } catch (error) {
+    // Check if this is a database connection error
+    if (isDatabaseConnectionError(error)) {
+      logger.warn({
+        module: 'auth',
+        middleware: 'authenticateToken',
+        error: String(error),
+      }, 'Database unavailable during authentication');
+      return res.status(503).json({
+        error: "Database temporarily unavailable. Please try again.",
+        code: "DB_UNAVAILABLE",
+      });
+    }
+    
     console.error("Auth error:", error);
     return res.status(403).json({ error: "Invalid or expired token" });
   }

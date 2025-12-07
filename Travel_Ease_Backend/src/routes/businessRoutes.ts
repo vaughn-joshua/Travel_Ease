@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import {
   authenticateToken,
-  requireGoogleAuth,
 } from "../middleware/auth.js";
 import { requireBusinessOwnership } from "../middleware/ownership.js";
 import {
@@ -43,12 +42,11 @@ const CACHE_TTL = {
   CATEGORIES: 300, // 5 minutes for categories (rarely change)
 };
 
-// Create routes (Google auth required + validation)
-// Business creation requires Google OAuth verification to ensure the user
-// is authenticated with the same Google account as their registered email
+// Create routes (authentication required + validation)
+// Business creation is available to all authenticated users (Google or password)
 router.post(
   "/create_business",
-  requireGoogleAuth,
+  authenticateToken,
   validate(createBusinessSchema),
   create_business
 );

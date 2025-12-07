@@ -256,6 +256,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
+    // Clear any existing Supabase session to avoid "identity already exists" errors
+    // when a logged-in password user reauthenticates with Google for business flows.
+    try {
+      const { data: { session: activeSession } } = await supabase.auth.getSession();
+      if (activeSession) {
+        await supabase.auth.signOut();
+      }
+    } catch (sessionResetError) {
+      console.warn("Failed to reset Supabase session before Google sign-in", sessionResetError);
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -297,6 +308,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error.message ||
           "Authentication failed. Please try again.";
 
+        // Database unavailable - don't clear auth, just report the error
+        // The user's Supabase session is still valid, just can't sync with backend
+        if (status === 503 && code === "DB_UNAVAILABLE") {
+          const err = new Error("Database temporarily unavailable. Please try again later.");
+          err.name = "DB_UNAVAILABLE";
+          throw err;
+        }
+
         if (status === 403 && code === "ACCOUNT_NOT_REGISTERED") {
           await clearAuthState();
           const err = new Error(message);
@@ -308,6 +327,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await clearAuthState();
           const err = new Error(message);
           err.name = "OAUTH_EMAIL_MISSING";
+          throw err;
+        }
+
+        // Token expired - clear auth state
+        if (status === 403 && code === "TOKEN_EXPIRED") {
+          await clearAuthState();
+          const err = new Error(message);
+          err.name = "TOKEN_EXPIRED";
           throw err;
         }
       }

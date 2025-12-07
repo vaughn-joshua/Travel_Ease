@@ -81,27 +81,40 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const status = error.response?.status;
+    const code = error.response?.data?.code;
+
+    // 503 with DB_UNAVAILABLE means the database is down, NOT an auth problem
+    // Don't trigger auth cleanup for this - let the request fail gracefully
+    const isDbUnavailable = status === 503 && code === "DB_UNAVAILABLE";
+
     // Emit unauthorized event on 401/403 to trigger auth state cleanup
-    // Backend returns 401 for missing token, 403 for invalid/expired token
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      authEvents.emitUnauthorized();
+    // BUT skip if this is a DB_UNAVAILABLE error (backend clarified it's not auth)
+    // Also skip for TOKEN_EXPIRED during initial sync - let AuthContext handle it
+    if ((status === 401 || status === 403) && !isDbUnavailable) {
+      // Only emit unauthorized for actual auth failures, not transient errors
+      // Check if this is a genuine token problem vs a temporary issue
+      if (code === "TOKEN_EXPIRED" || code === "GOOGLE_AUTH_REQUIRED" || !code) {
+        authEvents.emitUnauthorized();
+      }
     }
 
     // Only log detailed errors in development (skip abort errors)
     if (import.meta.env.DEV) {
       console.error("API Error:", {
-        status: error.response?.status,
+        status,
         statusText: error.response?.statusText,
+        code,
         message: error.message,
         url: error.config?.url,
       });
 
       // Handle specific error cases with helpful messages
-      if (error.response?.status === 500) {
+      if (status === 500) {
         console.error("Internal server error - check backend logs");
-      } else if (error.response?.status === 503) {
+      } else if (status === 503 || code === "DB_UNAVAILABLE") {
         console.error("Service unavailable - database may be down");
-      } else if (error.response?.data?.code === "CONNECTION_ERROR") {
+      } else if (code === "CONNECTION_ERROR") {
         console.error(
           "Database connection error - Supabase may be paused or unreachable"
         );

@@ -115,6 +115,18 @@ export const authApi = {
     const { data } = await api.delete<{ message: string }>("/user/account");
     return data;
   },
+
+  /**
+   * Disconnect Google account from user
+   * Requires user to have set a password first
+   */
+  async disconnectGoogle(password: string) {
+    const { data } = await api.post<{ message: string; auth_provider: AuthProvider }>(
+      "/user/disconnect-google",
+      { password }
+    );
+    return data;
+  },
 };
 
 export default authApi;

@@ -163,6 +163,7 @@ export function useBusinessCategoriesById(businessId: string | number | undefine
 // ─────────────────────────────────────────────────────────────────────────────
 // useMyBusinesses
 // Fetches the current user's own businesses (requires auth).
+// Includes retry logic that stops on auth failures (403) or DB unavailable (503).
 // ─────────────────────────────────────────────────────────────────────────────
 interface MyBusiness {
   business_id: number;
@@ -175,14 +176,46 @@ interface MyBusiness {
   categories?: { category_name: string }[];
 }
 
+interface MyBusinessesResponse {
+  data: MyBusiness[];
+  dbUnavailable?: boolean;
+}
+
 export function useMyBusinesses() {
+  // Check both token and user profile exist (more robust than just token)
   const hasToken = !!localStorage.getItem("token");
+  const hasUserProfile = !!localStorage.getItem("travelEaseUser");
+  const isAuthenticated = hasToken && hasUserProfile;
   
-  return useQuery<{ data: MyBusiness[] }, Error>({
+  return useQuery<MyBusinessesResponse, Error>({
     queryKey: [...businessKeys.lists(), "my"],
-    queryFn: () => businessApi.getMyBusinesses(),
-    enabled: hasToken,
+    queryFn: async () => {
+      try {
+        return await businessApi.getMyBusinesses();
+      } catch (error) {
+        // Check if this is a DB unavailable error - return empty with flag
+        const axiosError = error as { response?: { status?: number; data?: { code?: string } } };
+        if (axiosError.response?.status === 503 && axiosError.response?.data?.code === "DB_UNAVAILABLE") {
+          return { data: [], dbUnavailable: true };
+        }
+        throw error;
+      }
+    },
+    enabled: isAuthenticated,
     staleTime: 1000 * 30,
+    // Don't retry on auth failures or DB unavailable
+    retry: (failureCount, error) => {
+      const axiosError = error as { response?: { status?: number; data?: { code?: string } } };
+      const status = axiosError.response?.status;
+      const code = axiosError.response?.data?.code;
+      
+      // Don't retry on 401, 403, or 503 with DB_UNAVAILABLE
+      if (status === 401 || status === 403) return false;
+      if (status === 503 && code === "DB_UNAVAILABLE") return false;
+      
+      // Retry other errors up to 2 times
+      return failureCount < 2;
+    },
   });
 }
 

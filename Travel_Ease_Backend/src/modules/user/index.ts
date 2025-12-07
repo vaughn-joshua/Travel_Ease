@@ -16,5 +16,6 @@ export {
   update_profile, 
   get_me, 
   delete_account,
-  search_users
+  search_users,
+  disconnect_google
 } from './controllers/userController.js';

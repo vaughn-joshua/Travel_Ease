@@ -35,6 +35,39 @@ export default function AuthCallback() {
         // Check for hash fragment (implicit flow) or query params (PKCE flow)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const queryParams = new URLSearchParams(window.location.search);
+
+        // Handle OAuth errors returned by Supabase (e.g., identity already exists)
+        const oauthError = hashParams.get("error") || queryParams.get("error");
+        const oauthErrorDescription =
+          hashParams.get("error_description") || queryParams.get("error_description");
+        const oauthErrorCode = hashParams.get("error_code") || queryParams.get("error_code");
+
+        if (oauthError || oauthErrorDescription || oauthErrorCode) {
+          // Clear any stale Supabase session so the next attempt starts clean
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // ignore cleanup failures
+          }
+
+          // Restore original token/profile so the UI stays consistent after the failed OAuth attempt
+          if (originalToken) {
+            localStorage.setItem(TOKEN_STORAGE_KEY, originalToken);
+          } else {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+          }
+          if (originalUserJson) {
+            localStorage.setItem(PROFILE_STORAGE_KEY, originalUserJson);
+          }
+
+          const friendlyError =
+            oauthErrorCode === "identity_already_exists"
+              ? "That Google account is already linked. We've reset your session—please start Google sign-in again."
+              : oauthErrorDescription || oauthError || "Authentication failed. Please try again.";
+
+          setError(friendlyError);
+          return;
+        }
         
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
@@ -142,9 +175,16 @@ export default function AuthCallback() {
             }
           } catch (syncError) {
             localStorage.removeItem("auth_redirect");
-            localStorage.removeItem("token");
             localStorage.removeItem(BUSINESS_AUTH_EMAIL_KEY);
             localStorage.removeItem(ORIGINAL_USER_KEY);
+
+            // Check if this is a DB_UNAVAILABLE error - don't clear token, DB is just down
+            const isDbUnavailable = syncError instanceof Error && syncError.name === "DB_UNAVAILABLE";
+            
+            if (!isDbUnavailable) {
+              // Only clear token for actual auth failures
+              localStorage.removeItem("token");
+            }
 
             const message =
               syncError instanceof Error
