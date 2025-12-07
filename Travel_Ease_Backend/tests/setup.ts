@@ -44,6 +44,7 @@ interface CreateTestUserData {
   contact_no?: string;
   password?: string;
   auth_provider?: 'password' | 'google';
+  has_email_identity?: boolean;
   profile_completed?: boolean;
 }
 
@@ -54,7 +55,7 @@ interface TestUserResult {
 
 /**
  * Helper function to create a test user and get a JWT token
- * Supports configuring auth_provider and profile_completed for testing auth flows
+ * Supports configuring auth_provider, has_email_identity, and profile_completed for testing auth flows
  */
 export async function createTestUser(userData: CreateTestUserData = {}): Promise<TestUserResult> {
   const bcrypt = await import('bcryptjs');
@@ -64,6 +65,10 @@ export async function createTestUser(userData: CreateTestUserData = {}): Promise
     bcrypt.default.hash(userData.password || 'testpass123', salt)
   );
 
+  // Derive has_email_identity from auth_provider if not explicitly provided
+  const authProvider = userData.auth_provider || 'password';
+  const hasEmailIdentity = userData.has_email_identity ?? (authProvider === 'password');
+
   const user = await prisma.user.create({
     data: {
       first_name: userData.first_name || 'Test',
@@ -71,7 +76,8 @@ export async function createTestUser(userData: CreateTestUserData = {}): Promise
       email: userData.email || `test${Date.now()}@example.com`,
       contact_no: userData.contact_no || '1234567890',
       password: hashedPassword,
-      auth_provider: userData.auth_provider || 'password',
+      auth_provider: authProvider,
+      has_email_identity: hasEmailIdentity,
       profile_completed: userData.profile_completed ?? true, // Default to true for backward compatibility
     }
   });

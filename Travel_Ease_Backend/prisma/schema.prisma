@@ -54,6 +54,11 @@ enum blog_status {
 }
 
 // User and Authentication
+// Password Identity State Machine:
+//   - has_email_identity: true if user can log in with email+password
+//   - For registered users (auth_provider='password'): always true
+//   - For Google OAuth users: false until they set a password, then true
+//   - Disconnecting Google requires has_email_identity=true first
 model User {
   user_id               Int                  @id @default(autoincrement())
   auth_id               String?              @unique @db.Uuid  // Link to Supabase auth.users.id
@@ -63,6 +68,7 @@ model User {
   contact_no            String?              @db.VarChar(50)
   password              String?              @db.VarChar  // NULL when using Supabase Auth
   auth_provider         String?              @db.VarChar(50)  // 'password', 'google', etc.
+  has_email_identity    Boolean              @default(false)  // True if user can log in with email+password
   profile_completed     Boolean?             @default(false)
   created_at            DateTime?            @default(now()) @db.Timestamp(6)
   updated_at            DateTime?            @default(now()) @updatedAt @db.Timestamp(6)
@@ -149,8 +155,18 @@ model Business {
   reviews              BusinessReview[]
   menu_items           MenuItem[]
 
+  // Indexes for query optimization
   @@index([user_id], map: "idx_business_user_id")
   @@index([status], map: "idx_business_status")
+  // city: Used in /travel_spots filter (ILIKE search)
+  @@index([city], map: "idx_business_city")
+  // rating: Used in /travel_spots orderBy
+  @@index([rating], map: "idx_business_rating")
+  // Composite for common query pattern: active businesses sorted by rating
+  @@index([status, rating(sort: Desc)], map: "idx_business_status_rating")
+  // Price filtering: Used in /travel_spots price range queries
+  @@index([min_price], map: "idx_business_min_price")
+  @@index([max_price], map: "idx_business_max_price")
   @@map("business")
 }
 
@@ -161,6 +177,8 @@ model BusinessCategory {
   business      Business?    @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
   price_ranges  PriceRange[]
 
+  // FK index for joins with Business
+  @@index([business_id], map: "idx_business_category_business_id")
   @@map("business_category")
 }
 
@@ -183,6 +201,8 @@ model BusinessHours {
   close_time  DateTime? @db.Time(6)
   business    Business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
 
+  // FK index for joins with Business
+  @@index([business_id], map: "idx_business_hours_business_id")
   @@map("business_hours")
 }
 
@@ -211,6 +231,8 @@ model MenuItem {
   // Relations
   business     Business  @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
 
+  // FK index for joins with Business
+  @@index([business_id], map: "idx_menu_item_business_id")
   @@map("menu_item")
 }
 
@@ -236,9 +258,16 @@ model TravelPlan {
   favorites            TravelPlanFavorite[]
   reviews              TravelPlanReview[]
 
+  // Indexes for query optimization
   @@index([user_id], map: "idx_travel_plan_user_id")
   @@index([status], map: "idx_travel_plan_status")
   @@index([visibility], map: "idx_travel_plan_visibility")
+  // Used in public_plans orderBy
+  @@index([visibility_timestamp], map: "idx_travel_plan_visibility_timestamp")
+  // Used in public_plans filtering (expiry check)
+  @@index([visibility_end_date], map: "idx_travel_plan_visibility_end_date")
+  // Composite for public plans query: visibility + status + ordering
+  @@index([visibility, status, visibility_timestamp(sort: Desc)], map: "idx_travel_plan_public_query")
   @@map("travel_plan")
 }
 
@@ -315,6 +344,11 @@ model BusinessReview {
   business    Business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
   user        User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  // FK indexes for joins and groupBy queries
+  @@index([business_id], map: "idx_business_review_business_id")
+  @@index([user_id], map: "idx_business_review_user_id")
+  // For ordering reviews by date
+  @@index([review_date], map: "idx_business_review_date")
   @@map("business_review")
 }
 
@@ -330,5 +364,8 @@ model TravelPlanReview {
   travel_plan    TravelPlan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
   user           User?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
+  // FK indexes for joins
+  @@index([travel_plan_id], map: "idx_travel_plan_review_plan_id")
+  @@index([user_id], map: "idx_travel_plan_review_user_id")
   @@map("travel_plan_review")
 }

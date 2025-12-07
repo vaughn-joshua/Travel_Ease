@@ -39,6 +39,7 @@ export interface AuthUser {
   email: string;
   contact_no?: string | null;
   auth_provider?: AuthProvider;
+  has_email_identity?: boolean;  // True if user can log in with email+password
   profile_completed?: boolean;
   created_at?: string;
 }
@@ -89,8 +90,7 @@ export const authApi = {
 
   /**
    * Get current user's profile.
-   * @deprecated Not currently used. Could be implemented for session validation on app load.
-   * Profile is currently loaded during login/OAuth sync and stored in localStorage.
+   * Used to refresh profile state after operations that change user flags (e.g., setPassword).
    */
   async getMe() {
     const { data } = await api.get<AuthUser>("/user/me");
@@ -133,7 +133,7 @@ export const authApi = {
    * Uses backend admin API to create email identity
    */
   async setPassword(password: string) {
-    const { data } = await api.post<{ message: string }>(
+    const { data } = await api.post<{ message: string; has_email_identity: boolean }>(
       "/user/set-password",
       { password }
     );

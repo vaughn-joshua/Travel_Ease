@@ -23,7 +23,7 @@ interface PasswordFormData {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, updateProfile, signOut, signInWithGoogle, isConfigured } = useAuth();
+  const { user, loading: authLoading, updateProfile, signOut, signInWithGoogle, isConfigured, hasPassword, refreshProfile } = useAuth();
 
   const [redirectingToBusiness, setRedirectingToBusiness] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -113,10 +113,10 @@ export default function Profile() {
 
   const validatePassword = (): boolean => {
     const newErrors: Record<string, string> = {};
-    const isGoogleUser = user?.source === "google";
 
-    // Current password is only required for password users (not Google users setting password for first time)
-    if (!isGoogleUser && !passwordFormData.current_password) {
+    // Current password is only required for users who already have a password
+    // (not for users setting password for first time)
+    if (hasPassword && !passwordFormData.current_password) {
       newErrors.current_password = "Current password is required";
     }
     if (!passwordFormData.new_password) {
@@ -169,13 +169,13 @@ export default function Profile() {
     setPasswordSubmitting(true);
 
     try {
-      const isGoogleUser = user?.source === "google";
-
-      if (isGoogleUser) {
-        // For Google users: use backend endpoint to set password
+      if (!hasPassword) {
+        // For users without a password: use backend endpoint to set password
         // This uses the admin API which can properly create an email identity
         try {
           const response = await authApi.setPassword(passwordFormData.new_password);
+          // Refresh profile to get updated hasPassword flag
+          await refreshProfile();
           setSuccessMessage(response.message || "Password set successfully! You can now disconnect your Google account.");
           setPasswordFormData({
             current_password: "",
@@ -190,7 +190,7 @@ export default function Profile() {
           setSubmitError(errorMessage);
         }
       } else {
-        // For password users: verify current password first, then update via Supabase
+        // For users with a password: verify current password first, then update via Supabase
         // Step 1: Verify current password by attempting to sign in
         const { error: verifyError } = await supabase.auth.signInWithPassword({
           email: user?.email || "",
@@ -303,11 +303,7 @@ export default function Profile() {
     setSuccessMessage("");
     setSubmitError("");
     setPasswordErrors({});
-    if (user?.source === "google") {
-      setShowPasswordForm(true); // Google users must first set a password; reuse change form
-    } else {
-      setShowPasswordForm(true);
-    }
+    setShowPasswordForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -554,12 +550,12 @@ export default function Profile() {
           {showPasswordForm && (
             <div className="border-t border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {user?.source === "google" ? "Set Password" : "Change Password"}
+                {hasPassword ? "Change Password" : "Set Password"}
               </h3>
               
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                {/* Current Password - Only show for password users, not Google users setting password for first time */}
-                {user?.source !== "google" && (
+                {/* Current Password - Only show for users who already have a password */}
+                {hasPassword && (
                   <div>
                     <label htmlFor="current_password" className="block text-sm font-medium text-gray-700 mb-2">
                       Current Password
@@ -628,12 +624,12 @@ export default function Profile() {
                     className="flex-1 py-3 px-4 bg-primary-red text-white font-semibold rounded-lg hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {passwordSubmitting
-                      ? user?.source === "google"
-                        ? "Setting..."
-                        : "Updating..."
-                      : user?.source === "google"
-                      ? "Set Password"
-                      : "Update Password"}
+                      ? hasPassword
+                        ? "Updating..."
+                        : "Setting..."
+                      : hasPassword
+                      ? "Update Password"
+                      : "Set Password"}
                   </button>
                   <button
                     type="button"
@@ -742,12 +738,12 @@ export default function Profile() {
                 </div>
                 <div className="text-left">
                   <p className="font-medium text-gray-900">
-                    {user?.source === "google" ? "Set Password" : "Change Password"}
+                    {hasPassword ? "Change Password" : "Set Password"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {user?.source === "google"
-                      ? "Create password for your account"
-                      : "Update your password"}
+                    {hasPassword
+                      ? "Update your password"
+                      : "Create password for your account"}
                   </p>
                 </div>
               </button>

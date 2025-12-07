@@ -45,6 +45,7 @@ export interface AuthUser {
   first_name?: string;
   last_name?: string;
   auth_provider?: AuthProvider;
+  has_email_identity?: boolean;  // True if user can log in with email+password
   profile_completed?: boolean;
 }
 
@@ -65,6 +66,7 @@ export interface AuthUserDTO {
   email: string;
   contact_no?: string | null;
   auth_provider?: AuthProvider;
+  has_email_identity?: boolean;  // True if user can log in with email+password
   profile_completed?: boolean;
 }
 

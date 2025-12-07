@@ -11,18 +11,40 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 // Slow query threshold in milliseconds
 const SLOW_QUERY_THRESHOLD = 100;
 
-// Parse DATABASE_URL to add connection timeout if not present
-function getDatabaseUrlWithTimeout(): string | undefined {
+/**
+ * Parse DATABASE_URL to add connection pool parameters if not present
+ * 
+ * Supabase connection pool recommendations:
+ * - Free tier: ~10 connections max
+ * - Pro tier: more available
+ * 
+ * Parameters added:
+ * - connect_timeout: Time to wait for connection (5s)
+ * - pool_timeout: Time to wait for pool slot (10s)
+ * - connection_limit: Max connections in pool (configurable via env)
+ * - statement_cache_size: Prepared statement cache (0 = disabled for pgbouncer compatibility)
+ */
+function getDatabaseUrlWithPoolConfig(): string | undefined {
   const url = process.env.DATABASE_URL;
   if (!url) return url;
   
-  // Add connection timeout parameters if not already present
-  const hasTimeout = url.includes('connect_timeout') || url.includes('pool_timeout');
-  if (hasTimeout) return url;
+  // Check if pool params already present
+  const hasPoolConfig = url.includes('connect_timeout') || 
+                        url.includes('pool_timeout') ||
+                        url.includes('connection_limit');
+  if (hasPoolConfig) return url;
   
   const separator = url.includes('?') ? '&' : '?';
-  // 5 second connection timeout, 10 second pool timeout
-  return `${url}${separator}connect_timeout=5&pool_timeout=10`;
+  
+  // Connection limit from env or default to 5 for safety (Supabase free tier friendly)
+  const connectionLimit = process.env.DATABASE_POOL_SIZE || '5';
+  
+  // pgbouncer compatibility: disable prepared statement cache
+  // This is important for Supabase's pgbouncer proxy
+  const isPgBouncer = url.includes('pooler.supabase.com');
+  const statementCache = isPgBouncer ? '&statement_cache_size=0' : '';
+  
+  return `${url}${separator}connect_timeout=5&pool_timeout=10&connection_limit=${connectionLimit}${statementCache}`;
 }
 
 // Determine log configuration based on environment
@@ -49,7 +71,7 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
   log: getLogConfig(),
   datasources: {
     db: {
-      url: getDatabaseUrlWithTimeout()
+      url: getDatabaseUrlWithPoolConfig()
     }
   }
 });

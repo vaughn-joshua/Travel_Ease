@@ -414,5 +414,121 @@ describe('Authentication', () => {
       expect(response.body.auth_provider).toBe('google');
     });
   });
+
+  describe('Password Identity (has_email_identity)', () => {
+    /**
+     * Tests for has_email_identity flag.
+     * 
+     * has_email_identity indicates whether a user can log in with email+password:
+     * - Registered users (auth_provider='password'): always true
+     * - Google OAuth users: false until they set a password, then true
+     * - Required before disconnecting Google account
+     */
+
+    it('should return has_email_identity=true for password users', async () => {
+      const testEmail = `password_user_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'password',
+        has_email_identity: true,
+      });
+
+      const response = await request(app)
+        .get('/api/user/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.has_email_identity).toBe(true);
+      expect(response.body.auth_provider).toBe('password');
+    });
+
+    it('should return has_email_identity=false for new Google OAuth users', async () => {
+      const testEmail = `google_new_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'google',
+        has_email_identity: false, // New Google users don't have email identity
+        profile_completed: false,
+      });
+
+      const response = await request(app)
+        .get('/api/user/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.has_email_identity).toBe(false);
+      expect(response.body.auth_provider).toBe('google');
+    });
+
+    it('should include has_email_identity in OAuth sync response', async () => {
+      const testEmail = `oauth_identity_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'google',
+        has_email_identity: false,
+        profile_completed: true,
+      });
+
+      const response = await request(app)
+        .post('/api/user/oauth')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.user).toHaveProperty('has_email_identity');
+      expect(response.body.user.has_email_identity).toBe(false);
+    });
+
+    it('should include has_email_identity in profile update response', async () => {
+      const testEmail = `profile_identity_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'password',
+        has_email_identity: true,
+      });
+
+      const response = await request(app)
+        .put('/api/user/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ first_name: 'Updated', last_name: 'User' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.user).toHaveProperty('has_email_identity');
+      expect(response.body.user.has_email_identity).toBe(true);
+    });
+
+    it('should reject set-password for non-Google users', async () => {
+      const testEmail = `set_pass_reject_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'password',
+        has_email_identity: true,
+      });
+
+      const response = await request(app)
+        .post('/api/user/set-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ password: 'newpassword123' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('NOT_GOOGLE_USER');
+    });
+
+    it('should reject set-password with short password', async () => {
+      const testEmail = `set_pass_short_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
+      const { token } = await createTestUser({
+        email: testEmail,
+        auth_provider: 'google',
+        has_email_identity: false,
+      });
+
+      const response = await request(app)
+        .post('/api/user/set-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ password: '123' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('PASSWORD_TOO_SHORT');
+    });
+  });
 });
 

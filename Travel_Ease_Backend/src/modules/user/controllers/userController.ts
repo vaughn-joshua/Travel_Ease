@@ -46,6 +46,7 @@ export async function register(req: Request, res: Response) {
 
     // Create user profile in our database
     // Email/password registration collects all required fields, so profile is complete
+    // has_email_identity=true because they registered with email/password
     const user = await executeWithRetry(() =>
       prisma.user.create({
         data: {
@@ -56,6 +57,7 @@ export async function register(req: Request, res: Response) {
           contact_no,
           password: '[SECURED BY SUPABASE]',
           auth_provider: 'password',
+          has_email_identity: true, // User can log in with email+password
           profile_completed: true, // Profile is complete for email/password registration
         }
       })
@@ -71,6 +73,7 @@ export async function register(req: Request, res: Response) {
         email: user.email,
         contact_no: user.contact_no,
         auth_provider: 'password',
+        has_email_identity: true,
         profile_completed: true,
       },
       supabase_user_id: data.user.id
@@ -115,6 +118,7 @@ export async function login(req: Request, res: Response) {
           email: true,
           contact_no: true,
           auth_provider: true,
+          has_email_identity: true,
           profile_completed: true,
         }
       })
@@ -134,6 +138,7 @@ export async function login(req: Request, res: Response) {
         email: user.email,
         contact_no: user.contact_no,
         auth_provider: user.auth_provider ?? 'password',
+        has_email_identity: user.has_email_identity ?? (user.auth_provider === 'password'), // Derive from provider if not set
         profile_completed: user.profile_completed ?? true, // Existing users default to true
       },
       token: data.session.access_token,
@@ -347,6 +352,7 @@ export async function oauth_sync(req: Request, res: Response) {
           contact_no: true,
           created_at: true,
           auth_provider: true,
+          has_email_identity: true,
           profile_completed: true,
         },
       })
@@ -374,6 +380,7 @@ export async function oauth_sync(req: Request, res: Response) {
         email: user.email,
         contact_no: user.contact_no,
         auth_provider: user.auth_provider ?? 'google',
+        has_email_identity: user.has_email_identity ?? false, // Google OAuth users start without email identity
         profile_completed: user.profile_completed ?? false,
       },
       isNewUser,
@@ -438,6 +445,7 @@ export async function update_profile(req: Request, res: Response) {
         email: updatedUser.email,
         contact_no: updatedUser.contact_no,
         auth_provider: updatedUser.auth_provider ?? 'password',
+        has_email_identity: updatedUser.has_email_identity ?? (updatedUser.auth_provider === 'password'),
         profile_completed: updatedUser.profile_completed ?? false,
       }
     });
@@ -466,6 +474,7 @@ export async function get_me(req: Request, res: Response) {
           contact_no: true,
           created_at: true,
           auth_provider: true,
+          has_email_identity: true,
           profile_completed: true,
         }
       })
@@ -484,6 +493,7 @@ export async function get_me(req: Request, res: Response) {
       contact_no: user.contact_no,
       created_at: user.created_at,
       auth_provider: user.auth_provider ?? 'password',
+      has_email_identity: user.has_email_identity ?? (user.auth_provider === 'password'),
       profile_completed: user.profile_completed ?? true,
     });
   } catch (error) {
@@ -731,8 +741,17 @@ export async function set_password(req: Request, res: Response) {
       });
     }
 
+    // Update has_email_identity to true since user now has a password
+    await executeWithRetry(() =>
+      prisma.user.update({
+        where: { user_id: userId },
+        data: { has_email_identity: true }
+      })
+    );
+
     res.json({ 
-      message: 'Password set successfully. You can now log in with your email and password, or disconnect your Google account.'
+      message: 'Password set successfully. You can now log in with your email and password, or disconnect your Google account.',
+      has_email_identity: true
     });
   } catch (error) {
     console.error('Error setting password:', error);

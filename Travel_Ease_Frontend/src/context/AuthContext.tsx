@@ -24,6 +24,8 @@ export interface AppUser {
   contactNo?: string | null;
   /** Whether the user has completed their profile (set via onboarding) */
   profileCompleted?: boolean;
+  /** Whether the user can log in with email+password (has set a password) */
+  hasPassword?: boolean;
   /** How the user authenticated */
   source: AuthSource;
 }
@@ -35,11 +37,13 @@ interface AuthContextType {
   isConfigured: boolean;
   needsOnboarding: boolean;
   isGoogleAuth: boolean;  // True if user authenticated via Google
+  hasPassword: boolean;   // True if user can log in with email+password
   signInWithGoogle: () => Promise<void>;
   loginWithEmail: (payload: LoginPayload) => Promise<void>;
   registerWithEmail: (payload: RegisterPayload) => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
   syncOAuthUser: () => Promise<{ isNewUser: boolean }>;
+  refreshProfile: () => Promise<void>;  // Refresh user profile from server
   signOut: () => Promise<void>;
 }
 
@@ -102,6 +106,9 @@ const mapApiUser = (user: AuthUser, source?: AuthSource): AppUser => {
     contactNo: user.contact_no ?? null,
     // Use backend profile_completed flag
     profileCompleted: user.profile_completed ?? false,
+    // hasPassword: true if user can log in with email+password
+    // Derive from has_email_identity or auth_provider if not set
+    hasPassword: user.has_email_identity ?? (user.auth_provider === "password"),
     source: authSource,
   };
 };
@@ -378,12 +385,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // This is handled by persistAuth based on profile.profileCompleted
   };
 
+  /**
+   * Refresh user profile from server
+   * Useful after operations that change user flags (e.g., setPassword)
+   */
+  const refreshProfile = async () => {
+    try {
+      const userData = await authApi.getMe();
+      const profile = mapApiUser(userData, user?.source);
+      persistAuth(profile);
+    } catch (error) {
+      console.error("Failed to refresh profile:", error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     await clearAuthState();
   };
 
   // Check if user is authenticated via Google
   const isGoogleAuth = user?.source === "google";
+  // Check if user can log in with email+password
+  const hasPassword = user?.hasPassword ?? false;
 
   const value = {
     user,
@@ -392,11 +416,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isConfigured: isSupabaseConfigured,
     needsOnboarding,
     isGoogleAuth,
+    hasPassword,
     signInWithGoogle,
     loginWithEmail,
     registerWithEmail,
     updateProfile,
     syncOAuthUser,
+    refreshProfile,
     signOut,
   };
 
