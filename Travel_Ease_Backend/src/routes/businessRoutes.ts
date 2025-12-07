@@ -77,7 +77,7 @@ router.get(
         prisma.business.findMany({
           where: { user_id: userId },
           include: {
-            categories: true,
+            business_category: true,
             business_hours: true,
           },
           orderBy: { business_id: "desc" },

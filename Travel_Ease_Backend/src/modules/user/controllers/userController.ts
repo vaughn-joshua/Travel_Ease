@@ -554,13 +554,17 @@ export async function delete_account(req: Request, res: Response) {
 
 /**
  * Disconnect Google account from user
- * Requires user to have set a password first (creates email identity)
- * Updates auth_provider to 'password' after successful unlink
+ * Requires user to have set a password first (has_email_identity = true)
+ * Updates auth_provider to 'password' after successful password verification
+ * 
+ * Flow:
+ * 1. Check has_email_identity flag in our DB (set when user calls set_password)
+ * 2. Verify password by signing in with Supabase
+ * 3. Update auth_provider to 'password' in our DB
  */
 export async function disconnect_google(req: Request, res: Response) {
   try {
     const userId = req.user!.id;
-    const authId = req.user!.auth_id;
     const { password } = req.body;
 
     if (!password) {
@@ -596,77 +600,59 @@ export async function disconnect_google(req: Request, res: Response) {
       });
     }
 
-    // FIRST: Check if user has email identity (set a password) BEFORE verifying password
-    // This provides a better error message if they haven't set a password yet
-    const { data: supabaseUser, error: getUserError } = await supabaseAdmin!.auth.admin.getUserById(authId);
-
-    if (getUserError || !supabaseUser?.user) {
-      return res.status(500).json({ 
-        error: 'Failed to retrieve user identities',
-        code: 'SUPABASE_ERROR'
-      });
-    }
-
-    const identities = supabaseUser.user.identities || [];
-    const googleIdentity = identities.find(i => i.provider === 'google');
-    const emailIdentity = identities.find(i => i.provider === 'email');
-
-    // User must have set a password (which creates email identity) before unlinking Google
-    if (!emailIdentity) {
-      return res.status(400).json({ 
-        error: 'You must set a password before disconnecting Google. This creates an email login method.',
-        code: 'NO_EMAIL_IDENTITY'
-      });
-    }
-
-    if (!googleIdentity) {
-      return res.status(400).json({ 
-        error: 'No Google account linked',
-        code: 'NO_GOOGLE_IDENTITY'
-      });
-    }
-
-    // NOW verify the password (we know they have an email identity at this point)
+    // Verify the password by attempting to sign in with email+password
+    // This confirms the user has set a password and knows it
     const { error: passwordError } = await supabaseAdmin!.auth.signInWithPassword({
       email: user.email,
       password
     });
 
     if (passwordError) {
+      console.error('Password verification failed:', passwordError.message);
+      
+      // If sign-in failed, check if it's because no password is set
+      // vs. wrong password
+      if (passwordError.message?.toLowerCase().includes('invalid login credentials')) {
+        // Could be wrong password OR no email identity
+        // Check our flag to give better error message
+        if (!user.has_email_identity) {
+          return res.status(400).json({ 
+            error: 'You must set a password before disconnecting Google. This creates an email login method.',
+            code: 'NO_EMAIL_IDENTITY'
+          });
+        }
+      }
+      
       return res.status(401).json({ 
         error: 'Incorrect password',
         code: 'INVALID_PASSWORD'
       });
     }
 
-    // Attempt to unlink the Google identity using admin API
-    // Note: This may not be supported in all Supabase configurations
-    try {
-      // Supabase admin API doesn't have a direct unlinkIdentity method
-      // The client-side unlinkIdentity requires the user to have multiple identities
-      // Since we've verified the user has both email and google identities, we can try
-      // For now, we'll update our database to mark them as password-only
-      // The Google identity will remain in Supabase but our app will treat them as password users
-      
-      // Update auth_provider in our database
+    // Password verified - user definitely has email identity
+    // Update our flag if it was somehow out of sync
+    if (!user.has_email_identity) {
       await executeWithRetry(() =>
         prisma.user.update({
           where: { user_id: userId },
-          data: { auth_provider: 'password' }
+          data: { has_email_identity: true }
         })
       );
-
-      res.json({ 
-        message: 'Google account disconnected successfully. You can now only sign in with your email and password.',
-        auth_provider: 'password'
-      });
-    } catch (unlinkError) {
-      console.error('Error unlinking Google identity:', unlinkError);
-      return res.status(500).json({ 
-        error: 'Failed to disconnect Google account',
-        code: 'UNLINK_FAILED'
-      });
     }
+
+    // Password verified - update auth_provider to 'password' in our database
+    // The user can now only sign in with email+password
+    await executeWithRetry(() =>
+      prisma.user.update({
+        where: { user_id: userId },
+        data: { auth_provider: 'password' }
+      })
+    );
+
+    res.json({ 
+      message: 'Google account disconnected successfully. You can now only sign in with your email and password.',
+      auth_provider: 'password'
+    });
   } catch (error) {
     console.error('Error disconnecting Google:', error);
     return handlePrismaError(error, res, 'Disconnecting Google');
