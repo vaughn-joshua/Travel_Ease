@@ -23,7 +23,7 @@ import { supabaseAdmin, isSupabaseConfigured } from './supabase.js';
 import { logger } from './logger.js';
 
 // Default bucket name - can be overridden via env
-const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'images';
+const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'image';
 
 // Maximum file size (6MB - Supabase standard upload limit)
 const MAX_FILE_SIZE = 6 * 1024 * 1024;

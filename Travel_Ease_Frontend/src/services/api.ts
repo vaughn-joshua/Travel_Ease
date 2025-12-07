@@ -112,6 +112,11 @@ api.interceptors.response.use(
       // Handle specific error cases with helpful messages
       if (status === 500) {
         console.error("Internal server error - check backend logs");
+      } else if (code === "STORAGE_UNAVAILABLE") {
+        console.error(
+          "Storage unavailable - Supabase Storage bucket may not exist or is not public. " +
+          "Create a PUBLIC bucket named 'images' in Supabase Dashboard > Storage."
+        );
       } else if (status === 503 || code === "DB_UNAVAILABLE") {
         console.error("Service unavailable - database may be down");
       } else if (code === "CONNECTION_ERROR") {
