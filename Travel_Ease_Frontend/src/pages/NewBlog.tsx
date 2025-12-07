@@ -4,6 +4,7 @@ import { useCreateBlog } from "../features/blogs/mutations";
 import { generateSlug } from "../utils/slug";
 import { sanitizeHtml } from "../utils/sanitize";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 import type { Blog } from "../types/blog";
 
 interface FormData {
@@ -43,6 +44,7 @@ export default function NewBlog(): React.ReactElement {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
+  const [uploading, setUploading] = useState<boolean>(false);
   
   // Use TanStack Query mutation for creating blogs
   const createBlogMutation = useCreateBlog();
@@ -75,6 +77,39 @@ export default function NewBlog(): React.ReactElement {
     const value = generateSlug(e.target.value);
     setFormData((prev) => ({ ...prev, slug: value }));
     setSlugAuto(false);
+  };
+
+  const handleImageUpload = async (files: FileList): Promise<void> => {
+    if (!files.length) return;
+
+    setUploading(true);
+    setSubmitError("");
+    
+    const formDataUpload = new FormData();
+    formDataUpload.append("files", files[0]);
+    formDataUpload.append("names[]", `blog_${Date.now()}`);
+    formDataUpload.append("folders[]", "blog_images");
+
+    try {
+      const response = await api.post("/utils/upload_images", formDataUpload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      const data = response.data;
+
+      if (data.secure_url?.[0]) {
+        setFormData((prev) => ({ ...prev, coverImageUrl: data.secure_url[0] }));
+        if (errors.coverImageUrl) {
+          setErrors((prev) => ({ ...prev, coverImageUrl: "" }));
+        }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setSubmitError("Failed to upload image. Please try again or enter a URL manually.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const validate = (): boolean => {
@@ -319,18 +354,81 @@ export default function NewBlog(): React.ReactElement {
           </div>
 
           <div>
-            <label htmlFor="coverImageUrl" className="block text-sm font-medium text-gray-700 mb-2">
-              Cover Image URL *
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cover Image *
             </label>
-            <input
-              type="url"
-              id="coverImageUrl"
-              name="coverImageUrl"
-              value={formData.coverImageUrl}
-              onChange={handleChange}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-              placeholder="https://example.com/image.jpg"
-            />
+            
+            {/* Image Preview */}
+            {formData.coverImageUrl && (
+              <div className="mb-4 relative">
+                <img
+                  src={formData.coverImageUrl}
+                  alt="Cover preview"
+                  className="w-full h-48 object-cover rounded-lg border"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=200&fit=crop&auto=format";
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, coverImageUrl: "" }))}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Upload Options */}
+            {!formData.coverImageUrl && (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-red transition-colors">
+                <input
+                  type="file"
+                  id="coverImageFile"
+                  accept="image/*"
+                  onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                <label
+                  htmlFor="coverImageFile"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  {uploading ? (
+                    <>
+                      <div className="w-8 h-8 animate-spin rounded-full border-b-2 border-primary-red" />
+                      <span className="text-sm text-gray-500">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">Click to upload image</span>
+                      <span className="text-xs text-gray-500">PNG, JPG, WEBP up to 6MB</span>
+                    </>
+                  )}
+                </label>
+              </div>
+            )}
+            
+            {/* URL Input as Alternative */}
+            <div className="mt-3">
+              <label htmlFor="coverImageUrl" className="block text-xs text-gray-500 mb-1">
+                Or enter image URL directly:
+              </label>
+              <input
+                type="url"
+                id="coverImageUrl"
+                name="coverImageUrl"
+                value={formData.coverImageUrl}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
             {errors.coverImageUrl && <p className="mt-1 text-sm text-red-600">{errors.coverImageUrl}</p>}
           </div>
 

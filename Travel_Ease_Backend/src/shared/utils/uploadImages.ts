@@ -1,53 +1,36 @@
-import cloudinary from "../../config/cloudinary.js";
-import { Request, Response } from "express";
+/**
+ * Multiple Images Upload Handler
+ * 
+ * Handles multiple image uploads to Supabase Storage.
+ * POST /api/utils/upload_images
+ * 
+ * Request:
+ *   - multipart/form-data
+ *   - Fields: files (multiple files), names[] (array), folders[] (array)
+ * 
+ * Response:
+ *   - { secure_url: string[] } - Array of public URLs for uploaded images
+ */
 
-interface MulterRequest extends Omit<Request, 'file'> {
-  file?: {
-    buffer: Buffer;
-    mimetype: string;
-  };
-}
+import { Request, Response } from "express";
+import { uploadImage as uploadToSupabase } from "../../lib/supabaseStorage.js";
+import { logger } from "../../lib/logger.js";
 
 interface MulterFile {
   buffer: Buffer;
   mimetype: string;
+  originalname: string;
 }
 
-/**
- * Upload a single image
- * POST /api/utils/upload
- */
-export async function upload_image(req: MulterRequest, res: Response) {
-  try {
-    console.log("you are at upload image");
-    const { name, folder } = req.body;
-    const image_data = req.file!.buffer;
-    const image_base64 = image_data.toString("base64");
-
-    const result = await cloudinary.uploader.upload(
-      `data:image/png;base64,${image_base64}`,
-      {
-        folder: folder,
-        public_id: name,
-      }
-    );
-
-    console.log(result.secure_url);
-
-    res.json({ secure_url: result.secure_url });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Upload failed" });
-  }
+export async function upload_image(req: Request, res: Response) {
+  // Single image upload - delegate to the multi-file handler
+  return upload_images(req, res);
 }
 
-/**
- * Upload multiple images
- * POST /api/utils/upload_images
- */
 export async function upload_images(req: Request, res: Response): Promise<Response | void> {
   try {
-    console.log("you are at upload images");
+    logger.debug({ module: 'upload' }, 'Multiple images upload requested');
+
     const files = Array.isArray(req.files) ? req.files as MulterFile[] : undefined;
 
     // Handle array field names with [] suffix (e.g., names[], folders[])
@@ -82,50 +65,65 @@ export async function upload_images(req: Request, res: Response): Promise<Respon
       foldersArr = rawFolders;
     }
 
-    console.log("Files:", files?.length || 0);
-    console.log("Names:", namesArr);
-    console.log("Folders:", foldersArr);
+    logger.debug({ 
+      module: 'upload',
+      fileCount: files?.length || 0,
+      names: namesArr,
+      folders: foldersArr 
+    }, 'Processing file uploads');
 
     // Validate files exist
     if (!files || files.length === 0) {
       return res.status(400).json({ error: "No files uploaded" });
     }
 
-    if (namesArr.length !== files.length) {
-      return res.status(400).json({ 
-        error: `Mismatch: ${files.length} files but ${namesArr.length} names provided` 
-      });
+    // If names array is shorter than files, generate names for remaining
+    while (namesArr.length < files.length) {
+      namesArr.push(`upload_${Date.now()}_${namesArr.length}`);
     }
 
     const secure_urls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
-      const imageData = files[i].buffer;
-      const imageBase64 = imageData.toString("base64");
+      const file = files[i];
       const folder = foldersArr[i] || foldersArr[0] || "uploads";
-      const publicId = namesArr[i] || `upload_${Date.now()}_${i}`;
+      const filename = namesArr[i] || file.originalname || `upload_${Date.now()}_${i}`;
 
-      // Detect mime type from buffer or default to png
-      let mimeType = "image/png";
-      if (files[i].mimetype) {
-        mimeType = files[i].mimetype;
-      }
+      // Upload to Supabase Storage
+      const result = await uploadToSupabase({
+        fileBuffer: file.buffer,
+        contentType: file.mimetype,
+        folder: folder,
+        filename: filename,
+      });
 
-      const result = await cloudinary.uploader.upload(
-        `data:${mimeType};base64,${imageBase64}`,
-        {
-          folder: folder,
-          public_id: publicId,
-        }
-      );
-
-      secure_urls.push(result.secure_url);
+      secure_urls.push(result.publicUrl);
     }
 
+    logger.info({ 
+      module: 'upload',
+      count: secure_urls.length,
+      urls: secure_urls 
+    }, 'Multiple images uploaded successfully');
+
+    // Return in same format as Cloudinary did for backwards compatibility
     res.json({ secure_url: secure_urls });
   } catch (error: any) {
-    console.error("Upload error:", error);
-    res.status(500).json({ error: "Upload failed", details: error.message });
+    logger.error({ 
+      module: 'upload',
+      error: error.message 
+    }, 'Multiple images upload failed');
+    
+    // Return 503 for storage configuration issues (bucket not found, etc.)
+    // This follows the state machine pattern for graceful degradation
+    const isConfigError = error.message.includes('bucket') || 
+                          error.message.includes('not configured') ||
+                          error.message.includes('Permission denied');
+    
+    res.status(isConfigError ? 503 : 500).json({ 
+      error: "Upload failed", 
+      details: error.message,
+      code: isConfigError ? 'STORAGE_UNAVAILABLE' : 'UPLOAD_FAILED'
+    });
   }
 }
-

@@ -15,9 +15,10 @@ A comprehensive travel planning and discovery platform built with the PERN stack
 ### Technical Stack
 - **Frontend**: React 19 with TypeScript, Tailwind CSS 4 (CSS-first config), React Router
 - **Backend**: Express.js with unified API architecture
-- **Database**: PostgreSQL with Prisma ORM
+- **Database**: PostgreSQL with Prisma ORM (Supabase)
+- **Authentication**: Supabase Auth (Google OAuth + Email/Password)
+- **Image Storage**: Supabase Storage (public bucket)
 - **Maps**: Leaflet, React Leaflet, Leaflet Routing Machine
-- **Image Upload**: Cloudinary integration
 - **Geocoding**: OpenStreetMap Nominatim API
 - **Monorepo**: npm workspaces with single lockfile
 
@@ -26,8 +27,8 @@ A comprehensive travel planning and discovery platform built with the PERN stack
 ### Prerequisites
 
 - Node.js 18+
-- PostgreSQL 12+ (running locally or remote)
-- Cloudinary account (for image uploads)
+- PostgreSQL 12+ (running locally or via Supabase)
+- Supabase account (for auth and image storage)
 - Git
 
 ### Setup
@@ -45,20 +46,23 @@ A comprehensive travel planning and discovery platform built with the PERN stack
    Create `.env` file in `Travel_Ease_Backend/`:
 
    ```env
-   # Database
-   DATABASE_URL="postgresql://username:password@localhost:5432/travelease_db"
+   # Database (Supabase)
+   DATABASE_URL="postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres"
 
    # Server
    PORT=3001
 
-   # Cloudinary
-   CLOUDINARY_CLOUD_NAME="your-cloud-name"
-   CLOUDINARY_API_KEY="your-api-key"
-   CLOUDINARY_API_SECRET="your-api-secret"
+   # Supabase
+   SUPABASE_URL="https://[PROJECT].supabase.co"
+   SUPABASE_ANON_KEY="your-anon-key"
+   SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+   SUPABASE_STORAGE_BUCKET="images"
 
    # Environment
    NODE_ENV=development
    ```
+
+   > **Note**: Create a public bucket named "images" in Supabase Storage for image uploads.
 
 3. **Initialize Database**:
 
