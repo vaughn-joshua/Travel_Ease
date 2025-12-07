@@ -10,18 +10,17 @@ export async function business_fetch(req: Request, res: Response) {
       prisma.business.findUnique({
         where: { business_id: parseInt(id) },
         include: {
-          categories: {
+          business_category: {
             select: {
               category_id: true,
-              category_name: true,
             }
           },
           business_hours: true,
-          menu_items: {
+          menu_item: {
             where: { is_available: true },
             orderBy: [{ category: 'asc' }, { name: 'asc' }]
           },
-          reviews: {
+          business_review: {
             take: 5,
             orderBy: { review_date: 'desc' },
             include: {

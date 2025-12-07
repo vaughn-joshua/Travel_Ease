@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L, { LatLngExpression, LeafletEvent } from "leaflet";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -23,9 +23,30 @@ interface Pin {
 interface RegisterMapProps {
   pins: Pin[];
   onPinMove: (lat: number, lng: number) => void;
+  allowClickToPlace?: boolean;
 }
 
-function RegisterMap({ pins, onPinMove }: RegisterMapProps) {
+/**
+ * MapClickHandler - Handles click events to place a pin when no pin exists
+ */
+function MapClickHandler({ 
+  onPinPlace, 
+  enabled 
+}: { 
+  onPinPlace: (lat: number, lng: number) => void; 
+  enabled: boolean;
+}) {
+  useMapEvents({
+    click: (e) => {
+      if (enabled) {
+        onPinPlace(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+}
+
+function RegisterMap({ pins, onPinMove, allowClickToPlace = true }: RegisterMapProps) {
   const [center, setCenter] = useState<LatLngExpression>(Tagaytay_Center);
   const firstPin = pins?.[0];
 
@@ -46,6 +67,12 @@ function RegisterMap({ pins, onPinMove }: RegisterMapProps) {
       />
 
       <MapFlyTo center={center} />
+      
+      {/* Allow clicking to place pin when no pin exists */}
+      <MapClickHandler 
+        onPinPlace={onPinMove} 
+        enabled={allowClickToPlace && !firstPin} 
+      />
 
       {firstPin && (
         <Marker
@@ -60,7 +87,7 @@ function RegisterMap({ pins, onPinMove }: RegisterMapProps) {
           }}
         >
           <Popup>
-            📍 <b>Adjustable Pin</b>
+            📍 <b>Your Business Location</b>
             <br />
             Drag to adjust the location.
           </Popup>

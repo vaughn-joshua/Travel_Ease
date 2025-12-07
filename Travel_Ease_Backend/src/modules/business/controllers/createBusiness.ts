@@ -55,14 +55,14 @@ export async function create_business(req: Request, res: Response) {
           // Price range stored directly on business (not in separate table)
           min_price: min_price ?? null,
           max_price: max_price ?? null,
-          // New businesses start as inactive (Draft state)
-          status: false,
+          // New businesses are immediately active and visible in travel spots
+          status: true,
         }
       });
 
       // Create business hours
       if (business_hrs && business_hrs.length > 0) {
-        await tx.businessHours.createMany({
+        await tx.business_hours.createMany({
           data: business_hrs.map((hrs: { day: string; start?: string; end?: string }) => ({
             business_id: business.business_id,
             day_of_week: hrs.day,
@@ -72,15 +72,10 @@ export async function create_business(req: Request, res: Response) {
         });
       }
 
-      // Create business categories
-      if (category && category.length > 0) {
-        await tx.businessCategory.createMany({
-          data: category.map((cat: string) => ({
-            business_id: business.business_id,
-            category_name: cat,
-          }))
-        });
-      }
+      // Create business categories - skip for now if no subcategory mapping
+      // Note: The schema uses subcategory_id, but frontend sends category names
+      // For now, we'll skip category creation and handle it separately
+      // TODO: Implement proper category to subcategory_id mapping
 
       return business;
     });

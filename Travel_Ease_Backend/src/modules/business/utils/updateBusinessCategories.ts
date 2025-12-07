@@ -14,7 +14,7 @@ export async function updateBusinessCategories(business_id: number, categories: 
   // Use Prisma transaction for atomicity
   return await prisma.$transaction(async (tx) => {
     // 1. Get existing category IDs
-    const existing = await tx.businessCategory.findMany({
+    const existing = await tx.business_category.findMany({
       where: { business_id },
       select: { category_id: true }
     });
@@ -28,7 +28,7 @@ export async function updateBusinessCategories(business_id: number, categories: 
     // 3. Delete removed categories
     const toDelete = existingIds.filter(id => !incomingIds.includes(id));
     if (toDelete.length > 0) {
-      await tx.businessCategory.deleteMany({
+      await tx.business_category.deleteMany({
         where: { category_id: { in: toDelete } }
       });
     }
@@ -37,13 +37,13 @@ export async function updateBusinessCategories(business_id: number, categories: 
     for (const c of categories) {
       if (c.category_id) {
         // Update existing
-        await tx.businessCategory.update({
+        await tx.business_category.update({
           where: { category_id: c.category_id },
           data: { category_name: c.category_name as any }
         });
       } else {
         // Insert new
-        await tx.businessCategory.create({
+        await tx.business_category.create({
           data: {
             business_id,
             category_name: c.category_name as any

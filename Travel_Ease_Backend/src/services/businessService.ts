@@ -190,7 +190,7 @@ const BUSINESS_DETAIL_SELECT = {
     },
   },
   business_hours: true,
-  menu_items: {
+  menu_item: {
     where: { is_available: true },
     orderBy: [{ category: "asc" as const }, { name: "asc" as const }],
   },
@@ -309,7 +309,7 @@ export function formatBusinessToDTO(business: any): BusinessDTO {
   }
 
   // Normalize menu items
-  const menuItems = (business.menu_items || []).map((item: any) => ({
+  const menuItems = (business.menu_item || []).map((item: any) => ({
     id: item.menu_item_id,
     name: item.name,
     description: item.description,
@@ -320,7 +320,7 @@ export function formatBusinessToDTO(business: any): BusinessDTO {
   }));
 
   // Normalize reviews
-  const reviews = (business.reviews || []).map((review: any) => ({
+  const reviews = (business.business_review || []).map((review: any) => ({
     id: review.review_id,
     rating: review.rating ? parseFloat(review.rating) : null,
     content: review.content,
@@ -337,16 +337,16 @@ export function formatBusinessToDTO(business: any): BusinessDTO {
     id: business.business_id,
     name: business.name,
     description: business.description,
-    categories: (business.categories || []).map((c: any) => ({
+    categories: (business.business_category || []).map((c: any) => ({
       id: c.category_id,
-      name: c.category_name,
+      name: c.subcategory_id || 'Unknown',
     })),
     hours,
     priceRange,
     media,
     menuItems,
     reviews,
-    reviewCount: business.reviews?.length || 0,
+    reviewCount: business.business_review?.length || 0,
     location: {
       lat: business.latitude,
       lng: business.longitude,
@@ -388,7 +388,7 @@ export function formatBusinessListItem(business: any): BusinessListItemDTO {
     rating: business.rating ? parseFloat(business.rating) : null,
     status: business.status,
     coverImage: media.cover,
-    categories: (business.categories || []).map((c: any) => c.category_name),
+    categories: (business.business_category || []).map((c: any) => c.subcategory_id || 'Unknown'),
     location: {
       lat: business.latitude,
       lng: business.longitude,
@@ -426,9 +426,9 @@ export function formatBusinessListItemDetailed(
     id: business.business_id,
     name: business.name,
     description: business.description,
-    categories: (business.categories || []).map((c: any) => ({
+    categories: (business.business_category || []).map((c: any) => ({
       id: c.category_id,
-      name: c.category_name,
+      name: c.subcategory_id || 'Unknown',
     })),
     hours,
     priceRange,
@@ -469,7 +469,7 @@ export async function getBusinesses(
   const where: any = {};
 
   if (filters.category) {
-    where.categories = { some: { category_name: filters.category } };
+    where.business_category = { some: { subcategory_id: parseInt(filters.category) || undefined } };
   }
   if (filters.city) {
     where.city = { contains: filters.city, mode: "insensitive" };
@@ -524,7 +524,7 @@ export async function getBusinessById(
               },
             },
             business_hours: true,
-            menu_items: {
+            menu_item: {
               where: { is_available: true },
               orderBy: [{ category: "asc" }, { name: "asc" }],
             },
@@ -630,7 +630,7 @@ export async function createBusiness(
     // Add categories
     if (input.category?.length > 0) {
       for (const categoryName of input.category) {
-        await tx.businessCategory.create({
+        await tx.business_category.create({
           data: {
             business_id: business.business_id,
             category_name: categoryName as any,
@@ -642,7 +642,7 @@ export async function createBusiness(
     // Add business hours
     if (input.business_hrs?.length) {
       for (const hours of input.business_hrs) {
-        await tx.businessHours.create({
+        await tx.business_hours.create({
           data: {
             business_id: business.business_id,
             day_of_week: hours.day,
@@ -766,7 +766,7 @@ export async function getAllCategories(): Promise<string[]> {
     ttl: 3600, // 1 hour
     fetchFn: async () => {
       const categories = await executeWithRetry(() =>
-        prisma.businessCategory.findMany({
+        prisma.business_category.findMany({
           distinct: ["category_name"],
           select: { category_name: true },
         })

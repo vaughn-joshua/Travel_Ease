@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useMyBusinesses } from "../features/businesses/queries";
-import { useDeleteBusiness } from "../features/businesses/mutations";
+import { useDeleteBusiness, useUpdateBusiness } from "../features/businesses/mutations";
 
 interface Business {
   business_id: number;
@@ -29,6 +29,24 @@ export default function MyBusinesses() {
 
   // Use TanStack Query mutation for deletion
   const deleteBusinessMutation = useDeleteBusiness();
+  
+  // Use TanStack Query mutation for updating business status
+  const updateBusinessMutation = useUpdateBusiness();
+
+  const handleToggleStatus = async (business: Business) => {
+    updateBusinessMutation.mutate(
+      { id: business.business_id, data: { status: !business.status } },
+      {
+        onSuccess: () => {
+          refetch();
+        },
+        onError: (err) => {
+          console.error("Error updating business status:", err);
+          setError("Failed to update business status");
+        },
+      }
+    );
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -253,6 +271,32 @@ export default function MyBusinesses() {
                     >
                       Edit
                     </Link>
+                    {/* Toggle Status Button */}
+                    <button
+                      onClick={() => handleToggleStatus(business)}
+                      disabled={updateBusinessMutation.isPending}
+                      className={`py-2 px-3 text-sm border rounded-lg transition-colors ${
+                        business.status
+                          ? "text-yellow-600 border-yellow-300 hover:bg-yellow-50"
+                          : "text-green-600 border-green-300 hover:bg-green-50"
+                      } disabled:opacity-50`}
+                      title={business.status ? "Deactivate" : "Activate"}
+                    >
+                      {updateBusinessMutation.isPending ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      ) : business.status ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
                     <button
                       onClick={() => setDeleteId(business.business_id)}
                       className="py-2 px-3 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"

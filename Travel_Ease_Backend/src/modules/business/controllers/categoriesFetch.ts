@@ -8,7 +8,7 @@ export async function categories_fetch(req: Request, res: Response) {
     // Fetch categories and business price info
     const [categories, business] = await executeWithRetry(() =>
       Promise.all([
-        prisma.businessCategory.findMany({
+        prisma.business_category.findMany({
           where: { business_id: parseInt(id) },
           select: {
             category_id: true,

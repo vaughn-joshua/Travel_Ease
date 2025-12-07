@@ -80,10 +80,9 @@ export async function get_businesses(req: Request, res: Response) {
         prisma.business.findMany({
           where: where as any,
           include: {
-            categories: {
+            business_category: {
               select: {
                 category_id: true,
-                category_name: true,
               }
             },
             business_hours: true,
@@ -122,15 +121,17 @@ export async function get_businesses(req: Request, res: Response) {
  */
 export async function getCategories(req: Request, res: Response) {
   try {
+    // Note: business_category uses subcategory_id, not category_name
+    // Return distinct subcategory_ids for now
     const categories = await executeWithRetry(() =>
-      prisma.businessCategory.findMany({
-        distinct: ['category_name'],
-        select: { category_name: true }
+      prisma.business_category.findMany({
+        distinct: ['subcategory_id'],
+        select: { subcategory_id: true }
       })
     );
 
     res.json({
-      categories: categories.map(c => c.category_name),
+      categories: categories.map(c => c.subcategory_id).filter(Boolean),
     });
   } catch (error) {
     console.error("Error fetching categories:", error);

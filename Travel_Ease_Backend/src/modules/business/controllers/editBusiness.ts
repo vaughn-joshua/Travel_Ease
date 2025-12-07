@@ -106,14 +106,14 @@ export async function edit_business(req: Request, res: Response) {
       // Handle category updates if provided
       if (updateData.category && Array.isArray(updateData.category)) {
         // Delete existing categories (cascade will handle related data)
-        await tx.businessCategory.deleteMany({
+        await tx.business_category.deleteMany({
           where: { business_id: businessId }
         });
 
         // Create new categories
         if (updateData.category.length > 0) {
           for (const cat of updateData.category) {
-            await tx.businessCategory.create({
+            await tx.business_category.create({
               data: {
                 business_id: businessId,
                 category_name: cat,
@@ -126,13 +126,13 @@ export async function edit_business(req: Request, res: Response) {
       // Handle business hours updates if provided
       if (updateData.business_hrs && Array.isArray(updateData.business_hrs)) {
         // Delete existing hours
-        await tx.businessHours.deleteMany({
+        await tx.business_hours.deleteMany({
           where: { business_id: businessId }
         });
 
         // Create new hours
         if (updateData.business_hrs.length > 0) {
-          await tx.businessHours.createMany({
+          await tx.business_hours.createMany({
             data: updateData.business_hrs.map((hrs: { day: string; start?: string; end?: string }) => ({
               business_id: businessId,
               day_of_week: hrs.day,
@@ -147,10 +147,9 @@ export async function edit_business(req: Request, res: Response) {
       return await tx.business.findUnique({
         where: { business_id: businessId },
         include: {
-          categories: {
+          business_category: {
             select: {
               category_id: true,
-              category_name: true,
             }
           },
           business_hours: true

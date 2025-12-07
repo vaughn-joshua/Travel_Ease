@@ -109,12 +109,12 @@ router.delete(
       await prisma.$transaction(async (tx) => {
         // Delete related records (cascade handles most, but explicit for safety)
         await Promise.all([
-          tx.businessCategory.deleteMany({
+          tx.business_category.deleteMany({
             where: { business_id: businessId },
           }),
-          tx.businessHours.deleteMany({ where: { business_id: businessId } }),
-          tx.businessReview.deleteMany({ where: { business_id: businessId } }),
-          tx.businessFavorite.deleteMany({
+          tx.business_hours.deleteMany({ where: { business_id: businessId } }),
+          tx.business_review.deleteMany({ where: { business_id: businessId } }),
+          tx.business_favorite.deleteMany({
             where: { business_id: businessId },
           }),
           tx.menuItem.deleteMany({ where: { business_id: businessId } }),

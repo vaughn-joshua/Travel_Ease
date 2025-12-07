@@ -21,9 +21,28 @@
   overflow: hidden;
 }
 
-/* Leaflet map customizations for fullscreen */
+/* Leaflet map customizations */
 .leaflet-container {
   font-family: inherit;
+}
+
+/* Ensure embedded maps don't overlap navbar */
+.map-container-embedded {
+  position: relative;
+  z-index: 0;
+}
+
+.map-container-embedded .leaflet-container {
+  z-index: 1 !important;
+}
+
+.map-container-embedded .leaflet-pane {
+  z-index: 1 !important;
+}
+
+.map-container-embedded .leaflet-top,
+.map-container-embedded .leaflet-bottom {
+  z-index: 10 !important;
 }
 
 .leaflet-control-zoom {

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api, { businessApi } from "../services/api";
+import RegisterMap from "../components/business/RegisterMap";
 
 interface BusinessHours {
   day: string;
@@ -91,6 +92,11 @@ export default function BusinessForm() {
   const [submitError, setSubmitError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  
+  // Map-related state
+  const [locationSearch, setLocationSearch] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{ lat: number; lng: number; display_name: string }>>([]);
 
   // Fetch existing business data if editing
   useEffect(() => {
@@ -174,6 +180,8 @@ export default function BusinessForm() {
     if (!files.length) return;
 
     setUploading(true);
+    setSubmitError("");
+    
     const formDataUpload = new FormData();
 
     Array.from(files).forEach((file, i) => {
@@ -192,7 +200,7 @@ export default function BusinessForm() {
 
       if (type === "cover" && data.secure_url?.[0]) {
         setFormData((prev) => ({ ...prev, coverImage: data.secure_url[0] }));
-      } else if (type === "gallery") {
+      } else if (type === "gallery" && data.secure_url?.length) {
         setFormData((prev) => ({
           ...prev,
           gallery: [...prev.gallery, ...data.secure_url],
@@ -200,7 +208,7 @@ export default function BusinessForm() {
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setSubmitError("Failed to upload image");
+      setSubmitError("Failed to upload image. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -211,6 +219,107 @@ export default function BusinessForm() {
       ...prev,
       gallery: prev.gallery.filter((_, i) => i !== index),
     }));
+  };
+
+  /**
+   * Handle pin move on the map (drag or click to place)
+   */
+  const handlePinMove = useCallback((lat: number, lng: number) => {
+    setFormData((prev) => ({ ...prev, lat, lng }));
+  }, []);
+
+  /**
+   * Search for a location using the backend map API
+   */
+  const handleLocationSearch = async () => {
+    if (!locationSearch.trim()) return;
+    
+    setSearching(true);
+    setSearchResults([]);
+    setSubmitError("");
+    
+    try {
+      // Build search query with city context for better results
+      const query = locationSearch.includes(formData.city) 
+        ? locationSearch 
+        : `${locationSearch}, ${formData.city}`;
+      
+      const response = await api.post("/map/search", { query });
+      const result = response.data;
+      
+      if (result?.places && result.places.length > 0) {
+        // Backend returns places with coordinates object: { coordinates: { lat, lng }, label, ... }
+        setSearchResults(result.places.map((p: { 
+          coordinates?: { lat: number; lng: number }; 
+          lat?: number; 
+          lng?: number; 
+          label?: string;
+          display_name?: string;
+        }) => ({
+          lat: Number(p.coordinates?.lat ?? p.lat),
+          lng: Number(p.coordinates?.lng ?? p.lng),
+          display_name: p.label || p.display_name || query,
+        })));
+      } else {
+        setSubmitError("No locations found. Try a different search or click the map to place your pin manually.");
+      }
+    } catch (error) {
+      console.error("Location search error:", error);
+      setSubmitError("Failed to search location. You can click the map to place your pin manually.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  /**
+   * Select a search result and place the pin
+   */
+  const selectSearchResult = (result: { lat: number; lng: number; display_name: string }) => {
+    setFormData((prev) => ({ ...prev, lat: result.lat, lng: result.lng }));
+    setSearchResults([]);
+    setLocationSearch("");
+  };
+
+  /**
+   * Auto-search when address fields change
+   */
+  const autoSearchFromAddress = async () => {
+    const { street, brgy, city } = formData;
+    if (!street && !brgy) return;
+    
+    const query = [street, brgy, city].filter(Boolean).join(", ");
+    if (query.length < 5) return;
+    
+    setSearching(true);
+    try {
+      const response = await api.post("/map/search", { query });
+      const result = response.data;
+      
+      if (result?.places?.[0]) {
+        const place = result.places[0];
+        // Backend returns places with coordinates object
+        const lat = place.coordinates?.lat ?? place.lat;
+        const lng = place.coordinates?.lng ?? place.lng;
+        if (lat && lng) {
+          setFormData((prev) => ({ 
+            ...prev, 
+            lat: Number(lat), 
+            lng: Number(lng) 
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Auto-search error:", error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  /**
+   * Clear the current pin location
+   */
+  const clearPinLocation = () => {
+    setFormData((prev) => ({ ...prev, lat: null, lng: null }));
   };
 
   const validate = (): boolean => {
@@ -579,133 +688,130 @@ export default function BusinessForm() {
               {/* Cover Image */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cover Image
+                  Cover Image <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-start gap-4">
-                  {formData.coverImage ? (
-                    <div className="relative w-40 h-28">
-                      <img
-                        src={formData.coverImage}
-                        alt="Cover"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData((prev) => ({ ...prev, coverImage: "" }))
-                        }
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center w-40 h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-red transition-colors">
-                      <svg
-                        className="w-8 h-8 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
+                
+                {/* Image Preview */}
+                {formData.coverImage && (
+                  <div className="mb-3 relative inline-block">
+                    <img
+                      src={formData.coverImage}
+                      alt="Cover preview"
+                      className="w-full max-w-md h-48 object-cover rounded-lg border"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=200&fit=crop&auto=format";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, coverImage: "" }))}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                      <span className="text-sm text-gray-500 mt-1">Upload</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) =>
-                          e.target.files &&
-                          handleImageUpload(e.target.files, "cover")
-                        }
-                        disabled={uploading}
-                      />
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload Area */}
+                {!formData.coverImage && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-red transition-colors">
+                    <input
+                      type="file"
+                      id="coverImageFile"
+                      accept="image/*"
+                      onChange={(e) => e.target.files && handleImageUpload(e.target.files, "cover")}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <label
+                      htmlFor="coverImageFile"
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      {uploading ? (
+                        <>
+                          <div className="w-8 h-8 animate-spin rounded-full border-b-2 border-primary-red" />
+                          <span className="text-sm text-gray-500">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-sm text-gray-600 font-medium">Click to upload cover image</span>
+                          <span className="text-xs text-gray-500">PNG, JPG, WEBP up to 6MB</span>
+                        </>
+                      )}
                     </label>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Gallery */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gallery
+                  Gallery <span className="text-gray-400">(optional)</span>
                 </label>
-                <div className="flex flex-wrap gap-3">
-                  {formData.gallery.map((url, index) => (
-                    <div key={index} className="relative w-24 h-24">
-                      <img
-                        src={url}
-                        alt={`Gallery ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeGalleryImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                
+                {/* Gallery Preview */}
+                {formData.gallery.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {formData.gallery.map((url, index) => (
+                      <div key={index} className="relative w-24 h-24">
+                        <img
+                          src={url}
+                          alt={`Gallery ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg border"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&auto=format";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-sm"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Gallery Upload Area */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-red transition-colors">
+                  <input
+                    type="file"
+                    id="galleryImageFile"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => e.target.files && handleImageUpload(e.target.files, "gallery")}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="galleryImageFile"
+                    className="cursor-pointer flex flex-col items-center gap-1"
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="w-6 h-6 animate-spin rounded-full border-b-2 border-primary-red" />
+                        <span className="text-sm text-gray-500">Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                      </button>
-                    </div>
-                  ))}
-                  <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-red transition-colors">
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) =>
-                        e.target.files &&
-                        handleImageUpload(e.target.files, "gallery")
-                      }
-                      disabled={uploading}
-                    />
+                        <span className="text-sm text-gray-600">Add gallery images</span>
+                        <span className="text-xs text-gray-500">Select multiple files</span>
+                      </>
+                    )}
                   </label>
                 </div>
-                {uploading && (
-                  <p className="text-sm text-gray-500 mt-2">Uploading...</p>
-                )}
               </div>
             </div>
 
@@ -714,7 +820,9 @@ export default function BusinessForm() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Location
               </h2>
-              <div className="grid grid-cols-2 gap-4">
+              
+              {/* Address Fields */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     House/Building No.
@@ -737,6 +845,7 @@ export default function BusinessForm() {
                     name="street"
                     value={formData.street}
                     onChange={handleChange}
+                    onBlur={autoSearchFromAddress}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
                     placeholder="Main Street"
                   />
@@ -750,6 +859,7 @@ export default function BusinessForm() {
                     name="brgy"
                     value={formData.brgy}
                     onChange={handleChange}
+                    onBlur={autoSearchFromAddress}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
                     placeholder="Barangay"
                   />
@@ -774,6 +884,109 @@ export default function BusinessForm() {
                     <p className="mt-1 text-sm text-red-600">{errors.city}</p>
                   )}
                 </div>
+              </div>
+
+              {/* Map Search */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Location on Map
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={locationSearch}
+                    onChange={(e) => setLocationSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleLocationSearch();
+                      }
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
+                    placeholder="Search for a place (e.g., Sky Ranch, Tagaytay)"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleLocationSearch}
+                    disabled={searching}
+                    className="px-4 py-2 bg-primary-red text-white rounded-lg hover:bg-primary-red-dark disabled:opacity-50 transition-colors"
+                  >
+                    {searching ? (
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Search Results Dropdown */}
+                {searchResults.length > 0 && (
+                  <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => selectSearchResult(result)}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                      >
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-primary-red flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="text-sm text-gray-700">{result.display_name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Interactive Map */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pin Your Business Location
+                  </label>
+                  {formData.lat && formData.lng && (
+                    <button
+                      type="button"
+                      onClick={clearPinLocation}
+                      className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Clear Pin
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mb-2">
+                  {formData.lat && formData.lng 
+                    ? "Drag the marker to adjust the exact location"
+                    : "Click on the map to place your business pin, or use the search above"}
+                </p>
+                <div 
+                  className="map-container-embedded rounded-lg overflow-hidden border border-gray-300"
+                  style={{ height: "320px", width: "100%" }}
+                >
+                  <RegisterMap
+                    pins={formData.lat && formData.lng ? [{ lat: formData.lat, lon: formData.lng }] : []}
+                    onPinMove={handlePinMove}
+                    allowClickToPlace={true}
+                  />
+                </div>
+                {formData.lat && formData.lng && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    📍 Coordinates: {formData.lat.toFixed(6)}, {formData.lng.toFixed(6)}
+                  </p>
+                )}
               </div>
             </div>
 

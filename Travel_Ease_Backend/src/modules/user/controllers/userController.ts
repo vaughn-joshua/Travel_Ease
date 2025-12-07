@@ -162,7 +162,7 @@ export async function favorite(req: Request, res: Response) {
 
     if (business_id) {
       const fav = await executeWithRetry(() =>
-        prisma.businessFavorite.create({
+        prisma.business_favorite.create({
           data: { user_id, business_id }
         })
       );
@@ -206,7 +206,7 @@ export async function remove_favorite(req: Request, res: Response) {
 
     if (business_id) {
       const existing = await executeWithRetry(() =>
-        prisma.businessFavorite.findFirst({
+        prisma.business_favorite.findFirst({
           where: { user_id, business_id }
         })
       );
@@ -216,7 +216,7 @@ export async function remove_favorite(req: Request, res: Response) {
       }
 
       await executeWithRetry(() =>
-        prisma.businessFavorite.delete({
+        prisma.business_favorite.delete({
           where: { favorite_id: existing.favorite_id }
         })
       );
@@ -256,7 +256,7 @@ export async function favorite_id(req: Request, res: Response) {
 
     const [businessFavorites, travelPlanFavorites] = await executeWithRetry(() =>
       Promise.all([
-        prisma.businessFavorite.findMany({
+        prisma.business_favorite.findMany({
           where: { user_id: userId },
           include: {
             business: {
@@ -533,8 +533,8 @@ export async function delete_account(req: Request, res: Response) {
     // Delete associated favorites first
     await executeWithRetry(() =>
       Promise.all([
-        prisma.businessFavorite.deleteMany({ where: { user_id: userId } }),
-        prisma.travel_planFavorite.deleteMany({ where: { user_id: userId } })
+        prisma.business_favorite.deleteMany({ where: { user_id: userId } }),
+        prisma.travel_plan_favorite.deleteMany({ where: { user_id: userId } })
       ])
     );
 

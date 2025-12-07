@@ -256,7 +256,7 @@ export async function deleteUserAccount(userId: number, authId: string | null): 
   // Delete associated favorites first
   await executeWithRetry(() =>
     Promise.all([
-      prisma.businessFavorite.deleteMany({ where: { user_id: userId } }),
+      prisma.business_favorite.deleteMany({ where: { user_id: userId } }),
       prisma.travel_plan_favorite.deleteMany({ where: { user_id: userId } })
     ])
   );
@@ -304,7 +304,7 @@ export async function searchUsersByEmail(query: string, excludeUserId: number): 
  */
 export async function addBusinessFavorite(userId: number, businessId: number) {
   return executeWithRetry(() =>
-    prisma.businessFavorite.create({
+    prisma.business_favorite.create({
       data: { user_id: userId, business_id: businessId }
     })
   );
@@ -326,7 +326,7 @@ export async function addTravelPlanFavorite(userId: number, travelPlanId: number
  */
 export async function removeBusinessFavorite(userId: number, businessId: number): Promise<boolean> {
   const existing = await executeWithRetry(() =>
-    prisma.businessFavorite.findFirst({
+    prisma.business_favorite.findFirst({
       where: { user_id: userId, business_id: businessId }
     })
   );
@@ -336,7 +336,7 @@ export async function removeBusinessFavorite(userId: number, businessId: number)
   }
 
   await executeWithRetry(() =>
-    prisma.businessFavorite.delete({
+    prisma.business_favorite.delete({
       where: { favorite_id: existing.favorite_id }
     })
   );
@@ -373,7 +373,7 @@ export async function removeTravelPlanFavorite(userId: number, travelPlanId: num
 export async function getUserFavorites(userId: number) {
   const [businessFavorites, travelPlanFavorites] = await executeWithRetry(() =>
     Promise.all([
-      prisma.businessFavorite.findMany({
+      prisma.business_favorite.findMany({
         where: { user_id: userId },
         include: {
           business: {

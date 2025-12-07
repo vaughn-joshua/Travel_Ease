@@ -286,7 +286,7 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
       <div className="modal_body w-[70vw] h-[60vh]">
         <div className="flex gap-6 h-full">
           {/* Map Section */}
-          <div className="map-side w-[70%]">
+          <div className="map-side w-[70%] map-container-embedded" style={{ height: "400px" }}>
             <RegisterMap pins={pin} onPinMove={handlePinMove} />
           </div>
 
