@@ -98,7 +98,7 @@ export async function public_plans(req: Request, res: Response) {
         // Use Promise.allSettled for graceful partial failure handling
         const results = await Promise.allSettled([
           executeWithRetry(() =>
-            prisma.travelPlan.findMany({
+            prisma.travel_plan.findMany({
               where,
               select: {
                 travel_plan_id: true,
@@ -124,7 +124,7 @@ export async function public_plans(req: Request, res: Response) {
               take,
             }),
           1), // Only 1 retry for faster response
-          executeWithRetry(() => prisma.travelPlan.count({ where }), 1),
+          executeWithRetry(() => prisma.travel_plan.count({ where }), 1),
         ]);
 
         // Extract results, using empty/zero for failed queries

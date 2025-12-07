@@ -42,7 +42,7 @@ export async function fetch_plans(req: Request, res: Response) {
 
     const [plans, total] = await executeWithRetry(() =>
       Promise.all([
-        prisma.travelPlan.findMany({
+        prisma.travel_plan.findMany({
           where,
           select: {
             travel_plan_id: true,
@@ -56,7 +56,7 @@ export async function fetch_plans(req: Request, res: Response) {
             visibility: true,
             _count: {
               select: {
-                participants: {
+                participant: {
                   where: { status: true }
                 }
               }
@@ -66,13 +66,13 @@ export async function fetch_plans(req: Request, res: Response) {
           skip,
           take
         }),
-        prisma.travelPlan.count({ where })
+        prisma.travel_plan.count({ where })
       ])
     );
 
     // Format response with participant count included
     const data = plans.map(p => formatPlan(p, {
-      approvedParticipants: p._count.participants
+      approvedParticipants: p._count.participant
     }));
 
     res.json(paginatedResponse(data, total, { page, pageSize }));

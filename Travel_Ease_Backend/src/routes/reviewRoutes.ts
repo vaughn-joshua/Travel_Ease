@@ -77,7 +77,7 @@ router.post('/travel_plan', authenticateToken, validate(createReviewSchema), asy
 
     // Check if travel plan exists
     const travelPlan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id }
       })
     );
@@ -88,7 +88,7 @@ router.post('/travel_plan', authenticateToken, validate(createReviewSchema), asy
 
     // Create review
     const review = await executeWithRetry(() =>
-      prisma.travelPlanReview.create({
+      prisma.travel_planReview.create({
         data: {
           user_id,
           travel_plan_id,
@@ -100,7 +100,7 @@ router.post('/travel_plan', authenticateToken, validate(createReviewSchema), asy
 
     // Fetch with user info
     const reviewWithUser = await executeWithRetry(() =>
-      prisma.travelPlanReview.findUnique({
+      prisma.travel_planReview.findUnique({
         where: { review_id: review.review_id },
         include: {
           user: {
@@ -130,7 +130,7 @@ router.get('/travel_plan/:id', async (req: Request, res: Response) => {
     const travel_plan_id = parseInt(req.params.id);
 
     const reviews = await executeWithRetry(() =>
-      prisma.travelPlanReview.findMany({
+      prisma.travel_planReview.findMany({
         where: { travel_plan_id },
         include: {
           user: {

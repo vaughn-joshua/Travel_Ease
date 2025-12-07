@@ -98,11 +98,11 @@ export async function join_plan(req: Request, res: Response) {
     }
 
     // Get plan with participant info
-    const plan = await prisma.travelPlan.findUnique({
+    const plan = await prisma.travel_plan.findUnique({
       where: { travel_plan_id: parseInt(travel_plan_id) },
       include: {
-        participants: { where: { user_id: userId } },
-        _count: { select: { participants: { where: { status: true } } } }
+        participant: { where: { user_id: userId } },
+        _count: { select: { participant: { where: { status: true } } } }
       }
     });
 
@@ -119,8 +119,8 @@ export async function join_plan(req: Request, res: Response) {
     }
 
     // Check for duplicate
-    if (plan.participants.length > 0) {
-      const existing = plan.participants[0];
+    if (plan.participant.length > 0) {
+      const existing = plan.participant[0];
       if (existing.status) {
         return res.status(409).json({ error: 'You are already a participant' });
       }
@@ -128,7 +128,7 @@ export async function join_plan(req: Request, res: Response) {
     }
 
     // Check slots (only approved count toward limit)
-    if (plan.max_slots && plan._count.participants >= plan.max_slots) {
+    if (plan.max_slots && plan._count.participant >= plan.max_slots) {
       return res.status(400).json({
         error: 'Plan is full',
         details: `Maximum slots (${plan.max_slots}) reached`

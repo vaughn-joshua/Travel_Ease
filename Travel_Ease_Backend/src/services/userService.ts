@@ -257,7 +257,7 @@ export async function deleteUserAccount(userId: number, authId: string | null): 
   await executeWithRetry(() =>
     Promise.all([
       prisma.businessFavorite.deleteMany({ where: { user_id: userId } }),
-      prisma.travelPlanFavorite.deleteMany({ where: { user_id: userId } })
+      prisma.travel_plan_favorite.deleteMany({ where: { user_id: userId } })
     ])
   );
 
@@ -315,7 +315,7 @@ export async function addBusinessFavorite(userId: number, businessId: number) {
  */
 export async function addTravelPlanFavorite(userId: number, travelPlanId: number) {
   return executeWithRetry(() =>
-    prisma.travelPlanFavorite.create({
+    prisma.travel_plan_favorite.create({
       data: { user_id: userId, travel_plan_id: travelPlanId }
     })
   );
@@ -349,7 +349,7 @@ export async function removeBusinessFavorite(userId: number, businessId: number)
  */
 export async function removeTravelPlanFavorite(userId: number, travelPlanId: number): Promise<boolean> {
   const existing = await executeWithRetry(() =>
-    prisma.travelPlanFavorite.findFirst({
+    prisma.travel_plan_favorite.findFirst({
       where: { user_id: userId, travel_plan_id: travelPlanId }
     })
   );
@@ -359,7 +359,7 @@ export async function removeTravelPlanFavorite(userId: number, travelPlanId: num
   }
 
   await executeWithRetry(() =>
-    prisma.travelPlanFavorite.delete({
+    prisma.travel_plan_favorite.delete({
       where: { favorite_id: existing.favorite_id }
     })
   );
@@ -388,7 +388,7 @@ export async function getUserFavorites(userId: number) {
           }
         }
       }),
-      prisma.travelPlanFavorite.findMany({
+      prisma.travel_plan_favorite.findMany({
         where: { user_id: userId },
         include: {
           travel_plan: {

@@ -27,7 +27,7 @@ export async function update_activity(req: Request, res: Response) {
 
     // Get the travel plan
     const plan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id: planId },
         select: { travel_plan_id: true, start_date: true }
       })

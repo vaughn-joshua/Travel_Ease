@@ -22,7 +22,7 @@ export async function quick_join(req: Request, res: Response) {
 
     // Find visible plans with overlapping dates and matching location
     const plans = await executeWithRetry(() =>
-      prisma.travelPlan.findMany({
+      prisma.travel_plan.findMany({
         where: {
           AND: [
             { start_date: { lte: new Date(end_date) } },
@@ -108,7 +108,7 @@ export async function request_join(req: Request, res: Response) {
 
     // Get plan
     const plan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id: planId },
       })
     );
@@ -258,7 +258,7 @@ export async function approve_join(req: Request, res: Response) {
 
     // Get plan
     const plan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id: planId },
       })
     );

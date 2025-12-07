@@ -39,7 +39,7 @@ export async function plan_edit(req: Request, res: Response) {
     // Fetch current plan state with approved participant count
     const [currentPlan, approvedCount] = await executeWithRetry(() =>
       Promise.all([
-        prisma.travelPlan.findUnique({
+        prisma.travel_plan.findUnique({
           where: { travel_plan_id: planId }
         }),
         prisma.participant.count({
@@ -125,7 +125,7 @@ export async function plan_edit(req: Request, res: Response) {
 
     // Perform update
     const updatedPlan = await executeWithRetry(() =>
-      prisma.travelPlan.update({
+      prisma.travel_plan.update({
         where: { travel_plan_id: parseInt(id) },
         data: updateData
       })

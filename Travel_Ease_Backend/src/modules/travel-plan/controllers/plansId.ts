@@ -7,7 +7,7 @@ export async function plans_id(req: Request, res: Response) {
     const { id } = req.params;
 
     const plan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id: parseInt(id) },
         select: {
           travel_plan_id: true,

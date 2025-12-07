@@ -205,7 +205,7 @@ export async function getUpcomingPlans(
 
   const [plans, total] = await executeWithRetry(() =>
     Promise.all([
-      prisma.travelPlan.findMany({
+      prisma.travel_plan.findMany({
         where,
         select: {
           ...PLAN_LIST_SELECT,
@@ -217,7 +217,7 @@ export async function getUpcomingPlans(
         skip: pagination.skip,
         take: pagination.take
       }),
-      prisma.travelPlan.count({ where })
+      prisma.travel_plan.count({ where })
     ])
   );
 
@@ -252,7 +252,7 @@ export async function getOngoingPlans(
 
   const [plans, total] = await executeWithRetry(() =>
     Promise.all([
-      prisma.travelPlan.findMany({
+      prisma.travel_plan.findMany({
         where,
         select: {
           ...PLAN_LIST_SELECT,
@@ -264,7 +264,7 @@ export async function getOngoingPlans(
         skip: pagination.skip,
         take: pagination.take
       }),
-      prisma.travelPlan.count({ where })
+      prisma.travel_plan.count({ where })
     ])
   );
 
@@ -300,14 +300,14 @@ export async function getPreviousPlans(
 
   const [plans, total] = await executeWithRetry(() =>
     Promise.all([
-      prisma.travelPlan.findMany({
+      prisma.travel_plan.findMany({
         where,
         select: PLAN_LIST_SELECT,
         orderBy: [{ end_date: 'desc' }],
         skip: pagination.skip,
         take: pagination.take
       }),
-      prisma.travelPlan.count({ where })
+      prisma.travel_plan.count({ where })
     ])
   );
 
@@ -320,7 +320,7 @@ export async function getPreviousPlans(
  */
 export async function getPlanById(planId: number): Promise<TravelPlanDTO | null> {
   const plan = await executeWithRetry(() =>
-    prisma.travelPlan.findUnique({
+    prisma.travel_plan.findUnique({
       where: { travel_plan_id: planId },
       select: PLAN_DETAIL_SELECT
     })
@@ -426,7 +426,7 @@ export async function updatePlan(
   if (input.status !== undefined) updateData.status = input.status;
 
   const updated = await executeWithRetry(() =>
-    prisma.travelPlan.update({
+    prisma.travel_plan.update({
       where: { travel_plan_id: planId },
       data: updateData,
       select: PLAN_DETAIL_SELECT
@@ -443,7 +443,7 @@ export async function updatePlan(
  */
 export async function deletePlan(planId: number): Promise<void> {
   await executeWithRetry(() =>
-    prisma.travelPlan.delete({
+    prisma.travel_plan.delete({
       where: { travel_plan_id: planId }
     })
   );
@@ -454,7 +454,7 @@ export async function deletePlan(planId: number): Promise<void> {
  */
 export async function userHasPlanAccess(userId: number, planId: number): Promise<boolean> {
   const plan = await executeWithRetry(() =>
-    prisma.travelPlan.findFirst({
+    prisma.travel_plan.findFirst({
       where: {
         travel_plan_id: planId,
         OR: [
@@ -473,7 +473,7 @@ export async function userHasPlanAccess(userId: number, planId: number): Promise
  */
 export async function userIsPlanOwner(userId: number, planId: number): Promise<boolean> {
   const plan = await executeWithRetry(() =>
-    prisma.travelPlan.findFirst({
+    prisma.travel_plan.findFirst({
       where: { travel_plan_id: planId, user_id: userId },
       select: { travel_plan_id: true }
     })

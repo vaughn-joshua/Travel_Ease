@@ -172,7 +172,7 @@ export async function favorite(req: Request, res: Response) {
       });
     } else if (travel_plan_id) {
       const fav = await executeWithRetry(() =>
-        prisma.travelPlanFavorite.create({
+        prisma.travel_planFavorite.create({
           data: { user_id, travel_plan_id }
         })
       );
@@ -224,7 +224,7 @@ export async function remove_favorite(req: Request, res: Response) {
       return res.json({ message: 'Business removed from favorites' });
     } else if (travel_plan_id) {
       const existing = await executeWithRetry(() =>
-        prisma.travelPlanFavorite.findFirst({
+        prisma.travel_planFavorite.findFirst({
           where: { user_id, travel_plan_id }
         })
       );
@@ -234,7 +234,7 @@ export async function remove_favorite(req: Request, res: Response) {
       }
 
       await executeWithRetry(() =>
-        prisma.travelPlanFavorite.delete({
+        prisma.travel_planFavorite.delete({
           where: { favorite_id: existing.favorite_id }
         })
       );
@@ -271,7 +271,7 @@ export async function favorite_id(req: Request, res: Response) {
             }
           }
         }),
-        prisma.travelPlanFavorite.findMany({
+        prisma.travel_planFavorite.findMany({
           where: { user_id: userId },
           include: {
             travel_plan: {
@@ -534,7 +534,7 @@ export async function delete_account(req: Request, res: Response) {
     await executeWithRetry(() =>
       Promise.all([
         prisma.businessFavorite.deleteMany({ where: { user_id: userId } }),
-        prisma.travelPlanFavorite.deleteMany({ where: { user_id: userId } })
+        prisma.travel_planFavorite.deleteMany({ where: { user_id: userId } })
       ])
     );
 

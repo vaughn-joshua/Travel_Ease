@@ -19,7 +19,7 @@ export const requirePlanOwnership = async (req: Request, res: Response, next: Ne
   try {
     const [plan, participant] = await executeWithRetry(() =>
       Promise.all([
-        prisma.travelPlan.findUnique({
+        prisma.travel_plan.findUnique({
           where: { travel_plan_id: planId }
         }),
         prisma.participant.findFirst({

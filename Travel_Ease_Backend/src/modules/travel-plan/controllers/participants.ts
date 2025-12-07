@@ -47,7 +47,7 @@ export async function add_participant(req: Request, res: Response) {
 
     // Check if plan exists
     const plan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id: planId }
       })
     );
@@ -163,7 +163,7 @@ export async function update_participant(req: Request, res: Response) {
     // When approving, check slot limits
     if (status === true && participant.status === false) {
       const plan = await executeWithRetry(() =>
-        prisma.travelPlan.findUnique({
+        prisma.travel_plan.findUnique({
           where: { travel_plan_id: planId }
         })
       );
@@ -280,7 +280,7 @@ export async function collaborators_edit(req: Request, res: Response) {
     // Get plan with max_slots and current approved count
     const [plan, currentApprovedCount, currentAdmins] = await executeWithRetry(() =>
       Promise.all([
-        prisma.travelPlan.findUnique({
+        prisma.travel_plan.findUnique({
           where: { travel_plan_id: planId }
         }),
         prisma.participant.count({
