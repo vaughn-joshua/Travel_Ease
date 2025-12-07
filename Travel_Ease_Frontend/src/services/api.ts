@@ -250,7 +250,7 @@ interface TravelSpotsResponse {
     brgy: string | null;
     city: string | null;
     latitude: number | null;
-    longtitude: number | null;
+    longitude: number | null; // Fixed: backend returns 'longitude' (Prisma model field name)
     description: string | null;
     rating: number | null;
     status: boolean | null;
@@ -276,6 +276,32 @@ export const businessApi = {
   ): Promise<TravelSpotsResponse> => {
     const response = await api.get("/business/travel_spots", {
       params,
+      signal,
+    });
+    return response.data;
+  },
+
+  // Search businesses for map search functionality
+  searchBusinesses: async (
+    query: string,
+    limit?: number,
+    signal?: AbortSignal
+  ): Promise<{
+    message: string;
+    data: Array<{
+      business_id: number;
+      name: string;
+      description: string | null;
+      city: string | null;
+      brgy: string | null;
+      street: string | null;
+      house_number: string | null;
+      latitude: number | null;
+      longitude: number | null;
+    }>;
+  }> => {
+    const response = await api.get("/business/search", {
+      params: { query, limit },
       signal,
     });
     return response.data;

@@ -33,7 +33,7 @@ export default function RouteForm({ onRouteSubmit }: RouteFormProps): React.Reac
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-lg border border-white/50 space-y-2">
+    <form onSubmit={handleSubmit} className="bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-lg border border-white/50 space-y-2 relative z-[9996]">
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs text-gray-600">From:</label>

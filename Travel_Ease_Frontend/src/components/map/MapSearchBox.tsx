@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   useNominatimSearch,
   useNominatimGeocode,
+  useDatabaseBusinessSearch,
 } from "../../features/map/queries";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { SearchResult, NormalizedPlace } from "../../types/map";
@@ -26,13 +27,26 @@ export default function MapSearchBox({
   // Debounce the query for autocomplete (350ms delay)
   const debouncedQuery = useDebouncedValue(query, 350);
 
-  // Use TanStack Query for cached search suggestions
+  // Use TanStack Query for database business search
   const {
-    data: suggestions = [],
-    isLoading: isSuggestionsLoading,
-    isError: isSuggestionsError,
-    error: suggestionsError,
+    data: dbResults = [],
+    isLoading: isDbLoading,
+    isError: isDbError,
+    error: dbError,
+  } = useDatabaseBusinessSearch(debouncedQuery);
+
+  // Use TanStack Query for cached search suggestions from Nominatim
+  const {
+    data: nominatimResults = [],
+    isLoading: isNominatimLoading,
+    isError: isNominatimError,
+    error: nominatimError,
   } = useNominatimSearch(debouncedQuery);
+
+  // Combine results: database results first, then Nominatim results
+  const suggestions = useMemo(() => {
+    return [...dbResults, ...nominatimResults];
+  }, [dbResults, nominatimResults]);
 
   // Use TanStack Query for direct geocode search (on Enter)
   const {
@@ -114,15 +128,16 @@ export default function MapSearchBox({
     }
   };
 
-  const isLoading = isSuggestionsLoading || isGeocodeLoading;
+  const isLoading = isDbLoading || isNominatimLoading || isGeocodeLoading;
   const hasError =
-    (isSuggestionsError && query.length >= 2) ||
+    (isDbError && query.length >= 2) ||
+    (isNominatimError && query.length >= 2) ||
     (isGeocodeError && searchOnEnter);
   const errorMessage =
-    suggestionsError?.message || geocodeError?.message || "Search failed";
+    dbError?.message || nominatimError?.message || geocodeError?.message || "Search failed";
 
   return (
-    <div ref={boxRef} className="relative w-72">
+    <div ref={boxRef} className="relative w-72 z-[10000]">
       <div className="relative">
         <input
           ref={inputRef}
@@ -162,21 +177,31 @@ export default function MapSearchBox({
       )}
 
       {showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-xl shadow-black/10 max-h-60 overflow-y-auto">
-          {suggestions.map((place) => (
-            <li
-              key={place.id}
-              onClick={() => handleSelect(place)}
-              className="px-4 py-3 hover:bg-primary-red/10 cursor-pointer text-sm border-b border-gray-100 last:border-0 transition-colors"
-            >
-              <span className="font-medium text-gray-800">{place.name}</span>
-              {place.fullLabel !== place.name && (
-                <span className="text-gray-500 text-xs block mt-0.5 truncate">
-                  {place.fullLabel}
-                </span>
-              )}
-            </li>
-          ))}
+        <ul className="absolute z-[10000] w-full mt-2 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-xl shadow-black/10 max-h-60 overflow-y-auto">
+          {suggestions.map((place) => {
+            const isDatabaseResult = place.id.startsWith("business_");
+            return (
+              <li
+                key={place.id}
+                onClick={() => handleSelect(place)}
+                className="px-4 py-3 hover:bg-primary-red/10 cursor-pointer text-sm border-b border-gray-100 last:border-0 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  {isDatabaseResult && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                      🏢 DB
+                    </span>
+                  )}
+                  <span className="font-medium text-gray-800 flex-1">{place.name}</span>
+                </div>
+                {place.fullLabel !== place.name && (
+                  <span className="text-gray-500 text-xs block mt-0.5 truncate">
+                    {place.fullLabel}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 

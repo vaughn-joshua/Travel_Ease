@@ -11,6 +11,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { mapKeys } from "../../lib/queryKeys";
 import type { NominatimPlace, NormalizedPlace } from "../../types/map";
+import { businessApi } from "../../services/api";
 
 // Tagaytay City viewbox bounds (west, north, east, south)
 const TAGAYTAY_VIEWBOX = "120.92,14.15,120.97,14.07";
@@ -31,6 +32,45 @@ function normalizeNominatimPlace(place: NominatimPlace): NormalizedPlace {
       barangay: parts[1],
       city: parts[2],
       province: parts[3],
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: Normalize database business to NormalizedPlace format
+// ─────────────────────────────────────────────────────────────────────────────
+function normalizeBusinessPlace(business: {
+  business_id: number;
+  name: string;
+  description: string | null;
+  city: string | null;
+  brgy: string | null;
+  street: string | null;
+  house_number: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}): NormalizedPlace {
+  // Build full label from available address components
+  const addressParts: string[] = [];
+  if (business.house_number) addressParts.push(business.house_number);
+  if (business.street) addressParts.push(business.street);
+  if (business.brgy) addressParts.push(business.brgy);
+  if (business.city) addressParts.push(business.city);
+  
+  const fullLabel = addressParts.length > 0
+    ? `${business.name}, ${addressParts.join(", ")}`
+    : business.name;
+
+  return {
+    id: `business_${business.business_id}`,
+    name: business.name,
+    fullLabel: fullLabel,
+    lat: business.latitude!,
+    lng: business.longitude!,
+    type: "business",
+    address: {
+      barangay: business.brgy || undefined,
+      city: business.city || undefined,
     },
   };
 }
@@ -107,6 +147,31 @@ export function useNominatimGeocode(address: string) {
     // Keep in cache for 1 hour
     gcTime: 1000 * 60 * 60,
     retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useDatabaseBusinessSearch
+// Fetches and caches business search results from the database.
+// Results are cached for 10 minutes (longer than Nominatim since they change less frequently).
+// ─────────────────────────────────────────────────────────────────────────────
+export function useDatabaseBusinessSearch(query: string) {
+  return useQuery<NormalizedPlace[], Error>({
+    queryKey: [...mapKeys.search(query), "database"],
+    queryFn: async ({ signal }) => {
+      const response = await businessApi.searchBusinesses(query, 10, signal);
+      return response.data.map(normalizeBusinessPlace);
+    },
+    // Only enable query when there's a meaningful search term
+    enabled: query.length >= 2,
+    // Cache results for 10 minutes (longer than Nominatim since DB changes less)
+    staleTime: 1000 * 60 * 10,
+    // Keep in cache for 1 hour
+    gcTime: 1000 * 60 * 60,
+    // Retry once on error
+    retry: 1,
+    // Don't refetch on window focus for search results
     refetchOnWindowFocus: false,
   });
 }

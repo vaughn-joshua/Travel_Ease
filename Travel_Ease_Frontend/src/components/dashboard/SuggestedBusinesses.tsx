@@ -6,7 +6,6 @@ import BusinessDetailModal from "./BusinessDetailModal";
 
 // Main categories from the database enum
 const CATEGORIES = [
-  { id: "accommodation", label: "Accommodation", icon: "🏨" },
   { id: "food_drinks", label: "Food & Drinks", icon: "🍽️" },
   { id: "tours_activities", label: "Tours & Activities", icon: "🎯" },
   { id: "transport_transfers", label: "Transport & Transfers", icon: "🚗" },

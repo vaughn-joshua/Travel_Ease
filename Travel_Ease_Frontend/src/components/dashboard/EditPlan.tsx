@@ -45,6 +45,7 @@ export default function Edit_Plan({
   );
   const [isSearchingAccommodation, setIsSearchingAccommodation] = useState<boolean>(false);
   const [showAccommodationDropdown, setShowAccommodationDropdown] = useState<boolean>(false);
+  const [isAccommodationInputFocused, setIsAccommodationInputFocused] = useState<boolean>(false);
   const debouncedAccommodationSearch = useDebouncedValue(accommodationSearch, 300);
 
   // Use TanStack Query mutation for updating plans
@@ -72,12 +73,37 @@ export default function Edit_Plan({
   // Search for accommodation businesses
   useEffect(() => {
     const searchAccommodations = async () => {
+      // If input is focused and search is empty, fetch all accommodations
+      if (isAccommodationInputFocused && debouncedAccommodationSearch.length < 2) {
+        setIsSearchingAccommodation(true);
+        try {
+          const response = await businessApi.getTravelSpots({
+            category: "accommodation",
+            limit: 50 // Higher limit when showing all accommodations
+          });
+          const results = response.data.map(b => ({
+            business_id: b.business_id,
+            name: b.name
+          }));
+          setAccommodationResults(results);
+          setShowAccommodationDropdown(results.length > 0);
+        } catch (error) {
+          console.error("Error fetching accommodations:", error);
+          setAccommodationResults([]);
+        } finally {
+          setIsSearchingAccommodation(false);
+        }
+        return;
+      }
+
+      // If search query is less than 2 characters and not focused, clear results
       if (debouncedAccommodationSearch.length < 2) {
         setAccommodationResults([]);
         setShowAccommodationDropdown(false);
         return;
       }
 
+      // Perform search when user types
       setIsSearchingAccommodation(true);
       try {
         const response = await businessApi.getTravelSpots({
@@ -100,7 +126,7 @@ export default function Edit_Plan({
     };
 
     searchAccommodations();
-  }, [debouncedAccommodationSearch]);
+  }, [debouncedAccommodationSearch, isAccommodationInputFocused]);
 
   // Add an accommodation to the selected list
   const addAccommodation = (accommodation: { business_id: number; name: string }) => {
@@ -287,8 +313,19 @@ export default function Edit_Plan({
                   type="text"
                   value={accommodationSearch}
                   onChange={(e) => setAccommodationSearch(e.target.value)}
-                  onFocus={() => accommodationResults.length > 0 && setShowAccommodationDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowAccommodationDropdown(false), 200)}
+                  onFocus={() => {
+                    setIsAccommodationInputFocused(true);
+                    // Show dropdown if there are already results
+                    if (accommodationResults.length > 0) {
+                      setShowAccommodationDropdown(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setIsAccommodationInputFocused(false);
+                      setShowAccommodationDropdown(false);
+                    }, 200);
+                  }}
                   placeholder="Search for accommodation..."
                   className="text_box pl-10"
                 />

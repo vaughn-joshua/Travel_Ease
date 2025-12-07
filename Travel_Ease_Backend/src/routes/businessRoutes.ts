@@ -314,5 +314,62 @@ router.get("/travel_spots/reviews/:id", async (req: Request, res: Response) => {
   }
 });
 
+// Business search endpoint for map search functionality
+router.get("/search", async (req: Request, res: Response) => {
+  try {
+    const { query, limit = "10" } = req.query;
+    const searchLimit = Math.min(parseInt(limit as string, 10) || 10, 20);
+
+    if (!query || typeof query !== "string" || query.length < 2) {
+      return res.json({
+        message: "Success",
+        data: [],
+      });
+    }
+
+    const searchQuery = query as string;
+
+    // Search in name, description, city, brgy, street fields
+    const businesses = await executeWithRetry(() =>
+      prisma.business.findMany({
+        where: {
+          status: true,
+          OR: [
+            { name: { contains: searchQuery, mode: "insensitive" } },
+            { description: { contains: searchQuery, mode: "insensitive" } },
+            { city: { contains: searchQuery, mode: "insensitive" } },
+            { brgy: { contains: searchQuery, mode: "insensitive" } },
+            { street: { contains: searchQuery, mode: "insensitive" } },
+          ],
+          // Only include businesses with valid coordinates
+          latitude: { not: null },
+          longitude: { not: null },
+        },
+        select: {
+          business_id: true,
+          name: true,
+          description: true,
+          city: true,
+          brgy: true,
+          street: true,
+          house_number: true,
+          latitude: true,
+          longitude: true,
+        },
+        orderBy: [{ rating: "desc" }, { business_id: "desc" }],
+        take: searchLimit,
+      })
+    );
+
+    res.json({
+      message: "Success",
+      data: businesses,
+    });
+  } catch (error) {
+    businessLogger.error({ err: error }, "Error searching businesses");
+    return handlePrismaError(error, res, "Searching businesses");
+  }
+});
+
 export default router;
 

@@ -90,7 +90,7 @@ export interface Activity {
     business_id: number;
     name: string;
     latitude: number | null;
-    longtitude: number | null;
+    longitude: number | null; // Fixed: backend returns 'longitude' (Prisma model field name)
   };
 }
 

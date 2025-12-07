@@ -1,17 +1,20 @@
 import React from "react";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, ZoomControl, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, ZoomControl, useMap, Popup } from "react-leaflet";
 import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import Pin_Icon from "../../assets/pin.png";
 import { MapMover } from "./MapMover";
 import RoutingMachine, { RouteInfo } from "./RoutingMachine";
+import type { MapMarker } from "../../pages/LandingPage";
 
 interface MapPageProps {
   search_result?: [number, number] | { lat: number; lng: number } | null;
   start?: [number, number] | null;
   end?: [number, number] | null;
+  businessMarkers?: MapMarker[];
   onMapClear?: () => void;
   onRouteFound?: (routeInfo: RouteInfo) => void;
+  onMarkerClick?: (marker: MapMarker) => void;
 }
 
 const custom_icon = new Icon({
@@ -43,8 +46,10 @@ export default function Map_Page({
   search_result,
   start,
   end,
+  businessMarkers = [],
   onMapClear,
   onRouteFound,
+  onMarkerClick,
 }: MapPageProps): React.ReactElement {
   const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
   const zoom = 14;
@@ -96,6 +101,39 @@ export default function Map_Page({
       {position && <Marker position={position} icon={custom_icon} />}
 
       {position && <MapMover position={position} />}
+
+      {/* Render business markers */}
+      {businessMarkers.map((marker, index) => (
+        <Marker
+          key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
+          position={marker.position as LatLngExpression}
+          icon={custom_icon}
+          eventHandlers={{
+            click: () => {
+              if (onMarkerClick) {
+                onMarkerClick(marker);
+              }
+            },
+          }}
+        >
+          {marker.name && (
+            <Popup>
+              <div className="text-sm font-medium">{marker.name}</div>
+              {onMarkerClick && (
+                <button
+                  className="mt-2 text-xs text-primary-red hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkerClick(marker);
+                  }}
+                >
+                  Add to Travel Plan
+                </button>
+              )}
+            </Popup>
+          )}
+        </Marker>
+      ))}
 
       {start && end && <RoutingMachine start={start} end={end} onRouteFound={onRouteFound} />}
     </MapContainer>
