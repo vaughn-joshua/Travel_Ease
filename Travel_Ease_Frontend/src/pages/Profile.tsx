@@ -171,8 +171,26 @@ export default function Profile() {
     try {
       const isGoogleUser = user?.source === "google";
 
-      // For password users: verify current password first
-      if (!isGoogleUser) {
+      if (isGoogleUser) {
+        // For Google users: use backend endpoint to set password
+        // This uses the admin API which can properly create an email identity
+        try {
+          const response = await authApi.setPassword(passwordFormData.new_password);
+          setSuccessMessage(response.message || "Password set successfully! You can now disconnect your Google account.");
+          setPasswordFormData({
+            current_password: "",
+            new_password: "",
+            confirm_password: "",
+          });
+          setShowPasswordForm(false);
+        } catch (err: unknown) {
+          console.error("Set password error:", err);
+          const errorResponse = (err as any)?.response?.data;
+          const errorMessage = errorResponse?.error || "Failed to set password. Please try again.";
+          setSubmitError(errorMessage);
+        }
+      } else {
+        // For password users: verify current password first, then update via Supabase
         // Step 1: Verify current password by attempting to sign in
         const { error: verifyError } = await supabase.auth.signInWithPassword({
           email: user?.email || "",
@@ -184,37 +202,27 @@ export default function Profile() {
           setPasswordSubmitting(false);
           return;
         }
+
+        // Step 2: Update to new password (keeps user logged in)
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: passwordFormData.new_password,
+        });
+
+        if (updateError) {
+          setSubmitError("Failed to update password. Please try again.");
+          setPasswordSubmitting(false);
+          return;
+        }
+
+        // Success - clear form and show confirmation
+        setSuccessMessage("Password updated successfully!");
+        setPasswordFormData({
+          current_password: "",
+          new_password: "",
+          confirm_password: "",
+        });
+        setShowPasswordForm(false);
       }
-
-      // Step 2: Update to new password (keeps user logged in)
-      // For Google users, this creates an email identity
-      // For password users, this updates their existing password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: passwordFormData.new_password,
-      });
-
-      if (updateError) {
-        setSubmitError(
-          isGoogleUser
-            ? "Failed to set password. Please try again."
-            : "Failed to update password. Please try again."
-        );
-        setPasswordSubmitting(false);
-        return;
-      }
-
-      // Success - clear form and show confirmation
-      setSuccessMessage(
-        isGoogleUser
-          ? "Password set successfully! You can now log in with your email and password."
-          : "Password updated successfully!"
-      );
-      setPasswordFormData({
-        current_password: "",
-        new_password: "",
-        confirm_password: "",
-      });
-      setShowPasswordForm(false);
     } catch (err: unknown) {
       console.error("Password update error:", err);
       setSubmitError("Failed to update password. Please try again.");

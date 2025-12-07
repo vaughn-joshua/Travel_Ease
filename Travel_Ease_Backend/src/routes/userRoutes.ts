@@ -29,6 +29,7 @@ import {
   delete_account,
   search_users,
   disconnect_google,
+  set_password,
 } from '../modules/user/index.js';
 
 const router = Router();
@@ -47,6 +48,7 @@ router.get('/me', authenticateToken, get_me);
 router.put('/profile', authenticateToken, update_profile);
 router.delete('/account', authenticateToken, delete_account);
 router.post('/disconnect-google', authenticateToken, disconnect_google);
+router.post('/set-password', authenticateToken, set_password);
 
 // User search (for collaborator autocomplete)
 router.get('/search', authenticateToken, search_users);

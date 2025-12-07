@@ -586,20 +586,8 @@ export async function disconnect_google(req: Request, res: Response) {
       });
     }
 
-    // Verify password by attempting to sign in
-    const { error: passwordError } = await supabaseAdmin!.auth.signInWithPassword({
-      email: user.email,
-      password
-    });
-
-    if (passwordError) {
-      return res.status(401).json({ 
-        error: 'Incorrect password',
-        code: 'INVALID_PASSWORD'
-      });
-    }
-
-    // Get user's identities from Supabase to check if they have an email identity
+    // FIRST: Check if user has email identity (set a password) BEFORE verifying password
+    // This provides a better error message if they haven't set a password yet
     const { data: supabaseUser, error: getUserError } = await supabaseAdmin!.auth.admin.getUserById(authId);
 
     if (getUserError || !supabaseUser?.user) {
@@ -625,6 +613,19 @@ export async function disconnect_google(req: Request, res: Response) {
       return res.status(400).json({ 
         error: 'No Google account linked',
         code: 'NO_GOOGLE_IDENTITY'
+      });
+    }
+
+    // NOW verify the password (we know they have an email identity at this point)
+    const { error: passwordError } = await supabaseAdmin!.auth.signInWithPassword({
+      email: user.email,
+      password
+    });
+
+    if (passwordError) {
+      return res.status(401).json({ 
+        error: 'Incorrect password',
+        code: 'INVALID_PASSWORD'
       });
     }
 
@@ -659,6 +660,83 @@ export async function disconnect_google(req: Request, res: Response) {
   } catch (error) {
     console.error('Error disconnecting Google:', error);
     return handlePrismaError(error, res, 'Disconnecting Google');
+  }
+}
+
+/**
+ * Set password for Google OAuth users
+ * This uses the admin API to update the user's password, creating an email identity
+ * Required for Google users who want to disconnect their Google account
+ */
+export async function set_password(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const authId = req.user!.auth_id;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ 
+        error: 'Password is required',
+        code: 'PASSWORD_REQUIRED'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        error: 'Password must be at least 6 characters',
+        code: 'PASSWORD_TOO_SHORT'
+      });
+    }
+
+    // Require Supabase configuration
+    if (!isSupabaseConfigured()) {
+      return res.status(503).json({ 
+        error: 'Authentication service unavailable',
+        code: 'DB_UNAVAILABLE'
+      });
+    }
+
+    // Get user from database
+    const user = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { user_id: userId }
+      })
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Only Google users need this endpoint
+    if (user.auth_provider !== 'google') {
+      return res.status(400).json({ 
+        error: 'This endpoint is only for Google OAuth users. Use the standard password change flow.',
+        code: 'NOT_GOOGLE_USER'
+      });
+    }
+
+    // Use admin API to update user's password
+    // This creates an email identity for OAuth users
+    const { error: updateError } = await supabaseAdmin!.auth.admin.updateUserById(
+      authId,
+      { password }
+    );
+
+    if (updateError) {
+      console.error('Supabase set password error:', updateError);
+      return res.status(400).json({ 
+        error: 'Failed to set password. Please try again.',
+        code: 'SET_PASSWORD_FAILED',
+        details: updateError.message
+      });
+    }
+
+    res.json({ 
+      message: 'Password set successfully. You can now log in with your email and password, or disconnect your Google account.'
+    });
+  } catch (error) {
+    console.error('Error setting password:', error);
+    return handlePrismaError(error, res, 'Setting password');
   }
 }
 

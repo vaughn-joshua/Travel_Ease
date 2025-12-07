@@ -127,6 +127,18 @@ export const authApi = {
     );
     return data;
   },
+
+  /**
+   * Set password for Google OAuth users
+   * Uses backend admin API to create email identity
+   */
+  async setPassword(password: string) {
+    const { data } = await api.post<{ message: string }>(
+      "/user/set-password",
+      { password }
+    );
+    return data;
+  },
 };
 
 export default authApi;
