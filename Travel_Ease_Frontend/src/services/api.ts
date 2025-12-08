@@ -129,7 +129,14 @@ api.interceptors.response.use(
       } else if (error.code === "ECONNREFUSED") {
         console.error("Connection refused - is the backend server running?");
       } else if (error.code === "ERR_NETWORK") {
-        console.error("Network error - check your internet connection");
+        // Check if this might be a CORS issue (network error with no response)
+        if (!error.response) {
+          console.error(
+            "Network error - this may be a CORS issue. Check that the backend allows requests from this origin."
+          );
+        } else {
+          console.error("Network error - check your internet connection");
+        }
       } else if (error.code === "ECONNABORTED") {
         console.error(
           "Request timeout - backend may be slow or database unreachable"

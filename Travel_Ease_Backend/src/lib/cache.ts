@@ -275,9 +275,11 @@ export async function setInCache<T>(key: string, value: T, ttlSeconds: number): 
 
   // Redis cache
   if (isRedisAvailable()) {
-    redisSetJSON(key, value, ttlSeconds).catch(err => {
+    try {
+      await redisSetJSON(key, value, ttlSeconds);
+    } catch (err) {
       console.warn('[Cache] Redis write error:', err instanceof Error ? err.message : err);
-    });
+    }
   }
 }
 
@@ -290,9 +292,11 @@ export async function invalidateCache(key: string): Promise<void> {
 
   // Redis cache
   if (isRedisAvailable()) {
-    redisDel(key).catch(err => {
+    try {
+      await redisDel(key);
+    } catch (err) {
       console.warn('[Cache] Redis delete error:', err instanceof Error ? err.message : err);
-    });
+    }
   }
 }
 
@@ -314,9 +318,11 @@ export async function invalidateCachePattern(prefix: string): Promise<void> {
 
   // Redis cache (use pattern matching)
   if (isRedisAvailable()) {
-    redisDelPattern(`${prefix}*`).catch(err => {
+    try {
+      await redisDelPattern(`${prefix}*`);
+    } catch (err) {
       console.warn('[Cache] Redis pattern delete error:', err instanceof Error ? err.message : err);
-    });
+    }
   }
 }
 

@@ -47,7 +47,13 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map(o => o.trim()) || [
   "http://localhost:3000",
   "http://localhost:5173", // Vite dev server
+  "http://127.0.0.1:5173", // Vite dev server (IP)
+  "http://localhost:3001",
+  "http://127.0.0.1:3001",
 ];
+
+// In development, allow any localhost/127.0.0.1 origin
+const isDev = process.env.NODE_ENV !== "production";
 
 app.use(
   cors({
@@ -55,9 +61,15 @@ app.use(
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
 
+      // In development, allow any localhost or 127.0.0.1 origin
+      if (isDev && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
+        return callback(null, true);
+      }
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.warn(`CORS blocked origin: ${origin}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
