@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from "react-leaflet";
-import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { Icon, LatLngExpression, LatLngBounds } from "leaflet";
 import { useTravelSpots } from "../features/businesses/queries";
 import Pin_Icon from "../assets/pin.png";
 
@@ -10,8 +10,43 @@ const businessIcon = new Icon({
   iconSize: [28, 28],
 });
 
+// Default center (Tagaytay) when no businesses
+const DEFAULT_CENTER: LatLngExpression = [14.1154, 120.962];
+const DEFAULT_ZOOM = 13;
+
+/**
+ * Component to auto-recenter map when markers change.
+ * Fits bounds to show all markers, or defaults to Tagaytay center.
+ */
+function AutoRecenter({ markers }: { markers: Array<{ latitude: number; longitude: number }> }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (markers.length === 0) {
+      // No markers - center on default location
+      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+      return;
+    }
+
+    if (markers.length === 1) {
+      // Single marker - center on it
+      map.setView([markers[0].latitude, markers[0].longitude], DEFAULT_ZOOM);
+      return;
+    }
+
+    // Multiple markers - fit bounds to show all
+    const bounds = new LatLngBounds(
+      markers.map((m) => [m.latitude, m.longitude] as [number, number])
+    );
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }, [map, markers]);
+
+  return null;
+}
+
 /**
  * Lightweight embeddable map showing all businesses with coordinates.
+ * Static view (no user interactions) that auto-recenters when data changes.
  * Designed to be loaded via iframe on other pages (e.g., Blogs).
  */
 export default function EmbeddedBusinessMap() {
@@ -28,16 +63,6 @@ export default function EmbeddedBusinessMap() {
         !isNaN(b.longitude)
     );
   }, [data]);
-
-  // Map configuration for Tagaytay area
-  const center: LatLngExpression = [14.1154, 120.962];
-  const zoom = 13;
-  const minZoom = 11;
-  const maxZoom = 18;
-  const maxBounds: LatLngBoundsExpression = [
-    [13.9, 120.7],
-    [14.35, 121.2],
-  ];
 
   if (isLoading) {
     return (
@@ -61,21 +86,30 @@ export default function EmbeddedBusinessMap() {
   return (
     <div className="h-screen w-full">
       <MapContainer
-        center={center}
-        zoom={zoom}
-        minZoom={minZoom}
-        maxZoom={maxZoom}
-        maxBounds={maxBounds}
-        maxBoundsViscosity={0.9}
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
+        // Disable all user interactions for static view
         zoomControl={false}
-        scrollWheelZoom={true}
+        scrollWheelZoom={false}
+        dragging={false}
+        doubleClickZoom={false}
+        touchZoom={false}
+        boxZoom={false}
+        keyboard={false}
         className="h-full w-full"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
         />
-        <ZoomControl position="bottomright" />
+
+        {/* Auto-recenter when markers change */}
+        <AutoRecenter
+          markers={markers.map((b) => ({
+            latitude: b.latitude!,
+            longitude: b.longitude!,
+          }))}
+        />
 
         {markers.map((business) => (
           <Marker
@@ -91,7 +125,7 @@ export default function EmbeddedBusinessMap() {
                 )}
                 {business.rating !== null && (
                   <p className="mt-1 text-xs text-amber-600">
-                    ★ {business.rating.toFixed(1)}
+                    ★ {Number(business.rating).toFixed(1)}
                   </p>
                 )}
                 <a
@@ -117,4 +151,3 @@ export default function EmbeddedBusinessMap() {
     </div>
   );
 }
-

@@ -249,11 +249,15 @@ router.get(
             }, {} as Record<number, number>);
           }
 
-          // Attach reviewCount to each business
-          return businesses.map((b) => ({
-            ...b,
-            reviewCount: reviewCounts[b.business_id] || 0,
-          }));
+          // Attach reviewCount and normalize longtitude -> longitude
+          return businesses.map((b) => {
+            const { longtitude, ...rest } = b;
+            return {
+              ...rest,
+              longitude: longtitude, // Normalize DB typo to correct field name
+              reviewCount: reviewCounts[b.business_id] || 0,
+            };
+          });
         },
       });
 
@@ -348,9 +352,18 @@ router.get("/search", async (req: Request, res: Response) => {
       })
     );
 
+    // Normalize longtitude -> longitude in response
+    const normalizedBusinesses = businesses.map((b) => {
+      const { longtitude, ...rest } = b;
+      return {
+        ...rest,
+        longitude: longtitude,
+      };
+    });
+
     res.json({
       message: "Success",
-      data: businesses,
+      data: normalizedBusinesses,
     });
   } catch (error) {
     businessLogger.error({ err: error }, "Error searching businesses");
