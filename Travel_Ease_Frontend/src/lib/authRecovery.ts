@@ -4,11 +4,53 @@
  * Handles auth-related errors by triggering a page reload instead of logging out.
  * This preserves the session and allows Supabase to refresh tokens automatically.
  * 
- * Key behaviors:
+ * ## Key Behaviors
  * - Detects auth errors from Axios, Fetch, and Supabase responses
  * - Triggers ONE reload per session to avoid infinite loops
  * - Does NOT clear tokens or redirect - just reloads
  * - Only explicit logout (signOut) should clear auth state
+ * 
+ * ## Integration Points
+ * 
+ * 1. **Axios Interceptors** (`src/services/api.ts`):
+ *    - Response error interceptor calls `handleAuthRecovery(error)` for auth errors
+ *    - Skips DB_UNAVAILABLE and explicit user flow errors
+ * 
+ * 2. **React Query** (`src/lib/queryClient.ts`):
+ *    - QueryCache and MutationCache have global `onError` handlers
+ *    - Both call `handleAuthRecovery(error)` when `isAuthError(error)` is true
+ *    - Query retry logic doesn't retry auth errors
+ * 
+ * 3. **AuthContext** (`src/context/AuthContext.tsx`):
+ *    - TOKEN_EXPIRED triggers `handleAuthRecovery` instead of clearing auth
+ *    - Only explicit `signOut()` clears auth state
+ *    - onAuthStateChange only updates session when valid
+ * 
+ * 4. **AuthCallback** (`src/pages/AuthCallback.tsx`):
+ *    - Uses `handleAuthRecovery` for sync errors (not user flow errors)
+ * 
+ * ## Expected Behavior
+ * 
+ * | Scenario                           | Action                          |
+ * |------------------------------------|---------------------------------|
+ * | 401/403/419 from any API call      | Page reload (one-shot)          |
+ * | Token expired                      | Page reload (one-shot)          |
+ * | DB unavailable (503)               | Show error, no auth change      |
+ * | ACCOUNT_NOT_REGISTERED             | Clear auth, show registration   |
+ * | OAUTH_EMAIL_MISSING                | Clear auth, show error          |
+ * | User clicks Logout                 | Clear auth + redirect           |
+ * | User deletes account               | Clear auth + redirect           |
+ * 
+ * ## Reload Guard
+ * - Only ONE reload per 15-second window to prevent infinite loops
+ * - In-memory flag resets after timeout
+ * - Reload allows Supabase to refresh tokens automatically on page load
+ * 
+ * ## Testing Expectations
+ * 
+ * 1. 401 on a protected page → triggers recovery (reload), not logout
+ * 2. Explicit logout button → calls signOut(), clears auth, navigates to /
+ * 3. Multiple 401s in quick succession → only ONE reload (guard prevents loops)
  */
 
 // In-memory guard to prevent infinite reload loops

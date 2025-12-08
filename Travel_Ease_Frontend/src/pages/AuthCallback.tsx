@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import { handleAuthRecovery, isAuthError } from "../lib/authRecovery";
 
 // Storage key for email verification during business auth flow
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
@@ -181,11 +182,15 @@ export default function AuthCallback() {
             // Check if this is a DB_UNAVAILABLE error - don't clear token, DB is just down
             const isDbUnavailable = syncError instanceof Error && syncError.name === "DB_UNAVAILABLE";
             
-            if (!isDbUnavailable) {
-              // Only clear token for actual auth failures
-              localStorage.removeItem("token");
+            // Check if this is an auth error - trigger page reload to restore session
+            // Don't clear tokens, let Supabase handle token refresh on reload
+            if (!isDbUnavailable && isAuthError(syncError)) {
+              handleAuthRecovery(syncError);
+              return; // Page will reload
             }
 
+            // For other errors (DB unavailable, user flow errors), show error message
+            // Don't clear token - either DB is down or user needs to take action
             const message =
               syncError instanceof Error
                 ? syncError.message
