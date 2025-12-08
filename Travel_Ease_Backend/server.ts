@@ -44,7 +44,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 // CORS configuration with explicit origin whitelist
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map(o => o.trim()) || [
   "http://localhost:3000",
   "http://localhost:5173", // Vite dev server
 ];
