@@ -541,7 +541,7 @@ async function seed(): Promise<void> {
           continue;
         }
 
-        const created = await tx.businessCategory.create({
+        const created = await tx.business_category.create({
           data: {
             business_id: createdBusinesses[c.business_index].business_id,
             subcategory_id: subcategory.subcategory_id
@@ -557,7 +557,7 @@ async function seed(): Promise<void> {
       let hoursCount = 0;
       for (const business of createdBusinesses) {
         for (const day of days) {
-          await tx.businessHours.create({
+          await tx.business_hours.create({
             data: {
               business_id: business.business_id,
               day_of_week: day,
@@ -581,7 +581,7 @@ async function seed(): Promise<void> {
         }
         seenSubcategoryIds.add(cat.subcategory_id);
         
-        const created = await tx.priceRange.create({
+        const created = await tx.price_range.create({
           data: {
             subcategory_id: cat.subcategory_id,
             min_price: Math.floor(Math.random() * 100) + 50,
@@ -596,7 +596,7 @@ async function seed(): Promise<void> {
       console.log('Creating menu items...');
       const createdMenuItems: Array<{ menu_item_id: number }> = [];
       for (const m of menuItems) {
-        const created = await tx.menuItem.create({
+        const created = await tx.menu_item.create({
           data: {
             business_id: createdBusinesses[m.business_index].business_id,
             name: m.name,
@@ -629,7 +629,7 @@ async function seed(): Promise<void> {
       const createdPlans: TravelPlan[] = [];
       for (let i = 0; i < travelPlans.length; i++) {
         const p = travelPlans[i];
-        const created = await tx.travelPlan.create({
+        const created = await tx.travel_plan.create({
           data: {
             name: p.name,
             start_date: p.start_date,
@@ -708,7 +708,7 @@ async function seed(): Promise<void> {
         const numFavorites = Math.floor(Math.random() * 2) + 2;
         const shuffled = [...createdBusinesses].sort(() => 0.5 - Math.random());
         for (let i = 0; i < numFavorites; i++) {
-          await tx.businessFavorite.create({
+          await tx.business_favorite.create({
             data: {
               user_id: user.user_id,
               business_id: shuffled[i].business_id
@@ -725,7 +725,7 @@ async function seed(): Promise<void> {
       for (const user of createdUsers) {
         const randomPlan = createdPlans[Math.floor(Math.random() * createdPlans.length)];
         if (randomPlan.user_id !== user.user_id) {
-          await tx.travelPlanFavorite.create({
+          await tx.travel_plan_favorite.create({
             data: {
               user_id: user.user_id,
               travel_plan_id: randomPlan.travel_plan_id
@@ -748,7 +748,7 @@ async function seed(): Promise<void> {
       let bizReviewCount = 0;
       for (let i = 0; i < createdUsers.length; i++) {
         const randomBusiness = createdBusinesses[i % createdBusinesses.length];
-        await tx.businessReview.create({
+        await tx.business_review.create({
           data: {
             user_id: createdUsers[i].user_id,
             business_id: randomBusiness.business_id,
@@ -766,7 +766,7 @@ async function seed(): Promise<void> {
       for (let i = 0; i < Math.min(3, createdUsers.length); i++) {
         const randomPlan = createdPlans[i % createdPlans.length];
         if (randomPlan.user_id !== createdUsers[i].user_id) {
-          await tx.travelPlanReview.create({
+          await tx.travel_plan_review.create({
             data: {
               user_id: createdUsers[i].user_id,
               travel_plan_id: randomPlan.travel_plan_id,
