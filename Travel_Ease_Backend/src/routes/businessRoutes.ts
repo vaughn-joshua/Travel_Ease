@@ -117,7 +117,7 @@ router.delete(
           tx.business_favorite.deleteMany({
             where: { business_id: businessId },
           }),
-          tx.menuItem.deleteMany({ where: { business_id: businessId } }),
+          tx.menu_item.deleteMany({ where: { business_id: businessId } }),
         ]);
 
         // Delete the business

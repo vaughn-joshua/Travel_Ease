@@ -167,7 +167,7 @@ describe('Participant Management', () => {
   describe('Join Plan', () => {
     it('should allow user to join visible plan', async () => {
       // Make plan visible
-      await prisma.travelPlan.update({
+      await prisma.travel_plan.update({
         where: { travel_plan_id: planId },
         data: { visibility: true }
       });
@@ -205,7 +205,7 @@ describe('Participant Management', () => {
   describe('Slot Limits', () => {
     it('should reject participant when plan is full', async () => {
       // Update plan to max_slots = 1 (owner only)
-      await prisma.travelPlan.update({
+      await prisma.travel_plan.update({
         where: { travel_plan_id: planId },
         data: { max_slots: 1 }
       });

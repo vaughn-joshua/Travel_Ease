@@ -42,7 +42,7 @@ interface UserRoleResponse {
 // ─────────────────────────────────────────────────────────────────────────────
 export function useOngoingPlans(enabled = true) {
   // Use AuthContext to ensure we only fetch when user is authenticated
-  // This prevents race conditions where stale localStorage tokens cause 403s
+  // This prevents race conditions where stale localStorage tokens cause auth errors
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
   

@@ -14,7 +14,7 @@ export async function get_user_role(req: Request, res: Response) {
 
     // Get the plan to check ownership
     const plan = await executeWithRetry(() =>
-      prisma.travelPlan.findUnique({
+      prisma.travel_plan.findUnique({
         where: { travel_plan_id: planId },
         select: { user_id: true }
       })

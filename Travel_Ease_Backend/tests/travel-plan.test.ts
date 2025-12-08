@@ -196,7 +196,7 @@ describe('Travel Plans', () => {
 
     it('should reject adding participant when plan is full', async () => {
       // Update plan to max_slots = 1 (only creator)
-      await prisma.travelPlan.update({
+      await prisma.travel_plan.update({
         where: { travel_plan_id: planId },
         data: { max_slots: 1 }
       });

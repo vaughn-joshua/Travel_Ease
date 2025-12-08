@@ -304,7 +304,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
       const participantId = joinRes.body.participant.participant_id;
 
       // Now set max_slots to 1 (only owner fits)
-      await prisma.travelPlan.update({
+      await prisma.travel_plan.update({
         where: { travel_plan_id: planId },
         data: { max_slots: 1 }
       });
@@ -360,7 +360,7 @@ describe('Phase 3 - Travel Plan Domain', () => {
 
     it('should count only approved participants for slots', async () => {
       // Set max_slots to 2
-      await prisma.travelPlan.update({
+      await prisma.travel_plan.update({
         where: { travel_plan_id: planId },
         data: { max_slots: 2, visibility: true }
       });

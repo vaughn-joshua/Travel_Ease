@@ -9,7 +9,7 @@ async function diagnosePublicPlans() {
   console.log("=== Diagnosing Public Plans Filtering ===\n");
 
   // Get all plans with visibility=true
-  const allVisiblePlans = await prisma.travelPlan.findMany({
+  const allVisiblePlans = await prisma.travel_plan.findMany({
     where: { visibility: true },
     select: {
       travel_plan_id: true,

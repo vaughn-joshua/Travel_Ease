@@ -9,7 +9,7 @@ import {
   type RegisterPayload,
   type UpdateProfilePayload,
 } from "../services/auth";
-import { authEvents } from "../services/api";
+import { handleAuthRecovery } from "../lib/authRecovery";
 
 /** Auth source type - indicates how the user authenticated */
 type AuthSource = "supabase" | "password" | "google";
@@ -282,14 +282,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // If nextSession exists but is expired, ignore it - don't update state
     });
 
-    // Subscribe to 401/403 events to clear auth state when token is invalid
-    const unsubscribeAuth = authEvents.onUnauthorized(() => {
-      clearAuthState().catch(console.error);
-    });
+    // NOTE: We no longer subscribe to authEvents.onUnauthorized to clear auth state.
+    // Auth errors (401/403/419) now trigger a page reload via handleAuthRecovery
+    // in api.ts, which allows Supabase to refresh tokens automatically.
+    // Only explicit signOut() clears auth state.
 
     return () => {
       subscription.unsubscribe();
-      unsubscribeAuth();
     };
   }, []);
 
@@ -374,9 +373,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw err;
         }
 
-        // Token expired - clear auth state
+        // Token expired - trigger page reload to restore session
+        // Don't clear auth state, let Supabase refresh the token
         if (status === 403 && code === "TOKEN_EXPIRED") {
-          await clearAuthState();
+          handleAuthRecovery(error);
           const err = new Error(message);
           err.name = "TOKEN_EXPIRED";
           throw err;

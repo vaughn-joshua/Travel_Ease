@@ -22,7 +22,7 @@ describe('TravelPlanService', () => {
   afterEach(async () => {
     // Clean up test data
     if (testPlanId) {
-      await prisma.travelPlan.deleteMany({ 
+      await prisma.travel_plan.deleteMany({ 
         where: { travel_plan_id: testPlanId } 
       }).catch(() => {});
     }

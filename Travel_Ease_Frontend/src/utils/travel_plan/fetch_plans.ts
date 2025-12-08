@@ -25,7 +25,7 @@ export async function fetch_plans(): Promise<TravelPlan[]> {
     // Backend returns normalized DTOs in data array
     return response.data.data;
   } catch (e: any) {
-    // 401/403 means token is invalid - axios interceptor will handle clearing auth
+    // 401/403 means token is invalid - axios interceptor will trigger page reload to restore session
     if (e.response?.status === 401 || e.response?.status === 403) {
       return [];
     }

@@ -96,15 +96,15 @@ export async function cleanupTestData(): Promise<void> {
   // Delete in reverse order of dependencies
   await prisma.participant.deleteMany();
   await prisma.activity.deleteMany();
-  await prisma.travelPlanFavorite.deleteMany();
-  await prisma.travelPlanReview.deleteMany();
-  await prisma.travelPlan.deleteMany();
+  await prisma.travel_plan_favorite.deleteMany();
+  await prisma.travel_plan_review.deleteMany();
+  await prisma.travel_plan.deleteMany();
   await prisma.businessReview.deleteMany();
   await prisma.businessFavorite.deleteMany();
   // Note: priceRange table removed - prices now stored directly on business table
   await prisma.businessCategory.deleteMany();
   await prisma.businessHours.deleteMany();
-  await prisma.menuItem.deleteMany();
+  await prisma.menu_item.deleteMany();
   await prisma.business.deleteMany();
   // Don't delete users in case they're needed across tests
 }

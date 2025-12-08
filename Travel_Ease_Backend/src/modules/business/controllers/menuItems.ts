@@ -19,7 +19,7 @@ export async function getMenuItems(req: Request, res: Response) {
 
   try {
     const menuItems = await executeWithRetry(() =>
-      prisma.menuItem.findMany({
+      prisma.menu_item.findMany({
         where: { business_id: businessId },
         orderBy: [{ category: 'asc' }, { name: 'asc' }]
       })
@@ -79,7 +79,7 @@ export async function createMenuItem(req: Request, res: Response) {
     }
 
     const menuItem = await executeWithRetry(() =>
-      prisma.menuItem.create({
+      prisma.menu_item.create({
         data: {
           business_id: businessId,
           name,
@@ -143,7 +143,7 @@ export async function updateMenuItem(req: Request, res: Response) {
 
     // Verify menu item exists and belongs to this business
     const existingItem = await executeWithRetry(() =>
-      prisma.menuItem.findUnique({
+      prisma.menu_item.findUnique({
         where: { menu_item_id: itemId }
       })
     );
@@ -161,7 +161,7 @@ export async function updateMenuItem(req: Request, res: Response) {
     if (isAvailable !== undefined) updateData.is_available = isAvailable;
 
     const updatedItem = await executeWithRetry(() =>
-      prisma.menuItem.update({
+      prisma.menu_item.update({
         where: { menu_item_id: itemId },
         data: updateData
       })
@@ -216,7 +216,7 @@ export async function deleteMenuItem(req: Request, res: Response) {
 
     // Verify menu item exists and belongs to this business
     const existingItem = await executeWithRetry(() =>
-      prisma.menuItem.findUnique({
+      prisma.menu_item.findUnique({
         where: { menu_item_id: itemId }
       })
     );
@@ -226,7 +226,7 @@ export async function deleteMenuItem(req: Request, res: Response) {
     }
 
     await executeWithRetry(() =>
-      prisma.menuItem.delete({
+      prisma.menu_item.delete({
         where: { menu_item_id: itemId }
       })
     );

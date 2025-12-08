@@ -35,7 +35,7 @@ describe('ActivityService', () => {
       }).catch(() => {});
     }
     if (testPlanId) {
-      await prisma.travelPlan.deleteMany({ 
+      await prisma.travel_plan.deleteMany({ 
         where: { travel_plan_id: testPlanId } 
       }).catch(() => {});
     }

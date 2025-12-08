@@ -5,10 +5,12 @@ import type {
   BlogQueryParams,
   BlogOverviewResponse,
 } from "../types/blog";
+import { handleAuthRecovery, isAuthError } from "../lib/authRecovery";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 // Event emitter for auth events (e.g., 401 unauthorized)
+// NOTE: This is now only used for explicit logout, not for transient auth errors
 type AuthEventCallback = () => void;
 const authEventListeners: AuthEventCallback[] = [];
 
@@ -85,18 +87,18 @@ api.interceptors.response.use(
     const code = error.response?.data?.code;
 
     // 503 with DB_UNAVAILABLE means the database is down, NOT an auth problem
-    // Don't trigger auth cleanup for this - let the request fail gracefully
+    // Don't trigger auth recovery for this - let the request fail gracefully
     const isDbUnavailable = status === 503 && code === "DB_UNAVAILABLE";
 
-    // Emit unauthorized event on 401/403 to trigger auth state cleanup
-    // BUT skip if this is a DB_UNAVAILABLE error (backend clarified it's not auth)
-    // Also skip for TOKEN_EXPIRED during initial sync - let AuthContext handle it
-    if ((status === 401 || status === 403) && !isDbUnavailable) {
-      // Only emit unauthorized for actual auth failures, not transient errors
-      // Check if this is a genuine token problem vs a temporary issue
-      if (code === "TOKEN_EXPIRED" || code === "GOOGLE_AUTH_REQUIRED" || !code) {
-        authEvents.emitUnauthorized();
-      }
+    // For auth errors (401/403/419), trigger page reload to restore session
+    // This allows Supabase to refresh tokens automatically
+    // SKIP if it's a DB_UNAVAILABLE error (not an auth problem)
+    // SKIP if it's an explicit ACCOUNT_NOT_REGISTERED or OAUTH_EMAIL_MISSING (user flow errors)
+    const isUserFlowError = code === "ACCOUNT_NOT_REGISTERED" || code === "OAUTH_EMAIL_MISSING";
+    
+    if (isAuthError(error) && !isDbUnavailable && !isUserFlowError) {
+      // Attempt auth recovery (reload page) - this is one-shot per session
+      handleAuthRecovery(error);
     }
 
     // Only log detailed errors in development (skip abort errors and expected auth errors)
