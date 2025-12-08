@@ -121,6 +121,39 @@ const memoryCache = new LRUCache(1000);
 // ============================================================================
 
 /**
+ * Serialize a value for cache key in a type-preserving way
+ * - Strings use JSON.stringify to properly escape quotes and special chars
+ * - Objects/arrays use JSON.stringify for proper serialization
+ * - Primitives are converted directly
+ */
+function serializeValue(value: unknown): string {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  
+  const type = typeof value;
+  
+  if (type === 'string') {
+    // Use JSON.stringify to properly escape quotes and special characters
+    // This prevents cache key collisions from strings containing quotes
+    // e.g., 'test"value' becomes '"test\"value"' (properly escaped)
+    return JSON.stringify(value);
+  }
+  
+  if (type === 'number' || type === 'boolean') {
+    return String(value);
+  }
+  
+  if (type === 'object') {
+    // Use JSON.stringify for objects and arrays to handle nested structures
+    // This avoids [object Object] and properly serializes nested values
+    return JSON.stringify(value);
+  }
+  
+  // Fallback for other types
+  return String(value);
+}
+
+/**
  * Build a standardized cache key from namespace and identifiers
  * 
  * @param namespace - Category/feature name (e.g., 'blogs', 'business', 'travel_plans')
@@ -130,7 +163,7 @@ const memoryCache = new LRUCache(1000);
  * @example
  * buildCacheKey('blogs', 'overview')           // 'blogs:overview'
  * buildCacheKey('blogs', 'detail', 'my-slug')  // 'blogs:detail:my-slug'
- * buildCacheKey('business', 'list', { page: 1, search: 'cafe' }) // 'business:list:page=1&search=cafe'
+ * buildCacheKey('business', 'list', { page: 1, search: 'cafe' }) // 'business:list:page=1&search="cafe"'
  */
 export function buildCacheKey(namespace: string, ...parts: (string | number | Record<string, unknown>)[]): string {
   const keyParts = [namespace];
@@ -145,7 +178,7 @@ export function buildCacheKey(namespace: string, ...parts: (string | number | Re
       const sorted = Object.keys(part)
         .filter(k => part[k] !== undefined && part[k] !== null && part[k] !== '')
         .sort()
-        .map(k => `${k}=${part[k]}`)
+        .map(k => `${k}=${serializeValue(part[k])}`)
         .join('&');
       if (sorted) {
         keyParts.push(sorted);

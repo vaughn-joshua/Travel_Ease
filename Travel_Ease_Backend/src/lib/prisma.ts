@@ -108,13 +108,33 @@ process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
 
-// Handle connection errors
-prisma.$connect()
-  .then(() => {
-    dbLogger.info('Prisma client connected');
-  })
-  .catch((error) => {
-    dbLogger.error({ err: error }, 'Failed to connect Prisma client');
-  });
+// Connection promise for awaiting initialization
+let connectionPromise: Promise<void> | null = null;
+
+/**
+ * Connect to the database.
+ * This is idempotent - calling multiple times returns the same promise.
+ * Use this when you need to ensure the connection is established before proceeding.
+ */
+export async function connectPrisma(): Promise<void> {
+  if (!connectionPromise) {
+    connectionPromise = prisma.$connect()
+      .then(() => {
+        dbLogger.info('Prisma client connected');
+      })
+      .catch((error) => {
+        dbLogger.error({ err: error }, 'Failed to connect Prisma client');
+        connectionPromise = null; // Reset so retry is possible
+        throw error;
+      });
+  }
+  return connectionPromise;
+}
+
+// Initiate connection on module load (non-blocking, but logs errors)
+// Other code should await connectPrisma() if they need to ensure connection
+connectPrisma().catch(() => {
+  // Error already logged in connectPrisma, just prevent unhandled rejection
+});
 
 export default prisma;

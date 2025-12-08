@@ -42,10 +42,12 @@ export function parsePagination(query: Record<string, unknown>): PaginationParam
  * Build pagination response metadata
  */
 export function buildPaginationMeta(total: number, page: number, pageSize: number): PaginationMeta {
-  const totalPages = Math.ceil(total / pageSize);
+  // Guard against division by zero - default to 1 if pageSize is invalid
+  const safePageSize = pageSize > 0 ? pageSize : 1;
+  const totalPages = Math.ceil(total / safePageSize);
   return {
-    page,
-    pageSize,
+    page: Math.max(1, page),
+    pageSize: safePageSize,
     total,
     totalPages,
     hasNext: page < totalPages,

@@ -3,9 +3,7 @@
  * Run with: npx tsx scripts/seedBlogs.ts
  */
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma, { connectPrisma } from "../src/lib/prisma.js";
 
 const sampleBlogs = [
   {
@@ -120,6 +118,9 @@ const sampleBlogs = [
 ];
 
 async function main() {
+  // Ensure database connection is established before proceeding
+  await connectPrisma();
+  
   console.log("Seeding blogs...");
 
   for (const blog of sampleBlogs) {
