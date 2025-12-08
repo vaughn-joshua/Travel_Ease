@@ -41,16 +41,19 @@ import LandingPage from "./pages/LandingPage";
 import AuthCallback from "./pages/AuthCallback";
 import Onboarding from "./pages/Onboarding";
 
+// Embeddable pages
+import EmbeddedBusinessMap from "./pages/EmbeddedBusinessMap";
+
 import "./App.css";
 
 // Pages that should be fullscreen (no navbar/footer)
-const fullscreenRoutes = ["/map"];
+const fullscreenRoutes = ["/map", "/embed"];
 
 export default function App(): React.ReactElement {
   const location = useLocation();
   const isFullscreen = fullscreenRoutes.some(route => location.pathname.startsWith(route));
 
-  // Fullscreen layout (for map) - requires auth
+  // Fullscreen layout (for map and embeds) - some require auth
   if (isFullscreen) {
     return (
       <Routes>
@@ -64,6 +67,8 @@ export default function App(): React.ReactElement {
             <MainLandingPage />
           </RequireAuth>
         } />
+        {/* Embeddable pages - public, no auth required */}
+        <Route path="/embed/business-map" element={<EmbeddedBusinessMap />} />
       </Routes>
     );
   }

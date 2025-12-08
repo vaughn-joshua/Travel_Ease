@@ -316,6 +316,43 @@ export default function Blogs() {
         />
       )}
 
+      {/* Embedded Business Map Section */}
+      <section className="bg-slate-50 py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-bold text-slate-800 sm:text-4xl">
+              Discover Local Businesses
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
+              Explore restaurants, attractions, and hidden gems in Tagaytay.
+              Click any pin to learn more and plan your visit.
+            </p>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
+            <iframe
+              src="/embed/business-map"
+              title="Business locations map"
+              className="h-[450px] w-full sm:h-[500px] lg:h-[550px]"
+              loading="lazy"
+              style={{ border: 0 }}
+            />
+            {/* Fallback for browsers that block iframes */}
+            <noscript>
+              <div className="flex h-[450px] items-center justify-center bg-slate-100">
+                <p className="text-slate-600">
+                  Enable JavaScript to view the interactive map.
+                </p>
+              </div>
+            </noscript>
+          </div>
+          <p className="mt-4 text-center text-sm text-slate-500">
+            <Link to="/travel_spots_page" className="font-medium text-primary-red hover:underline">
+              View all businesses →
+            </Link>
+          </p>
+        </div>
+      </section>
+
       <section className="bg-white py-16">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold text-primary-red sm:text-4xl">
