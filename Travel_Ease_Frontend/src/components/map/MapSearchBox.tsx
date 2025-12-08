@@ -198,21 +198,21 @@ export default function MapSearchBox({
                 className="border-b border-gray-100 last:border-0"
               >
                 <div
-                  onClick={() => handleSelect(place)}
+                onClick={() => handleSelect(place)}
                   className="px-4 py-3 hover:bg-primary-red/10 cursor-pointer text-sm transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    {isDatabaseResult && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
-                        🏢 DB
-                      </span>
-                    )}
-                    <span className="font-medium text-gray-800 flex-1">{place.name}</span>
-                  </div>
-                  {place.fullLabel !== place.name && (
-                    <span className="text-gray-500 text-xs block mt-0.5 truncate">
-                      {place.fullLabel}
+              >
+                <div className="flex items-center gap-2">
+                  {isDatabaseResult && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                      🏢 DB
                     </span>
+                  )}
+                  <span className="font-medium text-gray-800 flex-1">{place.name}</span>
+                </div>
+                {place.fullLabel !== place.name && (
+                  <span className="text-gray-500 text-xs block mt-0.5 truncate">
+                    {place.fullLabel}
+                  </span>
                   )}
                 </div>
                 {/* Add to Travel Plan button for selected search results */}

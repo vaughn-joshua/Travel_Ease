@@ -121,9 +121,9 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
-                          {plan.title || plan.name}
-                        </h3>
+                      <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
+                        {plan.title || plan.name}
+                      </h3>
                         {isOwnPlan && (
                           <span className="px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
                             Your Plan

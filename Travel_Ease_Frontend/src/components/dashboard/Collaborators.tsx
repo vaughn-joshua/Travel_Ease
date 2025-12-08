@@ -441,20 +441,20 @@ export default function Collaborators({
                     const showApproveDeny = canEditRoles && hasOtherApprovedParticipants;
                     
                     return (
-                      <div
-                        key={participant.participant_id}
-                        className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-100"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-medium">
-                            {participant.user?.first_name?.charAt(0) || "U"}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {participant.user?.first_name}{" "}
-                              {participant.user?.last_name}
-                            </p>
-                            {getStatusBadge(participant.status)}
+                    <div
+                      key={participant.participant_id}
+                      className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 font-medium">
+                          {participant.user?.first_name?.charAt(0) || "U"}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {participant.user?.first_name}{" "}
+                            {participant.user?.last_name}
+                          </p>
+                          {getStatusBadge(participant.status)}
                             {!showApproveDeny && (
                               <p className="text-xs text-gray-500 mt-1">
                                 Waiting for someone to join...
@@ -463,24 +463,24 @@ export default function Collaborators({
                           </div>
                         </div>
                         {showApproveDeny && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleApprove(participant.user_id)}
-                              disabled={actionLoading === participant.user_id}
-                              className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleRemove(participant.user_id)}
-                              disabled={actionLoading === participant.user_id}
-                              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                            >
-                              Deny
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApprove(participant.user_id)}
+                            disabled={actionLoading === participant.user_id}
+                            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleRemove(participant.user_id)}
+                            disabled={actionLoading === participant.user_id}
+                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     );
                   })}
                 </div>

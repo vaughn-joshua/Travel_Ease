@@ -191,7 +191,7 @@ export async function plan_edit(req: Request, res: Response) {
     }
 
     console.log('[plan_edit] Update data to apply:', JSON.stringify(updateData, null, 2));
-    
+
     // Perform update
     const updatedPlan = await executeWithRetry(() =>
       prisma.travel_plan.update({

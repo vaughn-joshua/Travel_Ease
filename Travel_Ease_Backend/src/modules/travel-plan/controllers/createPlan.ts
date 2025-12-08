@@ -145,7 +145,7 @@ export async function create_plan(req: Request, res: Response) {
     console.log('[create_plan] ✅ SUCCESS - Plan created with ID:', result.travel_plan_id);
     const formattedPlan = formatPlan(result);
     console.log('[create_plan] Formatted plan:', JSON.stringify(formattedPlan, null, 2));
-    
+
     res.status(201).json({ 
       message: 'Travel plan created successfully',
       ...formattedPlan

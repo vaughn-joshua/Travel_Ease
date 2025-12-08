@@ -79,7 +79,7 @@ export async function create_activity(req: Request, res: Response) {
     // Validate coordinates are valid (allow null/undefined for activities without coordinates)
     if (finalLat != null && (isNaN(finalLat) || finalLat === 0)) finalLat = null;
     if (finalLng != null && (isNaN(finalLng) || finalLng === 0)) finalLng = null;
-    
+
     // Note: Activities can be created without coordinates if business_id is provided
     // The coordinates are optional and can be added later
     console.log('[create_activity] Final coordinates after validation:', { finalLat, finalLng });
@@ -89,18 +89,18 @@ export async function create_activity(req: Request, res: Response) {
     console.log('[create_activity] Budget range normalization:', { input: budget_range, output: normalizedBudgetRange });
     
     const activityData: any = {
-      travel_plan_id: parseInt(travel_plan_id),
-      business_id: business_id ? parseInt(String(business_id)) : null,
-      target_date: target_date ? new Date(target_date) : null,
-      user_id: userId,
-      lat: finalLat,
-      lng: finalLng,
-      // Location fields
-      location: location || null,
-      name: name || null,
-      brgy: brgy || null,
-      province: province || null,
-      city: city || null
+          travel_plan_id: parseInt(travel_plan_id),
+          business_id: business_id ? parseInt(String(business_id)) : null,
+          target_date: target_date ? new Date(target_date) : null,
+          user_id: userId,
+          lat: finalLat,
+          lng: finalLng,
+          // Location fields
+          location: location || null,
+          name: name || null,
+          brgy: brgy || null,
+          province: province || null,
+          city: city || null
     };
     
     // Only include notes if it's provided (not undefined)

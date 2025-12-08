@@ -89,13 +89,13 @@ export const travelPlanApi = {
     console.log("[travelPlanApi.createPlan] Endpoint:", endpoints.travelPlan.createPlan);
     console.log("[travelPlanApi.createPlan] Payload:", JSON.stringify(data, null, 2));
     try {
-      const response = await api.post<CreatePlanResponse>(
-        endpoints.travelPlan.createPlan,
-        data
-      );
+    const response = await api.post<CreatePlanResponse>(
+      endpoints.travelPlan.createPlan,
+      data
+    );
       console.log("[travelPlanApi.createPlan] ✅ Response status:", response.status);
       console.log("[travelPlanApi.createPlan] Response data:", response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error("[travelPlanApi.createPlan] ❌ API Error:", error);
       throw error;
@@ -129,13 +129,13 @@ export const travelPlanApi = {
     console.log("[travelPlanApi.updatePlan] Endpoint:", endpoints.travelPlan.editPlan(id));
     console.log("[travelPlanApi.updatePlan] Payload:", JSON.stringify(payload, null, 2));
     try {
-      const response = await api.put<UpdatePlanResponse>(
-        endpoints.travelPlan.editPlan(id),
-        payload
-      );
+    const response = await api.put<UpdatePlanResponse>(
+      endpoints.travelPlan.editPlan(id),
+      payload
+    );
       console.log("[travelPlanApi.updatePlan] ✅ Response status:", response.status);
       console.log("[travelPlanApi.updatePlan] Response data:", response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error("[travelPlanApi.updatePlan] ❌ API Error:", error);
       throw error;
@@ -156,13 +156,13 @@ export const travelPlanApi = {
     console.log("[travelPlanApi.createActivity] Endpoint:", endpoints.travelPlan.createActivity);
     console.log("[travelPlanApi.createActivity] Payload:", JSON.stringify(data, null, 2));
     try {
-      const response = await api.post<CreateActivityResponse>(
-        endpoints.travelPlan.createActivity,
-        data
-      );
+    const response = await api.post<CreateActivityResponse>(
+      endpoints.travelPlan.createActivity,
+      data
+    );
       console.log("[travelPlanApi.createActivity] ✅ Response status:", response.status);
       console.log("[travelPlanApi.createActivity] Response data:", response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error("[travelPlanApi.createActivity] ❌ API Error:", error);
       throw error;
@@ -181,13 +181,13 @@ export const travelPlanApi = {
     console.log("[travelPlanApi.updateActivity] Endpoint:", endpoints.travelPlan.editActivity(activityId));
     console.log("[travelPlanApi.updateActivity] Payload:", JSON.stringify(data, null, 2));
     try {
-      const response = await api.put<UpdateActivityResponse>(
-        endpoints.travelPlan.editActivity(activityId),
-        data
-      );
+    const response = await api.put<UpdateActivityResponse>(
+      endpoints.travelPlan.editActivity(activityId),
+      data
+    );
       console.log("[travelPlanApi.updateActivity] ✅ Response status:", response.status);
       console.log("[travelPlanApi.updateActivity] Response data:", response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error("[travelPlanApi.updateActivity] ❌ ERROR - Full error:", error);
       if (error && typeof error === 'object' && 'response' in error) {

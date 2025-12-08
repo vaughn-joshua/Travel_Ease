@@ -96,32 +96,6 @@ export default function MainMapPage(): React.ReactElement {
     getUserLocation();
   }, [getUserLocation]);
 
-  // Log route state changes
-  useEffect(() => {
-    console.log("[MainMapPage] ========== ROUTE STATE UPDATE ==========");
-    console.log("[MainMapPage] start:", start);
-    console.log("[MainMapPage] end:", end);
-    console.log("[MainMapPage] routeInfo:", routeInfo);
-    if (start && end) {
-      console.log("[MainMapPage] ✅ Route is active, RoutingMachine should be calculating");
-    } else {
-      console.log("[MainMapPage] ⏳ Route not active (waiting for start/end points)");
-    }
-  }, [start, end, routeInfo]);
-
-  // Log business markers changes
-  useEffect(() => {
-    console.log("[MainMapPage] ========== BUSINESS MARKERS UPDATE ==========");
-    console.log("[MainMapPage] businessMarkers count:", businessMarkers.length);
-    console.log("[MainMapPage] businessMarkers:", businessMarkers);
-    if (businessMarkers.length > 0) {
-      console.log("[MainMapPage] ✅ Markers will be passed to MapPage");
-      console.log("[MainMapPage] First 3 marker positions:", businessMarkers.slice(0, 3).map(m => m.position));
-    } else {
-      console.log("[MainMapPage] ⏳ No markers to display");
-    }
-  }, [businessMarkers]);
-
   // Fetch businesses by category
   const { data: travelSpotsData, isLoading: isLoadingSpots, error: spotsError } = useTravelSpots({
     category: selectedCategory || undefined,
@@ -171,30 +145,47 @@ export default function MainMapPage(): React.ReactElement {
         name: firstBusiness.name,
         latitude: firstBusiness.latitude,
         longitude: firstBusiness.longitude,
+        // Check for longtitude typo variant
+        longtitude: (firstBusiness as any).longtitude,
+        allKeys: Object.keys(firstBusiness),
       });
     }
 
     const markers = travelSpotsData.data
       .filter((business) => {
-        const hasCoords = business.latitude != null && business.longitude != null;
+        // Handle both longitude and longtitude (database typo)
+        const lng = business.longitude ?? (business as any).longtitude;
+        const lat = business.latitude;
+        const hasCoords = lat != null && lng != null;
+        
         if (!hasCoords) {
           console.warn(`[MainMapPage] ⚠️ Business "${business.name}" (ID: ${business.business_id}) missing coordinates`, {
-            latitude: business.latitude,
+            latitude: lat,
             longitude: business.longitude,
+            longtitude: (business as any).longtitude,
+            hasLatitude: lat != null,
+            hasLongitude: business.longitude != null,
+            hasLongtitude: (business as any).longtitude != null,
           });
         }
         return hasCoords;
       })
-      .map((business) => ({
-        position: [business.latitude!, business.longitude!] as [number, number],
-        type: 'activity' as const,
-        name: business.name,
-        business_id: business.business_id,
-        city: business.city,
-        brgy: business.brgy,
-        street: business.street,
-        description: business.description,
-      }));
+      .map((business) => {
+        // Handle both longitude and longtitude (database typo)
+        const lng = business.longitude ?? (business as any).longtitude;
+        const lat = business.latitude!;
+        
+        return {
+          position: [lat, lng!] as [number, number],
+          type: 'activity' as const,
+          name: business.name,
+          business_id: business.business_id,
+          city: business.city,
+          brgy: business.brgy,
+          street: business.street,
+          description: business.description,
+        };
+      });
 
     console.log(`[MainMapPage] ✅ Category "${selectedCategory}": Created ${markers.length} markers with valid coordinates`);
     if (markers.length > 0) {
@@ -206,6 +197,32 @@ export default function MainMapPage(): React.ReactElement {
 
     return markers;
   }, [selectedCategory, travelSpotsData, isLoadingSpots, spotsError]);
+
+  // Log route state changes
+  useEffect(() => {
+    console.log("[MainMapPage] ========== ROUTE STATE UPDATE ==========");
+    console.log("[MainMapPage] start:", start);
+    console.log("[MainMapPage] end:", end);
+    console.log("[MainMapPage] routeInfo:", routeInfo);
+    if (start && end) {
+      console.log("[MainMapPage] ✅ Route is active, RoutingMachine should be calculating");
+    } else {
+      console.log("[MainMapPage] ⏳ Route not active (waiting for start/end points)");
+    }
+  }, [start, end, routeInfo]);
+
+  // Log business markers changes
+  useEffect(() => {
+    console.log("[MainMapPage] ========== BUSINESS MARKERS UPDATE ==========");
+    console.log("[MainMapPage] businessMarkers count:", businessMarkers.length);
+    console.log("[MainMapPage] businessMarkers:", businessMarkers);
+    if (businessMarkers.length > 0) {
+      console.log("[MainMapPage] ✅ Markers will be passed to MapPage");
+      console.log("[MainMapPage] First 3 marker positions:", businessMarkers.slice(0, 3).map(m => m.position));
+    } else {
+      console.log("[MainMapPage] ⏳ No markers to display");
+    }
+  }, [businessMarkers]);
 
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {

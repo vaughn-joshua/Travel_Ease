@@ -111,7 +111,7 @@ export default function SuggestedBusinesses({
       latitude: business.latitude,
       longitude: business.longitude
     });
-    
+
     // Convert to SearchResult format for CreateActivity
     // Include business_id - coordinates will be fetched from business in backend if available
     // If business doesn't have coordinates, the activity can still be created without them
@@ -283,9 +283,9 @@ export default function SuggestedBusinesses({
                   {/* Business Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-semibold text-gray-900 text-sm truncate">
-                        {business.name}
-                      </h3>
+                    <h3 className="font-semibold text-gray-900 text-sm truncate">
+                      {business.name}
+                    </h3>
                       {canEdit && (
                         <button
                           onClick={(e) => {

@@ -90,16 +90,16 @@ export default function Create_Activity({
     // Otherwise, coordinates are required
     if (!search_result.business_id) {
       // Validate coordinates are valid numbers when business_id is not provided
-      if (typeof search_result.lat !== 'number' || typeof search_result.lng !== 'number') {
+    if (typeof search_result.lat !== 'number' || typeof search_result.lng !== 'number') {
         console.error("[CreateActivity] ❌ Invalid coordinates (not numbers):", { lat: search_result.lat, lng: search_result.lng });
-        alert("Invalid location coordinates. Please select a valid location.");
-        return;
-      }
+      alert("Invalid location coordinates. Please select a valid location.");
+      return;
+    }
 
-      if (isNaN(search_result.lat) || isNaN(search_result.lng)) {
+    if (isNaN(search_result.lat) || isNaN(search_result.lng)) {
         console.error("[CreateActivity] ❌ Invalid coordinates (NaN):", { lat: search_result.lat, lng: search_result.lng });
-        alert("Invalid location coordinates. Please select a valid location.");
-        return;
+      alert("Invalid location coordinates. Please select a valid location.");
+      return;
       }
     } else {
       console.log("[CreateActivity] ✅ business_id provided, coordinates optional");
