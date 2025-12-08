@@ -34,7 +34,8 @@ interface BusinessSeedData {
 
 interface BusinessCategorySeedData {
   business_index: number;
-  category_name: category;
+  main_category: category;
+  subcategory_name: string;
 }
 
 interface BlogSeedData {
@@ -246,22 +247,22 @@ const businesses: BusinessSeedData[] = [
 ];
 
 const businessCategories: BusinessCategorySeedData[] = [
-  { business_index: 0, category_name: 'food' as category },
-  { business_index: 0, category_name: 'drinks' as category },
-  { business_index: 1, category_name: 'food' as category },
-  { business_index: 2, category_name: 'accomodation' as category },
-  { business_index: 2, category_name: 'food' as category },
-  { business_index: 3, category_name: 'nature' as category },
-  { business_index: 3, category_name: 'activities' as category },
-  { business_index: 4, category_name: 'leisure' as category },
-  { business_index: 5, category_name: 'drinks' as category },
-  { business_index: 6, category_name: 'food' as category },
-  { business_index: 7, category_name: 'accomodation' as category },
-  { business_index: 7, category_name: 'leisure' as category },
-  { business_index: 8, category_name: 'souvenir_shop' as category },
-  { business_index: 8, category_name: 'local_offers' as category },
-  { business_index: 9, category_name: 'activities' as category },
-  { business_index: 9, category_name: 'leisure' as category }
+  { business_index: 0, main_category: 'food_drinks', subcategory_name: 'Restaurants & Cafés' },
+  { business_index: 0, main_category: 'food_drinks', subcategory_name: 'Bars & Pubs' },
+  { business_index: 1, main_category: 'food_drinks', subcategory_name: 'Restaurants & Cafés' },
+  { business_index: 2, main_category: 'accommodation', subcategory_name: 'Hotels & Resorts' },
+  { business_index: 2, main_category: 'food_drinks', subcategory_name: 'Restaurants & Cafés' },
+  { business_index: 3, main_category: 'tours_activities', subcategory_name: 'Nature & Adventure' },
+  { business_index: 3, main_category: 'tours_activities', subcategory_name: 'Theme Parks & Attractions' },
+  { business_index: 4, main_category: 'wellness_medical', subcategory_name: 'Spas & Massage' },
+  { business_index: 5, main_category: 'food_drinks', subcategory_name: 'Bars & Pubs' },
+  { business_index: 6, main_category: 'food_drinks', subcategory_name: 'Restaurants & Cafés' },
+  { business_index: 7, main_category: 'accommodation', subcategory_name: 'Hotels & Resorts' },
+  { business_index: 7, main_category: 'wellness_medical', subcategory_name: 'Spas & Massage' },
+  { business_index: 8, main_category: 'shopping_souvenirs', subcategory_name: 'Souvenir Shops' },
+  { business_index: 8, main_category: 'shopping_souvenirs', subcategory_name: 'Local Crafts & Artisans' },
+  { business_index: 9, main_category: 'tours_activities', subcategory_name: 'Theme Parks & Attractions' },
+  { business_index: 9, main_category: 'wellness_medical', subcategory_name: 'Wellness Retreats / Yoga' }
 ];
 
 const blogs: BlogSeedData[] = [
@@ -501,14 +502,49 @@ async function seed(): Promise<void> {
       }
       console.log(`   Created ${createdBusinesses.length} businesses.\n`);
 
+      // Ensure subcategories exist first
+      console.log('Ensuring subcategories exist...');
+      const uniqueSubcategories = [...new Set(businessCategories.map(c => 
+        JSON.stringify({ main_category: c.main_category, subcategory_name: c.subcategory_name })
+      ))].map(s => JSON.parse(s) as { main_category: category; subcategory_name: string });
+      
+      for (const subcat of uniqueSubcategories) {
+        await tx.subcategory.upsert({
+          where: {
+            main_category_subcategory_name: {
+              main_category: subcat.main_category,
+              subcategory_name: subcat.subcategory_name,
+            },
+          },
+          update: {},
+          create: subcat,
+        });
+      }
+      console.log(`   Ensured ${uniqueSubcategories.length} subcategories exist.\n`);
+
       // Create Business Categories
       console.log('Creating business categories...');
       const createdCategories: BusinessCategory[] = [];
       for (const c of businessCategories) {
+        // Look up the subcategory_id
+        const subcategory = await tx.subcategory.findUnique({
+          where: {
+            main_category_subcategory_name: {
+              main_category: c.main_category,
+              subcategory_name: c.subcategory_name,
+            },
+          },
+        });
+        
+        if (!subcategory) {
+          console.warn(`   Subcategory not found: ${c.main_category} > ${c.subcategory_name}`);
+          continue;
+        }
+
         const created = await tx.businessCategory.create({
           data: {
             business_id: createdBusinesses[c.business_index].business_id,
-            category_name: c.category_name
+            subcategory_id: subcategory.subcategory_id
           }
         });
         createdCategories.push(created);
@@ -534,13 +570,20 @@ async function seed(): Promise<void> {
       }
       console.log(`   Created ${hoursCount} business hours entries.\n`);
 
-      // Create Price Ranges
+      // Create Price Ranges (one per unique subcategory)
       console.log('Creating price ranges...');
       const createdPriceRanges: Array<{ id: number }> = [];
+      const seenSubcategoryIds = new Set<number>();
       for (const cat of createdCategories) {
+        // Skip if we already created a price range for this subcategory
+        if (!cat.subcategory_id || seenSubcategoryIds.has(cat.subcategory_id)) {
+          continue;
+        }
+        seenSubcategoryIds.add(cat.subcategory_id);
+        
         const created = await tx.priceRange.create({
           data: {
-            category_id: cat.category_id,
+            subcategory_id: cat.subcategory_id,
             min_price: Math.floor(Math.random() * 100) + 50,
             max_price: Math.floor(Math.random() * 500) + 200
           }

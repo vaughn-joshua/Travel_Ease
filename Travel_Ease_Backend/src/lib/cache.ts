@@ -61,8 +61,14 @@ class LRUCache<T = unknown> {
   }
 
   set(key: string, value: T, ttlSeconds?: number): void {
-    // Evict oldest if at capacity
-    if (this.cache.size >= this.maxSize) {
+    // Delete existing key first to maintain LRU ordering (move to end)
+    const exists = this.cache.has(key);
+    if (exists) {
+      this.cache.delete(key);
+    }
+
+    // Evict oldest if at capacity (only if this is a new key)
+    if (!exists && this.cache.size >= this.maxSize) {
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) {
         this.cache.delete(oldestKey);
