@@ -26,7 +26,7 @@ export async function getAccommodationForPlans(
             business_id: true,
             name: true,
             latitude: true,
-            longitude: true
+            longtitude: true // Note: DB column has typo 'longtitude' instead of 'longitude'
           }
         }
       }
@@ -41,9 +41,9 @@ export async function getAccommodationForPlans(
   // Set accommodation for plans that have it
   accommodations.forEach(acc => {
     if (acc.business) {
-      // Use activity lat/lng first, fallback to business latitude/longitude
+      // Use activity lat/lng first, fallback to business latitude/longtitude
       const lat = acc.lat ?? acc.business.latitude;
-      const lng = acc.lng ?? acc.business.longitude;
+      const lng = acc.lng ?? acc.business.longtitude; // Note: DB column has typo 'longtitude'
       
       accommodationMap.set(acc.travel_plan_id, {
         business_id: acc.business.business_id,

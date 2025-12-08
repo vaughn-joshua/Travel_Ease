@@ -12,6 +12,7 @@ interface MapPageProps {
   start?: [number, number] | null;
   end?: [number, number] | null;
   businessMarkers?: MapMarker[];
+  mapCenter?: [number, number] | null; // For centering map without showing search result
   onMapClear?: () => void;
   onRouteFound?: (routeInfo: RouteInfo) => void;
   onMarkerClick?: (marker: MapMarker) => void;
@@ -47,6 +48,7 @@ export default function Map_Page({
   start,
   end,
   businessMarkers = [],
+  mapCenter,
   onMapClear,
   onRouteFound,
   onMarkerClick,
@@ -100,40 +102,50 @@ export default function Map_Page({
 
       {position && <Marker position={position} icon={custom_icon} />}
 
-      {position && <MapMover position={position} />}
+      {/* Center map on search result or mapCenter */}
+      {(position || mapCenter) && <MapMover position={position || mapCenter || null} />}
 
       {/* Render business markers */}
-      {businessMarkers.map((marker, index) => (
-        <Marker
-          key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
-          position={marker.position as LatLngExpression}
-          icon={custom_icon}
-          eventHandlers={{
-            click: () => {
-              if (onMarkerClick) {
-                onMarkerClick(marker);
-              }
-            },
-          }}
-        >
-          {marker.name && (
-            <Popup>
-              <div className="text-sm font-medium">{marker.name}</div>
-              {onMarkerClick && (
-                <button
-                  className="mt-2 text-xs text-primary-red hover:underline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkerClick(marker);
-                  }}
-                >
-                  Add to Travel Plan
-                </button>
-              )}
-            </Popup>
-          )}
-        </Marker>
-      ))}
+      {businessMarkers.length > 0 && (
+        <>
+          {console.log(`[MapPage] Rendering ${businessMarkers.length} business markers`)}
+          {businessMarkers.map((marker, index) => {
+            console.log(`[MapPage] Rendering marker ${index}:`, marker.name, marker.position);
+            return (
+              <Marker
+                key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
+                position={marker.position as LatLngExpression}
+                icon={custom_icon}
+                eventHandlers={{
+                  click: () => {
+                    if (onMarkerClick) {
+                      onMarkerClick(marker);
+                    }
+                  },
+                }}
+              >
+                {marker.name && (
+                  <Popup>
+                    <div className="text-sm font-medium">{marker.name}</div>
+                    {onMarkerClick && (
+                      <button
+                        className="mt-2 text-xs text-primary-red hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMarkerClick(marker);
+                        }}
+                      >
+                        Add to Travel Plan
+                      </button>
+                    )}
+                  </Popup>
+                )}
+              </Marker>
+            );
+          })}
+        </>
+      )}
+      {businessMarkers.length === 0 && console.log("[MapPage] No business markers to render")}
 
       {start && end && <RoutingMachine start={start} end={end} onRouteFound={onRouteFound} />}
     </MapContainer>

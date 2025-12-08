@@ -330,7 +330,7 @@ router.get("/search", async (req: Request, res: Response) => {
           ],
           // Only include businesses with valid coordinates
           latitude: { not: null },
-          longitude: { not: null },
+          longtitude: { not: null }, // Note: DB column has typo 'longtitude' instead of 'longitude'
         },
         select: {
           business_id: true,
@@ -341,7 +341,7 @@ router.get("/search", async (req: Request, res: Response) => {
           street: true,
           house_number: true,
           latitude: true,
-          longitude: true,
+          longtitude: true, // Note: DB column has typo 'longtitude' instead of 'longitude'
         },
         orderBy: [{ rating: "desc" }, { business_id: "desc" }],
         take: searchLimit,

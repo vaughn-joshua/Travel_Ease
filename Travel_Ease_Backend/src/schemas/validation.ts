@@ -37,6 +37,7 @@ export const createPlanSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().or(z.string().datetime().optional()),
   slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()),
   max_slots: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()),
+  accommodation_id: z.number().int().positive().optional().or(z.string().transform(Number).pipe(z.number().int().positive()).optional()).nullable(),
   collaborators: z.array(collaboratorSchema).optional().default([])
 }).refine(
   (data) => {

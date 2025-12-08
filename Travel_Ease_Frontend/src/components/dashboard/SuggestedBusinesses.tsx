@@ -72,25 +72,49 @@ export default function SuggestedBusinesses({
   };
 
   const handleBusinessClick = (business: Business) => {
+    console.log("[SuggestedBusinesses] ========== BUSINESS CLICKED ==========");
+    console.log("[SuggestedBusinesses] Business:", business);
+    console.log("[SuggestedBusinesses] Business coordinates:", {
+      latitude: business.latitude,
+      longitude: business.longitude
+    });
+    
     setSelectedBusiness(business);
-    // Also show on map
+    
+    // Also show on map - pin the business location
     if (business.latitude && business.longitude) {
+      console.log("[SuggestedBusinesses] Pinning business on map at:", {
+        lat: business.latitude,
+        lng: business.longitude
+      });
       onBusinessSelect({
         lat: business.latitude,
         lng: business.longitude,
       });
+    } else {
+      console.warn("[SuggestedBusinesses] ⚠️ Business has no coordinates, cannot pin on map");
+    }
+  };
+
+  // Handle clicking on business card to add directly (without opening modal)
+  const handleBusinessCardClick = (business: Business, e: React.MouseEvent) => {
+    // If clicking on the card itself (not a button), add to activity
+    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.business-card')) {
+      handleAddToPlan(business);
     }
   };
 
   const handleAddToPlan = (business: Business) => {
-    // Use business's latitude and longitude as coordinates
-    if (!business.latitude || !business.longitude) {
-      alert("This business does not have location coordinates available.");
-      return;
-    }
-
+    console.log("[SuggestedBusinesses] ========== ADD BUSINESS TO ACTIVITY ==========");
+    console.log("[SuggestedBusinesses] Business to add:", business);
+    console.log("[SuggestedBusinesses] Business coordinates:", {
+      latitude: business.latitude,
+      longitude: business.longitude
+    });
+    
     // Convert to SearchResult format for CreateActivity
-    // Include business_id and use business's latitude/longitude as coordinates
+    // Include business_id - coordinates will be fetched from business in backend if available
+    // If business doesn't have coordinates, the activity can still be created without them
     const searchResult: SearchResult = {
       name: business.name,
       label: business.name,
@@ -98,12 +122,22 @@ export default function SuggestedBusinesses({
         city: business.city || undefined,
         country: undefined,
       },
-      lat: Number(business.latitude),
-      lng: Number(business.longitude),
+      // Use business coordinates if available and valid, otherwise undefined
+      // Backend will fetch coordinates from business if business_id is provided
+      lat: business.latitude != null && !isNaN(Number(business.latitude)) ? Number(business.latitude) : undefined,
+      lng: business.longitude != null && !isNaN(Number(business.longitude)) ? Number(business.longitude) : undefined,
       business_id: business.business_id, // Pass business_id to link the activity
     };
+    
+    console.log("[SuggestedBusinesses] SearchResult created:", searchResult);
+    console.log("[SuggestedBusinesses] Has business_id:", !!searchResult.business_id);
+    console.log("[SuggestedBusinesses] Has coordinates:", { hasLat: searchResult.lat !== undefined, hasLng: searchResult.lng !== undefined });
+    console.log("[SuggestedBusinesses] Calling onAddToActivity...");
+    
     onAddToActivity(searchResult);
     setSelectedBusiness(null);
+    
+    console.log("[SuggestedBusinesses] ✅ Business added to activity flow");
   };
 
   return (
@@ -217,8 +251,16 @@ export default function SuggestedBusinesses({
             {businesses.map((business: Business) => (
               <div
                 key={business.business_id}
-                onClick={() => handleBusinessClick(business)}
-                className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+                onClick={(e) => {
+                  // Double click or click with modifier key to add directly
+                  if (e.detail === 2 || e.ctrlKey || e.metaKey) {
+                    handleAddToPlan(business);
+                  } else {
+                    handleBusinessClick(business);
+                  }
+                }}
+                className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100 business-card group"
+                title="Click to view details, double-click or Ctrl+Click to add to plan"
               >
                 <div className="flex gap-3">
                   {/* Business Image */}
@@ -240,9 +282,23 @@ export default function SuggestedBusinesses({
 
                   {/* Business Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-sm truncate">
-                      {business.name}
-                    </h3>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate">
+                        {business.name}
+                      </h3>
+                      {canEdit && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToPlan(business);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                          title="Add to plan"
+                        >
+                          + Add
+                        </button>
+                      )}
+                    </div>
                     {business.city && (
                       <p className="text-xs text-gray-500 truncate">
                         {business.brgy ? `${business.brgy}, ` : ""}{business.city}

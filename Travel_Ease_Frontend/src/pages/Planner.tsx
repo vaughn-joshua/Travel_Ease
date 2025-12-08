@@ -221,10 +221,17 @@ export default function Planner(): React.ReactElement {
 
   // Handler when a business is selected from suggested tab
   const handleBusinessSelect = (business: { lat?: number; lng?: number; longitude?: number }) => {
+    console.log("[Planner] ========== BUSINESS SELECTED FOR MAP ==========");
+    console.log("[Planner] Business coordinates:", business);
+    console.log("[Planner] Using lat:", business.lat, "lng:", business.lng || business.longitude);
     const lat = business.lat;
     const lng = business.lng || business.longitude;
     if (lat && lng) {
+      console.log("[Planner] Setting map click activity to:", { start: null, end: [lat, lng] });
       setClickActivity({ start: null, end: [lat, lng] });
+      console.log("[Planner] ✅ Map should now show pin at coordinates");
+    } else {
+      console.warn("[Planner] ⚠️ Missing coordinates - cannot pin on map");
     }
   };
 
@@ -385,7 +392,7 @@ export default function Planner(): React.ReactElement {
   // Determine which buttons to show based on permissions
   const showAddActivity = permissions.canEdit && status !== "join";
   const showEditPlan = permissions.canEdit;
-  const showStartNow = permissions.canStart && (plan?.status === "Draft" || plan?.status === "Completed");
+  const showStartNow = permissions.canStart && plan?.status === "Draft";
   const showRequestJoin = permissions.isNonParticipant && status === "join";
 
   return (

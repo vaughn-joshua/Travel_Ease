@@ -23,11 +23,11 @@ const CATEGORIES = [
   { value: "outdoor_gear_rental", label: "Outdoor / Gear Rental", icon: "🎒" },
 ] as const;
 
-// Current Location (Tagaytay City Center - system focus area)
-const CURRENT_LOCATION = {
+// Default Location (Tagaytay City Center - system focus area)
+const DEFAULT_LOCATION = {
   lat: 14.1154,
   lng: 120.962,
-  name: "Current Location",
+  name: "Tagaytay City Center",
   label: "Tagaytay City, Cavite, Philippines",
 };
 
@@ -46,11 +46,81 @@ export default function MainMapPage(): React.ReactElement {
   const [showTagaytayMessage, setShowTagaytayMessage] = useState(false);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name: string; label: string } | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null); // For centering map without showing search result card
 
   // Sync selectedCategory with URL param
   useEffect(() => {
     setSelectedCategory(categoryFromUrl);
   }, [categoryFromUrl]);
+
+  // Get user's current location
+  const getUserLocation = useCallback((): void => {
+    if (!navigator.geolocation) {
+      console.warn("[MainMapPage] Geolocation is not supported by this browser");
+      // Fallback to default location
+      setUserLocation(DEFAULT_LOCATION);
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        console.log("[MainMapPage] ✅ Got user location:", { latitude, longitude });
+        setUserLocation({
+          lat: latitude,
+          lng: longitude,
+          name: "My Location",
+          label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+        });
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        console.error("[MainMapPage] ❌ Error getting user location:", error);
+        // Fallback to default location
+        setUserLocation(DEFAULT_LOCATION);
+        setIsGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  }, []);
+
+  // Try to get user location on mount
+  useEffect(() => {
+    getUserLocation();
+  }, [getUserLocation]);
+
+  // Log route state changes
+  useEffect(() => {
+    console.log("[MainMapPage] ========== ROUTE STATE UPDATE ==========");
+    console.log("[MainMapPage] start:", start);
+    console.log("[MainMapPage] end:", end);
+    console.log("[MainMapPage] routeInfo:", routeInfo);
+    if (start && end) {
+      console.log("[MainMapPage] ✅ Route is active, RoutingMachine should be calculating");
+    } else {
+      console.log("[MainMapPage] ⏳ Route not active (waiting for start/end points)");
+    }
+  }, [start, end, routeInfo]);
+
+  // Log business markers changes
+  useEffect(() => {
+    console.log("[MainMapPage] ========== BUSINESS MARKERS UPDATE ==========");
+    console.log("[MainMapPage] businessMarkers count:", businessMarkers.length);
+    console.log("[MainMapPage] businessMarkers:", businessMarkers);
+    if (businessMarkers.length > 0) {
+      console.log("[MainMapPage] ✅ Markers will be passed to MapPage");
+      console.log("[MainMapPage] First 3 marker positions:", businessMarkers.slice(0, 3).map(m => m.position));
+    } else {
+      console.log("[MainMapPage] ⏳ No markers to display");
+    }
+  }, [businessMarkers]);
 
   // Fetch businesses by category
   const { data: travelSpotsData, isLoading: isLoadingSpots, error: spotsError } = useTravelSpots({
@@ -58,32 +128,57 @@ export default function MainMapPage(): React.ReactElement {
     limit: 100, // Get more businesses for map display
   });
 
+  // Log category fetch status
+  useEffect(() => {
+    console.log("[MainMapPage] ========== CATEGORY FETCH STATUS ==========");
+    console.log("[MainMapPage] selectedCategory:", selectedCategory);
+    console.log("[MainMapPage] isLoadingSpots:", isLoadingSpots);
+    console.log("[MainMapPage] spotsError:", spotsError);
+    if (travelSpotsData) {
+      console.log("[MainMapPage] travelSpotsData received:", {
+        dataLength: travelSpotsData.data?.length || 0,
+        fromCache: travelSpotsData.fromCache,
+        message: travelSpotsData.message,
+      });
+    }
+  }, [selectedCategory, isLoadingSpots, spotsError, travelSpotsData]);
+
   // Convert businesses to map markers
   const businessMarkers = useMemo((): MapMarker[] => {
+    console.log("[MainMapPage] ========== CREATING BUSINESS MARKERS ==========");
+    console.log("[MainMapPage] selectedCategory:", selectedCategory);
+    console.log("[MainMapPage] travelSpotsData:", travelSpotsData);
+    console.log("[MainMapPage] isLoadingSpots:", isLoadingSpots);
+    console.log("[MainMapPage] spotsError:", spotsError);
+    
     // Only show markers when a category is selected
-    if (!selectedCategory) return [];
+    if (!selectedCategory) {
+      console.log("[MainMapPage] ❌ No category selected, returning empty markers");
+      return [];
+    }
     
     // Return empty array if data is not yet loaded
-    if (!travelSpotsData?.data) return [];
+    if (!travelSpotsData?.data) {
+      console.log("[MainMapPage] ⏳ No data yet, returning empty markers");
+      return [];
+    }
 
-    if (import.meta.env.DEV) {
-      console.log(`Category "${selectedCategory}": Received ${travelSpotsData.data.length} businesses from API`);
-      if (travelSpotsData.data.length > 0) {
-        const firstBusiness = travelSpotsData.data[0];
-        console.log('Sample business fields:', {
-          business_id: firstBusiness.business_id,
-          name: firstBusiness.name,
-          latitude: firstBusiness.latitude,
-          longitude: firstBusiness.longitude,
-        });
-      }
+    console.log(`[MainMapPage] ✅ Category "${selectedCategory}": Received ${travelSpotsData.data.length} businesses from API`);
+    if (travelSpotsData.data.length > 0) {
+      const firstBusiness = travelSpotsData.data[0];
+      console.log('[MainMapPage] Sample business fields:', {
+        business_id: firstBusiness.business_id,
+        name: firstBusiness.name,
+        latitude: firstBusiness.latitude,
+        longitude: firstBusiness.longitude,
+      });
     }
 
     const markers = travelSpotsData.data
       .filter((business) => {
         const hasCoords = business.latitude != null && business.longitude != null;
-        if (!hasCoords && import.meta.env.DEV) {
-          console.warn(`Business "${business.name}" (ID: ${business.business_id}) missing coordinates`, {
+        if (!hasCoords) {
+          console.warn(`[MainMapPage] ⚠️ Business "${business.name}" (ID: ${business.business_id}) missing coordinates`, {
             latitude: business.latitude,
             longitude: business.longitude,
           });
@@ -101,18 +196,28 @@ export default function MainMapPage(): React.ReactElement {
         description: business.description,
       }));
 
-    if (import.meta.env.DEV) {
-      console.log(`Category "${selectedCategory}": Created ${markers.length} markers with valid coordinates`);
+    console.log(`[MainMapPage] ✅ Category "${selectedCategory}": Created ${markers.length} markers with valid coordinates`);
+    if (markers.length > 0) {
+      console.log("[MainMapPage] Sample marker:", markers[0]);
+      console.log("[MainMapPage] All marker positions:", markers.map(m => m.position));
+    } else {
+      console.warn("[MainMapPage] ⚠️ No markers created! Check if businesses have coordinates.");
     }
 
     return markers;
-  }, [selectedCategory, travelSpotsData]);
+  }, [selectedCategory, travelSpotsData, isLoadingSpots, spotsError]);
 
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {
+    console.log("[MainMapPage] ========== ROUTE FOUND ==========");
+    console.log("[MainMapPage] Route info:", info);
+    console.log("[MainMapPage] Distance:", info.distance, "km");
+    console.log("[MainMapPage] Time:", info.time, "minutes");
     if (info.distance > 0 && info.time > 0) {
+      console.log("[MainMapPage] ✅ Valid route found, setting route info");
       setRouteInfo(info);
     } else {
+      console.log("[MainMapPage] ❌ Invalid route (distance or time is 0), clearing route info");
       setRouteInfo(null);
     }
   }, []);
@@ -139,8 +244,21 @@ export default function MainMapPage(): React.ReactElement {
   }, []);
 
   const handleRouteSubmit = ({ start: startPoint, end: endPoint }: RouteSubmission): void => {
+    console.log("[MainMapPage] ========== ROUTE SUBMITTED ==========");
+    console.log("[MainMapPage] Start point:", {
+      lat: startPoint.lat,
+      lng: startPoint.lng,
+      name: startPoint.name,
+    });
+    console.log("[MainMapPage] End point:", {
+      lat: endPoint.lat,
+      lng: endPoint.lng,
+      name: endPoint.name,
+    });
+    console.log("[MainMapPage] Setting route start and end coordinates");
     setStart([startPoint.lat, startPoint.lng]);
     setEnd([endPoint.lat, endPoint.lng]);
+    console.log("[MainMapPage] ✅ Route coordinates set, RoutingMachine will calculate route");
   };
 
   const handleClearMap = (): void => {
@@ -148,6 +266,7 @@ export default function MainMapPage(): React.ReactElement {
     setStart(null);
     setEnd(null);
     setRouteInfo(null);
+    setMapCenter(null);
     // Clear category
     setSelectedCategory(null);
     setSearchParams({}, { replace: true });
@@ -155,18 +274,18 @@ export default function MainMapPage(): React.ReactElement {
 
   // Handle category click - update URL and fetch businesses
   const handleCategoryClick = (category: string | null): void => {
+    console.log("[MainMapPage] ========== CATEGORY CLICKED ==========");
+    console.log("[MainMapPage] Previous category:", selectedCategory);
+    console.log("[MainMapPage] New category:", category);
     if (category) {
       setSelectedCategory(category);
       setSearchParams({ category }, { replace: true });
-      if (import.meta.env.DEV) {
-        console.log(`Category selected: ${category}`);
-      }
+      console.log("[MainMapPage] ✅ Category selected, fetching businesses for category:", category);
+      console.log("[MainMapPage] API will be called with params: { category:", category, ", limit: 100 }");
     } else {
       setSelectedCategory(null);
       setSearchParams({}, { replace: true });
-      if (import.meta.env.DEV) {
-        console.log('Category cleared');
-      }
+      console.log("[MainMapPage] ✅ Category cleared, removing all pins");
     }
   };
 
@@ -206,6 +325,7 @@ export default function MainMapPage(): React.ReactElement {
         start={start}
         end={end}
         businessMarkers={businessMarkers}
+        mapCenter={mapCenter}
         onMapClear={handleClearMap}
         onRouteFound={handleRouteFound}
         onMarkerClick={handleMarkerClick}
@@ -217,8 +337,14 @@ export default function MainMapPage(): React.ReactElement {
       {/* Search and Category Controls - Upper Left (positioned to the right of nav menu) */}
       <div className="absolute top-4 left-20 z-[9998] flex items-start gap-3">
         {/* Search Box */}
-        <div className="flex-shrink-0 relative z-[10000]">
-          <MapSearchBox onSearch={handleSearch} />
+        <div className="flex-shrink-0 relative z-[9999]">
+          <MapSearchBox 
+            onSearch={handleSearch}
+            onAddToPlan={(result) => {
+              set_search_result(result);
+              setShowPlanModal(true);
+            }}
+          />
         </div>
 
         {/* Category Buttons */}
@@ -301,20 +427,25 @@ export default function MainMapPage(): React.ReactElement {
           hover:scale-105 hover:shadow-xl hover:bg-white
           focus:outline-none focus:ring-2 focus:ring-primary-red
           active:scale-95
+          disabled:opacity-50 disabled:cursor-wait
         "
         title="Go to Current Location"
+        disabled={isGettingLocation}
         onClick={() => {
-          set_search_result({
-            lat: CURRENT_LOCATION.lat,
-            lng: CURRENT_LOCATION.lng,
-            name: CURRENT_LOCATION.name,
-            label: CURRENT_LOCATION.label,
-          });
-          setShowTagaytayMessage(true);
-          setTimeout(() => setShowTagaytayMessage(false), 3000);
+          if (userLocation) {
+            // Just center the map on user location, don't set search_result
+            // This prevents the "Add to Travel Plan" card from showing
+            console.log("[MainMapPage] 📍 Centering map on user location (not adding to plan)");
+            setMapCenter([userLocation.lat, userLocation.lng]);
+            setShowTagaytayMessage(true);
+            setTimeout(() => setShowTagaytayMessage(false), 3000);
+          } else {
+            // If no user location yet, try to get it
+            getUserLocation();
+          }
         }}
       >
-        📍
+        {isGettingLocation ? "⏳" : "📍"}
       </button>
 
       {/* Focus Area Message */}

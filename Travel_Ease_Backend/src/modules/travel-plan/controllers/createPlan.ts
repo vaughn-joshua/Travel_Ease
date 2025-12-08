@@ -21,6 +21,11 @@ interface ValidatedCreatePlan {
 }
 
 export async function create_plan(req: Request, res: Response) {
+  console.log('[create_plan] ========== CREATE PLAN REQUEST ==========');
+  console.log('[create_plan] Request body:', JSON.stringify(req.body, null, 2));
+  console.log('[create_plan] Validated data:', JSON.stringify(req.validated || req.body, null, 2));
+  console.log('[create_plan] User from request:', req.user);
+  
   // Use validated data from Zod middleware (transforms strings to numbers)
   const validated = (req.validated || req.body) as ValidatedCreatePlan;
   const {
@@ -35,24 +40,43 @@ export async function create_plan(req: Request, res: Response) {
     collaborators = [],
   } = validated;
   
+  console.log('[create_plan] Extracted values:', {
+    title,
+    description,
+    location,
+    start_date,
+    end_date,
+    slots,
+    maxSlotsParam,
+    accommodation_id,
+    collaboratorsCount: collaborators.length
+  });
+  
   // Defensive check for user ID
   const userId = req.user?.id;
   if (!userId) {
-    console.error('create_plan: req.user.id is missing');
+    console.error('[create_plan] ❌ ERROR: req.user.id is missing');
+    console.error('[create_plan] req.user:', req.user);
     return res.status(401).json({ error: 'User ID not found in request' });
   }
+  
+  console.log('[create_plan] User ID:', userId);
   
   // Prefer max_slots, fallback to slots, ensure it's a number or null
   const rawMaxSlots = maxSlotsParam ?? slots ?? null;
   const maxSlots = rawMaxSlots !== null ? Number(rawMaxSlots) : null;
+  console.log('[create_plan] Max slots calculation:', { rawMaxSlots, maxSlots });
+  
   if (maxSlots !== null && (isNaN(maxSlots) || !Number.isInteger(maxSlots) || maxSlots < 1)) {
+    console.error('[create_plan] ❌ ERROR: Invalid max_slots:', maxSlots);
     return res.status(400).json({ error: 'max_slots must be a positive integer' });
   }
 
   try {
+    console.log('[create_plan] Starting transaction...');
     const result = await prisma.$transaction(async (tx) => {
       // Create travel plan
-      const travelPlan = await tx.travelPlan.create({
+      const travelPlan = await tx.travel_plan.create({
         data: {
           name: title,
           user_id: userId,
@@ -114,15 +138,21 @@ export async function create_plan(req: Request, res: Response) {
         }
       }
 
+      console.log('[create_plan] Transaction completed. Travel plan ID:', travelPlan.travel_plan_id);
       return travelPlan;
     });
 
+    console.log('[create_plan] ✅ SUCCESS - Plan created with ID:', result.travel_plan_id);
+    const formattedPlan = formatPlan(result);
+    console.log('[create_plan] Formatted plan:', JSON.stringify(formattedPlan, null, 2));
+    
     res.status(201).json({ 
       message: 'Travel plan created successfully',
-      ...formatPlan(result)
+      ...formattedPlan
     });
   } catch (error) {
-    console.error('Error creating travel plan:', error);
+    console.error('[create_plan] ❌ ERROR - Full error:', error);
+    console.error('[create_plan] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return handlePrismaError(error, res, 'Creating travel plan');
   }
 }

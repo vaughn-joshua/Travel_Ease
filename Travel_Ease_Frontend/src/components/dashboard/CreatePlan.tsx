@@ -67,6 +67,7 @@ export default function Create_Plan({
   const [selectedAccommodation, setSelectedAccommodation] = useState<SelectedAccommodation | null>(null);
   const [isSearchingAccommodation, setIsSearchingAccommodation] = useState<boolean>(false);
   const [showAccommodationDropdown, setShowAccommodationDropdown] = useState<boolean>(false);
+  const [isAccommodationInputFocused, setIsAccommodationInputFocused] = useState<boolean>(false);
 
   // Debounce the search queries
   const debouncedSearch = useDebouncedValue(emailSearch, 300);
@@ -111,15 +112,40 @@ export default function Create_Plan({
     searchUsers();
   }, [debouncedSearch, selectedCollaborators]);
 
-  // Search for accommodation businesses when debounced search changes
+  // Search for accommodation businesses when debounced search changes or input is focused
   useEffect(() => {
     const searchAccommodations = async () => {
+      // If input is focused and search is empty, fetch all accommodations
+      if (isAccommodationInputFocused && debouncedAccommodationSearch.length < 2) {
+        setIsSearchingAccommodation(true);
+        try {
+          const response = await businessApi.getTravelSpots({
+            category: "accommodation",
+            limit: 50 // Higher limit when showing all accommodations
+          });
+          const results = response.data.map(b => ({
+            business_id: b.business_id,
+            name: b.name
+          }));
+          setAccommodationResults(results);
+          setShowAccommodationDropdown(results.length > 0);
+        } catch (error) {
+          console.error("Error fetching accommodations:", error);
+          setAccommodationResults([]);
+        } finally {
+          setIsSearchingAccommodation(false);
+        }
+        return;
+      }
+
+      // If search query is less than 2 characters and not focused, clear results
       if (debouncedAccommodationSearch.length < 2) {
         setAccommodationResults([]);
         setShowAccommodationDropdown(false);
         return;
       }
 
+      // Perform search when user types
       setIsSearchingAccommodation(true);
       try {
         const response = await businessApi.getTravelSpots({
@@ -142,7 +168,7 @@ export default function Create_Plan({
     };
 
     searchAccommodations();
-  }, [debouncedAccommodationSearch]);
+  }, [debouncedAccommodationSearch, isAccommodationInputFocused]);
 
   // Add a collaborator to the selected list
   const addCollaborator = (user: UserSearchResult) => {
@@ -226,17 +252,31 @@ export default function Create_Plan({
       collaborators: collaborators.length > 0 ? collaborators : undefined,
     };
 
-    console.log("Creating plan with payload:", payload);
+    console.log("[CreatePlan] ========== CREATE PLAN ATTEMPT ==========");
+    console.log("[CreatePlan] Form data:", d);
+    console.log("[CreatePlan] Selected accommodation:", selectedAccommodation);
+    console.log("[CreatePlan] Selected collaborators:", selectedCollaborators);
+    console.log("[CreatePlan] Final payload:", JSON.stringify(payload, null, 2));
+    console.log("[CreatePlan] Token exists:", !!localStorage.getItem("token"));
+    console.log("[CreatePlan] Mutation state - isPending:", createPlanMutation.isPending);
 
     createPlanMutation.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (response) => {
+        console.log("[CreatePlan] ✅ SUCCESS - Response:", response);
         setCounter(0);
         setSelectedCollaborators([]);
         setSelectedAccommodation(null);
         on_close();
       },
       onError: (error) => {
-        console.error("Error creating plan:", error);
+        console.error("[CreatePlan] ❌ ERROR - Full error object:", error);
+        console.error("[CreatePlan] Error message:", error instanceof Error ? error.message : String(error));
+        console.error("[CreatePlan] Error stack:", error instanceof Error ? error.stack : "No stack");
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as any;
+          console.error("[CreatePlan] Response status:", axiosError.response?.status);
+          console.error("[CreatePlan] Response data:", axiosError.response?.data);
+        }
         setSubmitError(
           error instanceof Error
             ? error.message
@@ -464,8 +504,16 @@ export default function Create_Plan({
                         type="text"
                         value={accommodationSearch}
                         onChange={(e) => setAccommodationSearch(e.target.value)}
-                        onFocus={() => accommodationResults.length > 0 && setShowAccommodationDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowAccommodationDropdown(false), 200)}
+                        onFocus={() => {
+                          setIsAccommodationInputFocused(true);
+                          if (accommodationResults.length > 0) {
+                            setShowAccommodationDropdown(true);
+                          }
+                        }}
+                        onBlur={() => {
+                          setIsAccommodationInputFocused(false);
+                          setTimeout(() => setShowAccommodationDropdown(false), 200);
+                        }}
                         placeholder="Search for accommodation..."
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                       />

@@ -63,11 +63,22 @@ export default function EditActivity({
   };
 
   const on_submit = async (formData: FormData): Promise<void> => {
+    console.log("[EditActivity] ========== EDIT ACTIVITY ATTEMPT ==========");
+    console.log("[EditActivity] Activity ID:", data.activity_id);
+    console.log("[EditActivity] Plan ID:", planId || data.travel_plan_id);
+    console.log("[EditActivity] Original data:", data);
+    console.log("[EditActivity] Form data:", formData);
+    console.log("[EditActivity] Selected date (value):", value);
+    console.log("[EditActivity] Date ISO string:", value.toISOString());
+    
     const payload: UpdateActivityPayload = {
       target_date: value.toISOString(),
       budget_range: formData.budget_range || undefined,
       notes: formData.notes || undefined,
     };
+
+    console.log("[EditActivity] Final payload:", JSON.stringify(payload, null, 2));
+    console.log("[EditActivity] Token exists:", !!localStorage.getItem("token"));
 
     updateActivityMutation.mutate(
       {
@@ -76,11 +87,19 @@ export default function EditActivity({
         data: payload,
       },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
+          console.log("[EditActivity] ✅ SUCCESS - Response:", response);
           on_close();
         },
         onError: (error) => {
-          console.error("Error updating activity:", error);
+          console.error("[EditActivity] ❌ ERROR - Full error object:", error);
+          console.error("[EditActivity] Error message:", error instanceof Error ? error.message : String(error));
+          console.error("[EditActivity] Error stack:", error instanceof Error ? error.stack : "No stack");
+          if (error && typeof error === 'object' && 'response' in error) {
+            const axiosError = error as any;
+            console.error("[EditActivity] Response status:", axiosError.response?.status);
+            console.error("[EditActivity] Response data:", axiosError.response?.data);
+          }
         },
       }
     );

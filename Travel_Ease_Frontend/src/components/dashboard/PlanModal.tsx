@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRequestJoin } from "../../features/travelPlans/mutations";
+import { useAuth } from "../../context/AuthContext";
 import type { TravelPlan } from "../../types/travelPlan";
 
 interface PlanModalProps {
@@ -18,12 +19,19 @@ function formatDate(dateStr: string | null): string {
 
 export default function Plan_Modal({ results, on_close }: PlanModalProps): React.ReactElement {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [joiningPlanId, setJoiningPlanId] = useState<number | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState<number | null>(null);
   
   // Use TanStack Query mutation for requesting to join
   const requestJoinMutation = useRequestJoin();
+  
+  // Check if a plan belongs to the current user
+  const isUserOwnPlan = (plan: TravelPlan): boolean => {
+    if (!user?.id) return false;
+    return plan.user_id === user.id || (plan.user && plan.user.user_id === user.id);
+  };
 
   const handleViewPlan = (planId: number): void => {
     on_close(); // Close modal first
@@ -98,18 +106,30 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
               const isJoining = joiningPlanId === planId;
               const hasJoined = joinSuccess === planId;
               const isFull = plan.isFull || (plan.slotsAvailable != null && plan.slotsAvailable <= 0);
+              const isOwnPlan = isUserOwnPlan(plan);
 
               return (
                 <div
                   key={planId}
-                  className="card hover:shadow-lg hover:border-red-200 transition-all cursor-pointer group"
+                  className={`card hover:shadow-lg transition-all cursor-pointer group ${
+                    isOwnPlan 
+                      ? "border-2 border-red-500 bg-red-50/30 hover:border-red-600" 
+                      : "hover:border-red-200"
+                  }`}
                   onClick={() => handleViewPlan(planId)}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
-                        {plan.title || plan.name}
-                      </h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-gray-900 group-hover:text-red-600 transition-colors">
+                          {plan.title || plan.name}
+                        </h3>
+                        {isOwnPlan && (
+                          <span className="px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
+                            Your Plan
+                          </span>
+                        )}
+                      </div>
                       {plan.description && (
                         <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                           {plan.description}

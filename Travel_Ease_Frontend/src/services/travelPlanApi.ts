@@ -85,11 +85,21 @@ export const travelPlanApi = {
    * Create a new travel plan
    */
   createPlan: async (data: CreatePlanPayload): Promise<CreatePlanResponse> => {
-    const response = await api.post<CreatePlanResponse>(
-      endpoints.travelPlan.createPlan,
-      data
-    );
-    return response.data;
+    console.log("[travelPlanApi.createPlan] ========== API CALL ==========");
+    console.log("[travelPlanApi.createPlan] Endpoint:", endpoints.travelPlan.createPlan);
+    console.log("[travelPlanApi.createPlan] Payload:", JSON.stringify(data, null, 2));
+    try {
+      const response = await api.post<CreatePlanResponse>(
+        endpoints.travelPlan.createPlan,
+        data
+      );
+      console.log("[travelPlanApi.createPlan] ✅ Response status:", response.status);
+      console.log("[travelPlanApi.createPlan] Response data:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("[travelPlanApi.createPlan] ❌ API Error:", error);
+      throw error;
+    }
   },
 
   /**
@@ -109,13 +119,27 @@ export const travelPlanApi = {
     if (data.slots !== undefined) payload.max_slots = data.slots;
     if (data.is_public !== undefined) payload.visibility = data.is_public;
     if (data.status !== undefined) payload.status = data.status;
-    if (data.accommodation_id !== undefined) payload.accommodation_id = data.accommodation_id;
+    // Handle accommodation_id: include null to remove, undefined to not change
+    if (data.accommodation_id !== undefined) {
+      payload.accommodation_id = data.accommodation_id;
+    }
 
-    const response = await api.put<UpdatePlanResponse>(
-      endpoints.travelPlan.editPlan(id),
-      payload
-    );
-    return response.data;
+    console.log("[travelPlanApi.updatePlan] ========== API CALL ==========");
+    console.log("[travelPlanApi.updatePlan] Plan ID:", id);
+    console.log("[travelPlanApi.updatePlan] Endpoint:", endpoints.travelPlan.editPlan(id));
+    console.log("[travelPlanApi.updatePlan] Payload:", JSON.stringify(payload, null, 2));
+    try {
+      const response = await api.put<UpdatePlanResponse>(
+        endpoints.travelPlan.editPlan(id),
+        payload
+      );
+      console.log("[travelPlanApi.updatePlan] ✅ Response status:", response.status);
+      console.log("[travelPlanApi.updatePlan] Response data:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("[travelPlanApi.updatePlan] ❌ API Error:", error);
+      throw error;
+    }
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -128,11 +152,21 @@ export const travelPlanApi = {
   createActivity: async (
     data: CreateActivityPayload
   ): Promise<CreateActivityResponse> => {
-    const response = await api.post<CreateActivityResponse>(
-      endpoints.travelPlan.createActivity,
-      data
-    );
-    return response.data;
+    console.log("[travelPlanApi.createActivity] ========== API CALL ==========");
+    console.log("[travelPlanApi.createActivity] Endpoint:", endpoints.travelPlan.createActivity);
+    console.log("[travelPlanApi.createActivity] Payload:", JSON.stringify(data, null, 2));
+    try {
+      const response = await api.post<CreateActivityResponse>(
+        endpoints.travelPlan.createActivity,
+        data
+      );
+      console.log("[travelPlanApi.createActivity] ✅ Response status:", response.status);
+      console.log("[travelPlanApi.createActivity] Response data:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("[travelPlanApi.createActivity] ❌ API Error:", error);
+      throw error;
+    }
   },
 
   /**
@@ -142,11 +176,27 @@ export const travelPlanApi = {
     activityId: number | string,
     data: UpdateActivityPayload
   ): Promise<UpdateActivityResponse> => {
-    const response = await api.put<UpdateActivityResponse>(
-      endpoints.travelPlan.editActivity(activityId),
-      data
-    );
-    return response.data;
+    console.log("[travelPlanApi.updateActivity] ========== API CALL ==========");
+    console.log("[travelPlanApi.updateActivity] Activity ID:", activityId);
+    console.log("[travelPlanApi.updateActivity] Endpoint:", endpoints.travelPlan.editActivity(activityId));
+    console.log("[travelPlanApi.updateActivity] Payload:", JSON.stringify(data, null, 2));
+    try {
+      const response = await api.put<UpdateActivityResponse>(
+        endpoints.travelPlan.editActivity(activityId),
+        data
+      );
+      console.log("[travelPlanApi.updateActivity] ✅ Response status:", response.status);
+      console.log("[travelPlanApi.updateActivity] Response data:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("[travelPlanApi.updateActivity] ❌ ERROR - Full error:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        console.error("[travelPlanApi.updateActivity] Response status:", axiosError.response?.status);
+        console.error("[travelPlanApi.updateActivity] Response data:", axiosError.response?.data);
+      }
+      throw error;
+    }
   },
 
   /**

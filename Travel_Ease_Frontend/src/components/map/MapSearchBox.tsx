@@ -9,12 +9,14 @@ import type { SearchResult, NormalizedPlace } from "../../types/map";
 
 interface SearchBoxProps {
   onSearch: (result: SearchResult) => void;
+  onAddToPlan?: (result: SearchResult) => void; // Optional callback for "Add to Travel Plan"
   placeholder?: string;
   initialValue?: string;
 }
 
 export default function MapSearchBox({
   onSearch,
+  onAddToPlan,
   placeholder = "Search for a place...",
   initialValue = "",
 }: SearchBoxProps): React.ReactElement {
@@ -47,6 +49,15 @@ export default function MapSearchBox({
   const suggestions = useMemo(() => {
     return [...dbResults, ...nominatimResults];
   }, [dbResults, nominatimResults]);
+
+  // Update showSuggestions when suggestions change
+  useEffect(() => {
+    if (query.length >= 2 && suggestions.length > 0) {
+      setShowSuggestions(true);
+    } else if (query.length < 2) {
+      setShowSuggestions(false);
+    }
+  }, [suggestions, query]);
 
   // Use TanStack Query for direct geocode search (on Enter)
   const {
@@ -89,7 +100,8 @@ export default function MapSearchBox({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = e.target.value;
     setQuery(value);
-    setShowSuggestions(value.length >= 2);
+    // Show suggestions dropdown when there are results and query is at least 2 chars
+    setShowSuggestions(value.length >= 2 && suggestions.length > 0);
     setSearchOnEnter(false);
   };
 
@@ -176,28 +188,58 @@ export default function MapSearchBox({
         </div>
       )}
 
-      {showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute z-[10000] w-full mt-2 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-xl shadow-black/10 max-h-60 overflow-y-auto">
+      {showSuggestions && query.length >= 2 && suggestions.length > 0 && (
+        <ul className="absolute z-[9999] w-full mt-2 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-xl shadow-black/10 max-h-60 overflow-y-auto">
           {suggestions.map((place) => {
             const isDatabaseResult = place.id.startsWith("business_");
             return (
               <li
                 key={place.id}
-                onClick={() => handleSelect(place)}
-                className="px-4 py-3 hover:bg-primary-red/10 cursor-pointer text-sm border-b border-gray-100 last:border-0 transition-colors"
+                className="border-b border-gray-100 last:border-0"
               >
-                <div className="flex items-center gap-2">
-                  {isDatabaseResult && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
-                      🏢 DB
+                <div
+                  onClick={() => handleSelect(place)}
+                  className="px-4 py-3 hover:bg-primary-red/10 cursor-pointer text-sm transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    {isDatabaseResult && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                        🏢 DB
+                      </span>
+                    )}
+                    <span className="font-medium text-gray-800 flex-1">{place.name}</span>
+                  </div>
+                  {place.fullLabel !== place.name && (
+                    <span className="text-gray-500 text-xs block mt-0.5 truncate">
+                      {place.fullLabel}
                     </span>
                   )}
-                  <span className="font-medium text-gray-800 flex-1">{place.name}</span>
                 </div>
-                {place.fullLabel !== place.name && (
-                  <span className="text-gray-500 text-xs block mt-0.5 truncate">
-                    {place.fullLabel}
-                  </span>
+                {/* Add to Travel Plan button for selected search results */}
+                {onAddToPlan && (
+                  <div className="px-4 pb-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Convert place to SearchResult and trigger add to plan
+                        const searchResult: SearchResult = {
+                          lat: place.lat,
+                          lng: place.lng,
+                          name: place.name,
+                          label: place.fullLabel,
+                          address: place.address,
+                          business_id: isDatabaseResult ? parseInt(place.id.replace("business_", "")) : undefined,
+                        };
+                        onAddToPlan(searchResult);
+                      }}
+                      className="w-full text-xs text-primary-red hover:text-primary-red/80 hover:bg-red-50 py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add to Travel Plan
+                    </button>
+                  </div>
                 )}
               </li>
             );

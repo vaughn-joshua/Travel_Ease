@@ -40,6 +40,8 @@ export default function Edit_Plan({
   // Accommodation search state
   const [accommodationSearch, setAccommodationSearch] = useState<string>("");
   const [accommodationResults, setAccommodationResults] = useState<Array<{ business_id: number; name: string }>>([]);
+  // Track initial accommodation to detect changes
+  const initialAccommodationId = plan.accommodation?.business_id ?? null;
   const [selectedAccommodation, setSelectedAccommodation] = useState<{ business_id: number; name: string } | null>(
     plan.accommodation ? { business_id: plan.accommodation.business_id, name: plan.accommodation.name } : null
   );
@@ -145,6 +147,14 @@ export default function Edit_Plan({
   const on_submit = async (formData: FormData): Promise<void> => {
     setSubmitError(null);
 
+    // Determine accommodation_id: only include if it changed
+    let accommodation_id: number | null | undefined = undefined;
+    const currentAccommodationId = selectedAccommodation?.business_id ?? null;
+    if (currentAccommodationId !== initialAccommodationId) {
+      // Accommodation changed - send the new value (number or null to remove)
+      accommodation_id = currentAccommodationId;
+    }
+
     const payload: UpdatePlanPayload = {
       title: formData.title,
       description: formData.description,
@@ -153,17 +163,35 @@ export default function Edit_Plan({
       end_date: formData.end_date || undefined,
       slots: formData.max_slots ? parseInt(formData.max_slots, 10) : undefined,
       is_public: formData.visibility,
-      accommodation_id: selectedAccommodation?.business_id ?? null,
+      accommodation_id,
     };
+
+    console.log("[EditPlan] ========== EDIT PLAN ATTEMPT ==========");
+    console.log("[EditPlan] Plan ID:", travel_plan);
+    console.log("[EditPlan] Form data:", formData);
+    console.log("[EditPlan] Initial accommodation ID:", initialAccommodationId);
+    console.log("[EditPlan] Selected accommodation:", selectedAccommodation);
+    console.log("[EditPlan] Accommodation ID to send:", accommodation_id);
+    console.log("[EditPlan] Final payload:", JSON.stringify(payload, null, 2));
+    console.log("[EditPlan] Token exists:", !!localStorage.getItem("token"));
+    console.log("[EditPlan] Mutation state - isPending:", updatePlanMutation.isPending);
 
     updatePlanMutation.mutate(
       { id: travel_plan, data: payload },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
+          console.log("[EditPlan] ✅ SUCCESS - Response:", response);
           on_close();
         },
         onError: (error) => {
-          console.error("Error updating plan:", error);
+          console.error("[EditPlan] ❌ ERROR - Full error object:", error);
+          console.error("[EditPlan] Error message:", error instanceof Error ? error.message : String(error));
+          console.error("[EditPlan] Error stack:", error instanceof Error ? error.stack : "No stack");
+          if (error && typeof error === 'object' && 'response' in error) {
+            const axiosError = error as any;
+            console.error("[EditPlan] Response status:", axiosError.response?.status);
+            console.error("[EditPlan] Response data:", axiosError.response?.data);
+          }
           setSubmitError(
             error instanceof Error ? error.message : "Failed to update plan"
           );

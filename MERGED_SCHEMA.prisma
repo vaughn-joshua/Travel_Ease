@@ -1,0 +1,331 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Blog {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        Int?
+  title          String      @db.VarChar(200)
+  slug           String      @unique @db.VarChar(200)
+  excerpt        String      @db.VarChar(500)
+  content        String
+  coverImageUrl  String
+  category       String      @db.VarChar(100)
+  isFeatured     Boolean?    @default(false)
+  readingMinutes Int
+  publishedAt    DateTime?   @default(now()) @db.Timestamp(6)
+  author         String      @db.VarChar(100)
+  createdAt      DateTime?   @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime?   @default(now()) @db.Timestamp(6)
+  status         blog_status @default(Published)
+  user           user?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([category], map: "idx_blog_category")
+  @@index([isFeatured], map: "idx_blog_is_featured")
+  @@index([publishedAt], map: "idx_blog_published_at")
+  @@index([slug], map: "idx_blog_slug")
+  @@index([status], map: "idx_blog_status")
+}
+
+model activity {
+  activity_id      Int          @id @default(autoincrement())
+  travel_plan_id   Int?
+  business_id      Int?
+  notes            String?
+  target_date      DateTime?    @db.Date
+  budget_range     range?
+  user_id          Int?
+  is_priority      Boolean?     @default(false)
+  lat              Float?
+  lng              Float?
+  brgy             String?      @db.VarChar(200)
+  city             String?      @db.VarChar(200)
+  location         String?      @db.VarChar(300)
+  name             String?      @db.VarChar(200)
+  province         String?      @db.VarChar(200)
+  is_accommodation Boolean?     @default(false)
+  business         business?    @relation(fields: [business_id], references: [business_id], onUpdate: NoAction)
+  travel_plan      travel_plan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user             user?        @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([business_id], map: "idx_activity_business_id")
+  @@index([travel_plan_id, is_accommodation], map: "idx_activity_plan_accommodation")
+  @@index([travel_plan_id], map: "idx_activity_travel_plan_id")
+  @@index([user_id], map: "idx_activity_user_id")
+}
+
+/// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
+model business {
+  business_id          Int                 @id @default(autoincrement())
+  user_id              Int?
+  name                 String              @db.VarChar(200)
+  house_number         String?             @db.VarChar(300)
+  street               String?             @db.VarChar(300)
+  brgy                 String?             @db.VarChar(300)
+  city                 String?             @db.VarChar(300)
+  latitude             Float?
+  longtitude           Float?
+  description          String?
+  rating               Decimal?            @db.Decimal(3, 1)
+  google_authenticator String?             @db.VarChar(100)
+  status               Boolean?            @default(false)
+  picture              String?
+  min_price            Int?
+  max_price            Int?
+  activity             activity[]
+  user                 user?               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  business_category    business_category[]
+  business_favorite    business_favorite[]
+  business_hours       business_hours[]
+  business_review      business_review[]
+  menu_item            menu_item[]
+
+  @@index([city], map: "idx_business_city")
+  @@index([max_price], map: "idx_business_max_price")
+  @@index([min_price], map: "idx_business_min_price")
+  @@index([rating(sort: Desc)], map: "idx_business_rating")
+  @@index([status], map: "idx_business_status")
+  @@index([status, rating(sort: Desc)], map: "idx_business_status_rating")
+  @@index([user_id], map: "idx_business_user_id")
+}
+
+model business_category {
+  category_id    Int          @id @default(autoincrement())
+  business_id    Int?
+  subcategory_id Int?
+  business       business?    @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+  subcategory    subcategory? @relation(fields: [subcategory_id], references: [subcategory_id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([business_id], map: "idx_business_category_business_id")
+}
+
+model business_favorite {
+  favorite_id Int       @id @default(autoincrement())
+  user_id     Int?
+  business_id Int?
+  business    business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+  user        user?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, business_id])
+}
+
+model business_hours {
+  id          Int       @id @default(autoincrement())
+  business_id Int?
+  day_of_week String?   @db.VarChar(10)
+  open_time   DateTime? @db.Time(6)
+  close_time  DateTime? @db.Time(6)
+  business    business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([business_id], map: "idx_business_hours_business_id")
+}
+
+/// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
+model business_review {
+  review_id   Int       @id @default(autoincrement())
+  user_id     Int?
+  business_id Int?
+  rating      Decimal?  @db.Decimal(3, 1)
+  content     String?
+  review_date DateTime? @default(dbgenerated("CURRENT_DATE")) @db.Date
+  business    business? @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+  user        user?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([business_id], map: "idx_business_review_business_id")
+  @@index([review_date(sort: Desc)], map: "idx_business_review_date")
+  @@index([user_id], map: "idx_business_review_user_id")
+}
+
+model menu_item {
+  menu_item_id Int      @id @default(autoincrement())
+  business_id  Int
+  name         String   @db.VarChar(200)
+  description  String?
+  price        Decimal  @db.Decimal(10, 2)
+  image_url    String?
+  category     String?  @db.VarChar(100)
+  is_available Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @db.Timestamp(6)
+  business     business @relation(fields: [business_id], references: [business_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([business_id], map: "idx_menu_item_business_id")
+}
+
+model notification {
+  notification_id Int      @id @default(autoincrement())
+  user_id         Int
+  type            String   @db.VarChar(50)
+  title           String   @db.VarChar(200)
+  message         String
+  data            Json?
+  is_read         Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  user            user     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_notification_created_at")
+  @@index([is_read], map: "idx_notification_is_read")
+  @@index([user_id], map: "idx_notification_user_id")
+}
+
+model participant {
+  participant_id Int              @id @default(autoincrement())
+  travel_plan_id Int?
+  user_id        Int?
+  role           participant_role @default(Viewer)
+  joined_at      DateTime?        @default(now()) @db.Timestamp(6)
+  status         Boolean?         @default(false)
+  travel_plan    travel_plan?     @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           user?            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, travel_plan_id])
+  @@index([travel_plan_id], map: "idx_participant_travel_plan_id")
+  @@index([user_id], map: "idx_participant_user_id")
+}
+
+model subcategory {
+  subcategory_id    Int                 @id @default(autoincrement())
+  main_category     category
+  subcategory_name  String              @db.VarChar(100)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  business_category business_category[]
+  price_range       price_range[]
+
+  @@unique([main_category, subcategory_name])
+  @@index([main_category])
+}
+
+model price_range {
+  id             Int          @id @default(autoincrement())
+  subcategory_id Int?
+  min_price      Int
+  max_price      Int
+  subcategory    subcategory? @relation(fields: [subcategory_id], references: [subcategory_id], onUpdate: NoAction)
+
+  @@map("price_range")
+}
+
+/// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
+model travel_plan {
+  travel_plan_id       Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(200)
+  user_id              Int?
+  start_date           DateTime?              @db.Date
+  end_date             DateTime?              @db.Date
+  description          String?
+  visibility           Boolean?               @default(false)
+  visibility_end_date  DateTime?              @db.Date
+  status               status_enum            @default(Draft)
+  max_slots            Int?
+  location             String?
+  visibility_timestamp DateTime?              @db.Timestamp(6)
+  activity             activity[]
+  participant          participant[]
+  user                 user?                  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  travel_plan_favorite travel_plan_favorite[]
+  travel_plan_review   travel_plan_review[]
+
+  @@index([visibility, status, visibility_timestamp(sort: Desc)], map: "idx_travel_plan_public_query")
+  @@index([status], map: "idx_travel_plan_status")
+  @@index([user_id], map: "idx_travel_plan_user_id")
+  @@index([visibility], map: "idx_travel_plan_visibility")
+  @@index([visibility_end_date], map: "idx_travel_plan_visibility_end_date")
+  @@index([visibility_timestamp(sort: Desc)], map: "idx_travel_plan_visibility_timestamp")
+}
+
+model travel_plan_favorite {
+  favorite_id    Int          @id @default(autoincrement())
+  user_id        Int?
+  travel_plan_id Int?
+  travel_plan    travel_plan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           user?        @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, travel_plan_id])
+}
+
+model travel_plan_review {
+  review_id      Int          @id @default(autoincrement())
+  user_id        Int?
+  travel_plan_id Int?
+  rating         Decimal?     @db.Decimal(3, 1)
+  content        String?
+  review_date    DateTime?    @default(dbgenerated("CURRENT_DATE")) @db.Date
+  travel_plan    travel_plan? @relation(fields: [travel_plan_id], references: [travel_plan_id], onDelete: Cascade, onUpdate: NoAction)
+  user           user?        @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([travel_plan_id], map: "idx_travel_plan_review_plan_id")
+  @@index([user_id], map: "idx_travel_plan_review_user_id")
+}
+
+model user {
+  user_id              Int                    @id @default(autoincrement())
+  auth_id              String?                @unique @db.Uuid
+  first_name           String                 @db.VarChar(100)
+  last_name            String                 @db.VarChar(100)
+  email                String                 @unique @db.VarChar(100)
+  contact_no           String?                @db.VarChar(50)
+  password             String?                @db.VarChar
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(6)
+  auth_provider        String?                @db.VarChar(50)
+  profile_completed    Boolean?               @default(false)
+  has_email_identity   Boolean                @default(false)
+  Blog                 Blog[]
+  activity             activity[]
+  business             business[]
+  business_favorite    business_favorite[]
+  business_review      business_review[]
+  notification         notification[]
+  participant          participant[]
+  travel_plan          travel_plan[]
+  travel_plan_favorite travel_plan_favorite[]
+  travel_plan_review   travel_plan_review[]
+}
+
+enum blog_status {
+  Draft
+  Published
+  Archived
+}
+
+enum category {
+  accommodation
+  food_drinks
+  tours_activities
+  transport_transfers
+  travel_services
+  shopping_souvenirs
+  wellness_medical
+  events_experiences
+  outdoor_gear_rental
+}
+
+enum participant_role {
+  Admin
+  Editor
+  Viewer
+}
+
+enum range {
+  range_0_100     @map("0-100")
+  range_100_200   @map("100-200")
+  range_200_400   @map("200-400")
+  range_400_700   @map("400-700")
+  range_700_1000  @map("700-1000")
+  range_1000_1500 @map("1000-1500")
+  range_1500_plus @map("1500+")
+}
+
+enum status_enum {
+  Draft
+  Active
+  Completed
+  Cancelled
+}
+

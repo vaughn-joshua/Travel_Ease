@@ -41,11 +41,19 @@ function isDbConnectionError(error: unknown): boolean {
  * DEGRADED MODE: Returns empty data with dbUnavailable=true when database is unreachable
  */
 export async function previous_plans(req: Request, res: Response) {
-  const userId = req.user!.id;
+  console.log('[previousPlans] Request received - req.user:', req.user);
+  if (!req.user) {
+    console.error('[previousPlans] ERROR: req.user is undefined!');
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  const userId = req.user.id;
+  console.log('[previousPlans] Starting - userId:', userId);
   const { page, pageSize, skip, take } = parsePagination(
     req.query as Record<string, string>
   );
   const filters = buildPlanFilters(req.query as Record<string, string>);
+  console.log('[previousPlans] Pagination:', { page, pageSize, skip, take });
+  console.log('[previousPlans] Filters:', filters);
 
   // Empty fallback response for degraded mode
   const emptyResponse = {
@@ -79,9 +87,11 @@ export async function previous_plans(req: Request, res: Response) {
           select: { travel_plan_id: true },
         }),
       1);
+      console.log('[previousPlans] Participant plan IDs from DB:', participantPlanIds);
       planIds = participantPlanIds
         .map((p) => p.travel_plan_id)
         .filter((id): id is number => id !== null);
+      console.log('[previousPlans] Filtered plan IDs:', planIds);
     } catch (participantError) {
       if (isDbConnectionError(participantError)) {
         logger.warn({ err: participantError }, 'Database unavailable - returning empty previous plans');
@@ -100,6 +110,8 @@ export async function previous_plans(req: Request, res: Response) {
       ],
       ...filters,
     };
+    console.log('[previousPlans] Where clause:', JSON.stringify(where, null, 2));
+    console.log('[previousPlans] Status filter:', statuses);
 
     // Use Promise.allSettled for graceful partial failure handling
     const results = await Promise.allSettled([
@@ -126,6 +138,14 @@ export async function previous_plans(req: Request, res: Response) {
     // Extract results, using empty/zero for failed queries
     const plans = results[0].status === 'fulfilled' ? results[0].value : [];
     const total = results[1].status === 'fulfilled' ? results[1].value : 0;
+    console.log('[previousPlans] Plans found:', plans.length, 'Total:', total);
+    console.log('[previousPlans] Plans data:', plans.map(p => ({ id: p.travel_plan_id, name: p.name, status: p.status })));
+    if (results[0].status === 'rejected') {
+      console.error('[previousPlans] Query failed:', results[0].reason);
+    }
+    if (results[1].status === 'rejected') {
+      console.error('[previousPlans] Count query failed:', results[1].reason);
+    }
 
     // Check if both queries failed
     const allFailed = results.every(r => r.status === 'rejected');
@@ -166,6 +186,7 @@ export async function previous_plans(req: Request, res: Response) {
 
     // Fetch accommodation for all plans
     const accommodationMap = await getAccommodationForPlans(planIdList);
+    console.log('[previousPlans] Accommodation map:', Array.from(accommodationMap.entries()));
 
     const data = plans.map((p) =>
       formatPlan(p, {
@@ -174,6 +195,8 @@ export async function previous_plans(req: Request, res: Response) {
         accommodation: accommodationMap.get(p.travel_plan_id) || null,
       })
     );
+    console.log('[previousPlans] Formatted data count:', data.length);
+    console.log('[previousPlans] Final response data:', data);
 
     res.set("X-DB-Status", "connected");
     res.json(paginatedResponse(data, total, { page, pageSize }));
