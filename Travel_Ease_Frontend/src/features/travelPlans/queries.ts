@@ -7,11 +7,17 @@
  * Degraded Mode Support:
  * - Some hooks (usePublicPlansWithMeta, usePreviousPlansWithMeta) return dbUnavailable flag
  * - Use these when you need to display degraded state banners in UI
+ * 
+ * Auth-Protected Queries:
+ * - Queries that require authentication (ongoing, previous, upcoming) use useAuth()
+ *   to check loading and user state before enabling
+ * - This prevents race conditions where queries fire before auth state is resolved
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { travelPlanKeys } from "../../lib/queryKeys";
 import { travelPlanApi } from "../../services/travelPlanApi";
+import { useAuth } from "../../context/AuthContext";
 import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
 import { fetch_previous_plans, fetch_previous_plans_with_meta, type PreviousPlansResult } from "../../utils/travel_plan/fetch_previous_plans";
 import { fetch_public_plans, fetch_public_plans_with_meta, type PublicPlansResult } from "../../utils/travel_plan/fetch_public_plans";
@@ -35,10 +41,15 @@ interface UserRoleResponse {
 // Requires authentication; returns empty array if not logged in.
 // ─────────────────────────────────────────────────────────────────────────────
 export function useOngoingPlans(enabled = true) {
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  // This prevents race conditions where stale localStorage tokens cause 403s
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
+  
   return useQuery<TravelPlan[], Error>({
     queryKey: travelPlanKeys.ongoing(),
     queryFn: fetch_ongoing_plans,
-    enabled,
+    enabled: enabled && isAuthenticated,
     // Ongoing plans can change frequently; keep default staleTime
   });
 }
@@ -48,10 +59,14 @@ export function useOngoingPlans(enabled = true) {
 // Fetches the current user's completed/past travel plans.
 // ─────────────────────────────────────────────────────────────────────────────
 export function usePreviousPlans(enabled = true) {
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
+  
   return useQuery<TravelPlan[], Error>({
     queryKey: travelPlanKeys.previous(),
     queryFn: fetch_previous_plans,
-    enabled,
+    enabled: enabled && isAuthenticated,
     staleTime: 1000 * 60, // Previous plans don't change often
   });
 }
@@ -62,10 +77,14 @@ export function usePreviousPlans(enabled = true) {
 // Use this when you need to display a banner when database is unavailable.
 // ─────────────────────────────────────────────────────────────────────────────
 export function usePreviousPlansWithMeta(enabled = true) {
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
+  
   return useQuery<PreviousPlansResult, Error>({
     queryKey: [...travelPlanKeys.previous(), 'meta'],
     queryFn: fetch_previous_plans_with_meta,
-    enabled,
+    enabled: enabled && isAuthenticated,
     staleTime: 1000 * 60,
   });
 }
@@ -75,10 +94,14 @@ export function usePreviousPlansWithMeta(enabled = true) {
 // Fetches the current user's upcoming/draft travel plans.
 // ─────────────────────────────────────────────────────────────────────────────
 export function useUpcomingPlans(enabled = true) {
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
+  
   return useQuery<TravelPlan[], Error>({
     queryKey: travelPlanKeys.list({ status: "upcoming" }),
     queryFn: fetch_plans,
-    enabled,
+    enabled: enabled && isAuthenticated,
   });
 }
 
@@ -113,12 +136,14 @@ export function usePublicPlansWithMeta() {
 // Only enabled when we have an ID and a valid auth token.
 // ─────────────────────────────────────────────────────────────────────────────
 export function useTravelPlanDetail(id: number | string | undefined) {
-  const hasToken = !!localStorage.getItem("token");
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
   
   return useQuery<TravelPlan | null, Error>({
     queryKey: travelPlanKeys.detail(id ?? ""),
     queryFn: () => fetch_plan_id(id!),
-    enabled: id !== undefined && id !== "" && hasToken,
+    enabled: id !== undefined && id !== "" && isAuthenticated,
     staleTime: 1000 * 30,
     retry: (failureCount, error) => {
       // Don't retry on auth errors
@@ -162,12 +187,14 @@ export function useTravelPlanParticipants(planId: number | string | undefined) {
 // Returns: { isOwner, role, isParticipant }
 // ─────────────────────────────────────────────────────────────────────────────
 export function useUserPlanRole(planId: number | string | undefined) {
-  const hasToken = !!localStorage.getItem("token");
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
   
   return useQuery<UserRoleResponse, Error>({
     queryKey: ["travel-plan", "user-role", planId],
     queryFn: () => travelPlanApi.getUserRole(planId!),
-    enabled: planId !== undefined && planId !== "" && hasToken,
+    enabled: planId !== undefined && planId !== "" && isAuthenticated,
     staleTime: 1000 * 30,
   });
 }

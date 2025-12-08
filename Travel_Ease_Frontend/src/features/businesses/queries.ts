@@ -8,6 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { businessApi } from "../../services/api";
 import { businessKeys, type BusinessListParams } from "../../lib/queryKeys";
+import { useAuth } from "../../context/AuthContext";
 
 // Re-export types from api.ts for convenience (they're not exported there, so we mirror the shapes)
 interface Business {
@@ -185,10 +186,10 @@ interface MyBusinessesResponse {
 }
 
 export function useMyBusinesses() {
-  // Check both token and user profile exist (more robust than just token)
-  const hasToken = !!localStorage.getItem("token");
-  const hasUserProfile = !!localStorage.getItem("travelEaseUser");
-  const isAuthenticated = hasToken && hasUserProfile;
+  // Use AuthContext to ensure we only fetch when user is authenticated
+  // This prevents race conditions where stale localStorage tokens cause 403s
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
   
   return useQuery<MyBusinessesResponse, Error>({
     queryKey: [...businessKeys.lists(), "my"],

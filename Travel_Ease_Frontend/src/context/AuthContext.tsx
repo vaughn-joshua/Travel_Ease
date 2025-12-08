@@ -146,11 +146,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearAuthState = async () => {
+    // Clear local state first - this is the important part
     persistAuth(null, null);
     setSession(null);
     setNeedsOnboarding(false);
+    
+    // Attempt to sign out from Supabase. Use scope: 'local' to minimize
+    // server-side impact. The 403 errors that occur when the session is
+    // already invalid are expected and silently ignored - the important
+    // thing is that our local state is already cleared above.
     if (isSupabaseConfigured) {
-      await supabase.auth.signOut().catch(console.error);
+      supabase.auth.signOut({ scope: 'local' }).catch(() => {
+        // Silently ignore signOut errors - local state is already cleared
+        // The session was likely already invalid server-side
+      });
     }
   };
 
@@ -159,20 +168,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const businessAuthEmail = localStorage.getItem(BUSINESS_AUTH_EMAIL_KEY);
     const isInBusinessAuthFlow = !!businessAuthEmail;
     
-    // Load stored profile
+    // Read stored profile but DON'T set user state yet - wait for session validation
+    // This prevents the race condition where user is truthy but session is invalid
     const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    let parsedProfile: AppUser | null = null;
     if (storedProfile) {
       try {
-        const parsed = JSON.parse(storedProfile) as AppUser;
-        setUser(parsed);
-        // Set onboarding state based on profile_completed flag
-        setNeedsOnboarding(!parsed.profileCompleted);
+        parsedProfile = JSON.parse(storedProfile) as AppUser;
       } catch (error) {
         localStorage.removeItem(PROFILE_STORAGE_KEY);
       }
     }
 
     if (!isSupabaseConfigured) {
+      // No Supabase - trust localStorage as the only source of truth
+      if (parsedProfile) {
+        setUser(parsedProfile);
+        setNeedsOnboarding(!parsedProfile.profileCompleted);
+      }
       setLoading(false);
       return;
     }
@@ -185,36 +198,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (sessionEmail !== expectedEmail) {
           // Email mismatch - DON'T update session or user state
-          // Keep the original user from localStorage intact
+          // Restore the original user from localStorage intact
+          if (parsedProfile) {
+            setUser(parsedProfile);
+            setNeedsOnboarding(!parsedProfile.profileCompleted);
+          }
           setLoading(false);
           return;
         }
       }
       
-      setSession(currentSession);
+      // CRITICAL: Validate session expiration before trusting it
+      // Supabase getSession() returns cached sessions from localStorage which may be expired
+      // We must check expires_at to avoid making API calls with stale tokens
+      const isSessionValid = currentSession?.access_token && 
+        currentSession.expires_at && 
+        (currentSession.expires_at * 1000) > Date.now();
       
-      // ALWAYS sync the token when we have a valid Supabase session
-      // This ensures API calls can work immediately after auth loads
-      if (currentSession?.access_token) {
+      if (isSessionValid) {
+        setSession(currentSession);
         localStorage.setItem(TOKEN_STORAGE_KEY, currentSession.access_token);
-      } else {
-        // If we have a stored profile but no valid Supabase session,
-        // the session has expired - clear the stored auth state
-        if (storedProfile) {
-          localStorage.removeItem(PROFILE_STORAGE_KEY);
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-          setUser(null);
-          setNeedsOnboarding(false);
+        
+        // Now that session is validated, restore user from localStorage or Supabase
+        if (parsedProfile) {
+          setUser(parsedProfile);
+          setNeedsOnboarding(!parsedProfile.profileCompleted);
+        } else {
+          // No stored profile - create from Supabase user
+          const profile = mapSupabaseUser(currentSession?.user ?? null);
+          if (profile) {
+            setUser(profile);
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+          }
         }
+      } else {
+        // Session is missing, expired, or invalid - clear everything
+        // This prevents the race condition where stale localStorage data
+        // causes authenticated API calls before auth state is resolved
+        setSession(null);
+        localStorage.removeItem(PROFILE_STORAGE_KEY);
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        setUser(null);
+        setNeedsOnboarding(false);
       }
       
-      const profile = mapSupabaseUser(currentSession?.user ?? null);
-      if (profile && !storedProfile) {
-        // Only set basic profile if we don't already have a user from localStorage
-        setUser(profile);
-        // Also persist the profile so future page loads have it
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-      }
       setLoading(false);
     });
 
@@ -235,14 +262,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      setSession(nextSession);
+      // Validate session expiration before trusting it
+      const isNextSessionValid = nextSession?.access_token && 
+        nextSession.expires_at && 
+        (nextSession.expires_at * 1000) > Date.now();
       
-      // Sync the token when auth state changes (e.g., token refresh)
-      // Only do this if we have a stored user profile (user has been verified)
-      const storedUser = localStorage.getItem(PROFILE_STORAGE_KEY);
-      if (nextSession?.access_token && storedUser) {
-        localStorage.setItem(TOKEN_STORAGE_KEY, nextSession.access_token);
+      if (isNextSessionValid) {
+        setSession(nextSession);
+        // Sync the token when auth state changes (e.g., token refresh)
+        // Only do this if we have a stored user profile (user has been verified)
+        const storedUser = localStorage.getItem(PROFILE_STORAGE_KEY);
+        if (storedUser) {
+          localStorage.setItem(TOKEN_STORAGE_KEY, nextSession.access_token);
+        }
+      } else if (nextSession === null) {
+        // Session explicitly cleared (user signed out)
+        setSession(null);
       }
+      // If nextSession exists but is expired, ignore it - don't update state
     });
 
     // Subscribe to 401/403 events to clear auth state when token is invalid

@@ -1,57 +1,101 @@
-import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
+import { prisma, executeWithRetry } from "../../../lib/prismaHelpers.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../utils/pagination.js";
 import { formatPlan } from "../utils/formatPlan.js";
 import { getAccommodationForPlans } from "../utils/getAccommodation.js";
+import { logger } from "../../../lib/logger.js";
 import { Request, Response } from "express";
 
 /**
+ * Check if error is a database connection error
+ */
+function isDbConnectionError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message || '';
+    const prismaError = error as { code?: string };
+    return (
+      prismaError.code === 'P1001' || // Can't reach database
+      prismaError.code === 'P1002' || // Database server timed out
+      prismaError.code === 'P1008' || // Operations timed out
+      prismaError.code === 'P1017' || // Server closed connection
+      message.includes("Can't reach database") ||
+      message.includes('Connection refused') ||
+      message.includes('ECONNREFUSED') ||
+      message.includes('ECONNRESET') ||
+      message.includes('terminating connection')
+    );
+  }
+  return false;
+}
+
+/**
  * Fetch ONGOING plans for the authenticated user:
- * - ALL plans with status 'Active'
+ * - Plans with status 'Active' where user is owner OR approved participant
+ * 
+ * DEGRADED MODE: Returns empty data with dbUnavailable=true when database is unreachable
  */
 export async function ongoing_plan(req: Request, res: Response) {
-  try {
-    console.log('[ongoingPlans] Request received - req.user:', req.user);
-    if (!req.user) {
-      console.error('[ongoingPlans] ERROR: req.user is undefined!');
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    const userId = req.user.id;
-    console.log('[ongoingPlans] Starting - userId:', userId);
-    const { page, pageSize, skip, take } = parsePagination(req.query as Record<string, string>);
-    const filters = buildPlanFilters(req.query as Record<string, string>);
-    console.log('[ongoingPlans] Pagination:', { page, pageSize, skip, take });
-    console.log('[ongoingPlans] Filters:', filters);
+  const { page, pageSize, skip, take } = parsePagination(req.query as Record<string, string>);
+  
+  // Empty fallback response for degraded mode
+  const emptyResponse = {
+    data: [],
+    pagination: {
+      page,
+      pageSize,
+      total: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false,
+    },
+    dbUnavailable: true,
+  };
 
-    // Single query to get plan IDs where user is owner OR participant
-    // Note: Table names use lowercase with @@map in Prisma schema
-    const userPlanAccess = await executeWithRetry(() =>
-      prisma.$queryRaw<{ travel_plan_id: number }[]>`
-        SELECT DISTINCT tp.travel_plan_id 
-        FROM "travel_plan" tp
-        LEFT JOIN "participant" p ON tp.travel_plan_id = p.travel_plan_id AND p.user_id = ${userId} AND p.status = true
-        WHERE tp.user_id = ${userId} OR p.participant_id IS NOT NULL
-      `
-    );
-    console.log('[ongoingPlans] Raw SQL query result:', userPlanAccess);
-    const accessiblePlanIds = userPlanAccess.map(p => p.travel_plan_id);
-    console.log('[ongoingPlans] Accessible plan IDs:', accessiblePlanIds);
+  // Auth check
+  if (!req.user) {
+    logger.warn({ endpoint: 'ongoing_plan' }, 'Request without authenticated user');
+    return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+  }
+  
+  const userId = req.user.id;
+  const filters = buildPlanFilters(req.query as Record<string, string>);
+
+  try {
+    // Get plan IDs where user is owner OR approved participant
+    let accessiblePlanIds: number[] = [];
+    try {
+      const userPlanAccess = await executeWithRetry(() =>
+        prisma.$queryRaw<{ travel_plan_id: number }[]>`
+          SELECT DISTINCT tp.travel_plan_id 
+          FROM "travel_plan" tp
+          LEFT JOIN "participant" p ON tp.travel_plan_id = p.travel_plan_id AND p.user_id = ${userId} AND p.status = true
+          WHERE tp.user_id = ${userId} OR p.participant_id IS NOT NULL
+        `,
+      1); // Only 1 retry for faster response
+      accessiblePlanIds = userPlanAccess.map(p => p.travel_plan_id);
+    } catch (accessError) {
+      if (isDbConnectionError(accessError)) {
+        logger.warn({ err: accessError, userId, endpoint: 'ongoing_plan' }, 'Database unavailable - returning empty ongoing plans');
+        res.set("X-DB-Status", "unavailable");
+        return res.json(emptyResponse);
+      }
+      throw accessError;
+    }
 
     if (accessiblePlanIds.length === 0) {
-      console.log('[ongoingPlans] No accessible plans found for user, returning empty');
+      res.set("X-DB-Status", "connected");
       return res.json(paginatedResponse([], 0, { page, pageSize }));
     }
 
-    // Build where clause for ONGOING plans:
-    // All plans with Active status
+    // Build where clause for ONGOING plans (status = Active)
     const where: any = {
       travel_plan_id: { in: accessiblePlanIds },
       status: 'Active',
       ...filters
     };
-    console.log('[ongoingPlans] Where clause:', JSON.stringify(where, null, 2));
 
-    const [plans, total] = await executeWithRetry(() =>
-      Promise.all([
+    // Use Promise.allSettled for graceful partial failure handling
+    const results = await Promise.allSettled([
+      executeWithRetry(() =>
         prisma.travel_plan.findMany({
           where,
           select: {
@@ -76,29 +120,58 @@ export async function ongoing_plan(req: Request, res: Response) {
           skip,
           take
         }),
-        prisma.travel_plan.count({ where })
-      ])
-    );
-    console.log('[ongoingPlans] Plans found:', plans.length, 'Total:', total);
-    console.log('[ongoingPlans] Plans data:', plans.map(p => ({ id: p.travel_plan_id, name: p.name, status: p.status })));
+      1),
+      executeWithRetry(() => prisma.travel_plan.count({ where }), 1),
+    ]);
+
+    // Extract results, using empty/zero for failed queries
+    const plans = results[0].status === 'fulfilled' ? results[0].value : [];
+    const total = results[1].status === 'fulfilled' ? results[1].value : 0;
+
+    // Check if both queries failed
+    const allFailed = results.every(r => r.status === 'rejected');
+    if (allFailed) {
+      const firstError = (results[0] as PromiseRejectedResult).reason;
+      if (isDbConnectionError(firstError)) {
+        logger.warn({ err: firstError, userId, endpoint: 'ongoing_plan' }, 'Database unavailable - returning empty ongoing plans');
+        res.set("X-DB-Status", "unavailable");
+        return res.json(emptyResponse);
+      }
+      throw firstError;
+    }
 
     // Fetch accommodation for all plans
     const planIds = plans.map(p => p.travel_plan_id);
-    const accommodationMap = await getAccommodationForPlans(planIds);
-    console.log('[ongoingPlans] Accommodation map:', Array.from(accommodationMap.entries()));
+    let accommodationMap = new Map<number, any>();
+    if (planIds.length > 0) {
+      try {
+        accommodationMap = await getAccommodationForPlans(planIds);
+      } catch (accommodationError) {
+        // Log but don't fail - accommodation is non-critical
+        logger.warn({ err: accommodationError }, 'Failed to fetch accommodation for ongoing plans');
+      }
+    }
 
     // Format response with participant count and accommodation included
     const data = plans.map(p => formatPlan(p, {
       approvedParticipants: p._count.participant,
       accommodation: accommodationMap.get(p.travel_plan_id) || null
     }));
-    console.log('[ongoingPlans] Formatted data count:', data.length);
-    console.log('[ongoingPlans] Final response data:', data);
 
+    res.set("X-DB-Status", "connected");
     res.json(paginatedResponse(data, total, { page, pageSize }));
   } catch (error) {
-    console.error("Error fetching ongoing plans:", error);
-    return handlePrismaError(error, res, 'Fetching ongoing plans');
+    // Check if this is a database connection error
+    if (isDbConnectionError(error)) {
+      logger.warn({ err: error, userId, endpoint: 'ongoing_plan' }, 'Database unavailable - returning empty ongoing plans');
+      res.set("X-DB-Status", "unavailable");
+      return res.json(emptyResponse);
+    }
+
+    // Log and return empty for other errors to maintain graceful degradation
+    logger.error({ err: error, userId, endpoint: 'ongoing_plan' }, 'Error fetching ongoing plans');
+    res.set("X-DB-Status", "error");
+    return res.json(emptyResponse);
   }
 }
 

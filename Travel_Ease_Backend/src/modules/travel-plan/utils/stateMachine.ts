@@ -279,22 +279,114 @@ export function hasPermission(role: participant_role, permission: PlanPermission
 }
 
 // ============================================================================
+// Plan Classification for UI
+// ============================================================================
+
+/**
+ * UI classification categories for travel plans.
+ * Each plan falls into exactly one category for display purposes.
+ */
+export type PlanClassification = 'ongoing' | 'upcoming' | 'previous';
+
+export interface ClassificationResult {
+  classification: PlanClassification;
+  isPublic: boolean;
+  isJoinable: boolean;
+}
+
+/**
+ * Classify a travel plan for UI display purposes.
+ * 
+ * Classification rules (based on status and dates):
+ * - ONGOING: status='Active' (regardless of dates - user explicitly activated it)
+ * - UPCOMING: status='Draft' (being prepared, not yet active)
+ * - PREVIOUS: status='Completed' or 'Cancelled' (terminal states)
+ * 
+ * Public/Joinable:
+ * - A plan is public if visibility=true
+ * - A plan is joinable if public AND status in ['Draft', 'Active']
+ * 
+ * @param plan - The travel plan to classify
+ * @param _now - Current date (optional, for future date-based logic)
+ * @returns Classification result with category and flags
+ */
+export function classifyPlanState(
+  plan: {
+    status: PlanStatus;
+    visibility?: boolean | null;
+    start_date?: Date | null;
+    end_date?: Date | null;
+  },
+  _now: Date = new Date()
+): ClassificationResult {
+  const status = plan.status;
+  const visibility = plan.visibility ?? false;
+  
+  // Determine classification based on status
+  let classification: PlanClassification;
+  
+  if (TERMINAL_STATES.includes(status)) {
+    // Completed or Cancelled -> Previous
+    classification = 'previous';
+  } else if (status === 'Active') {
+    // Active -> Ongoing (user explicitly started the plan)
+    classification = 'ongoing';
+  } else {
+    // Draft -> Upcoming (still being prepared)
+    classification = 'upcoming';
+  }
+  
+  // Determine if joinable
+  const isJoinable = visibility && JOINABLE_STATES.includes(status);
+  
+  return {
+    classification,
+    isPublic: visibility,
+    isJoinable,
+  };
+}
+
+/**
+ * Filter plans by classification.
+ * Useful for backend filtering before sending to frontend.
+ */
+export function filterPlansByClassification<T extends { status: PlanStatus }>(
+  plans: T[],
+  targetClassification: PlanClassification,
+  now: Date = new Date()
+): T[] {
+  return plans.filter(plan => {
+    const { classification } = classifyPlanState(plan, now);
+    return classification === targetClassification;
+  });
+}
+
+// ============================================================================
 // Export convenience object
 // ============================================================================
 
 export const PlanStateMachine = {
+  // Status transitions
   isValidTransition,
   validateStatusTransition,
   canAcceptParticipants,
   isTerminalState,
   validateVisibilityChange,
+  // Slot management
   canApproveParticipant,
   validateMaxSlotsChange,
+  // Date validation
   validateDateRange,
+  // Participant management
   validateRoleDemotion,
   validateParticipantRemoval,
+  // Permissions
   getRolePermissions,
   hasPermission,
+  // Classification
+  classifyPlanState,
+  filterPlansByClassification,
+  // Constants
   JOINABLE_STATES,
   TERMINAL_STATES,
 };

@@ -99,8 +99,11 @@ api.interceptors.response.use(
       }
     }
 
-    // Only log detailed errors in development (skip abort errors)
-    if (import.meta.env.DEV) {
+    // Only log detailed errors in development (skip abort errors and expected auth errors)
+    const isExpectedAuthError = (status === 401 || status === 403) && 
+      (code === "TOKEN_EXPIRED" || code === "AUTH_REQUIRED" || !code);
+    
+    if (import.meta.env.DEV && !isExpectedAuthError) {
       console.error("API Error:", {
         status,
         statusText: error.response?.statusText,
