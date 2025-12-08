@@ -67,7 +67,7 @@ interface TravelSpotsResponse {
     brgy: string | null;
     city: string | null;
     latitude: number | null;
-    longtitude: number | null;
+    longitude: number | null; // Fixed: backend returns 'longitude' (Prisma model field name)
     description: string | null;
     rating: number | null;
     status: boolean | null;
@@ -92,11 +92,12 @@ export function useBusinessList(params?: BusinessListParams) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useTravelSpots
-// Fetches travel spots with optional search/city/limit (public, cached on backend).
+// Fetches travel spots with optional search/city/category/limit (public, cached on backend).
 // ─────────────────────────────────────────────────────────────────────────────
 export function useTravelSpots(params?: {
   search?: string;
   city?: string;
+  category?: string;
   limit?: number;
 }) {
   return useQuery<TravelSpotsResponse, Error>({

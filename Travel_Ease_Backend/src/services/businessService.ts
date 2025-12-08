@@ -469,7 +469,13 @@ export async function getBusinesses(
   const where: any = {};
 
   if (filters.category) {
-    where.business_category = { some: { subcategory_id: parseInt(filters.category) || undefined } };
+    where.business_category = {
+      some: {
+        subcategory: {
+          main_category: filters.category as any, // Cast to enum type
+        },
+      },
+    };
   }
   if (filters.city) {
     where.city = { contains: filters.city, mode: "insensitive" };

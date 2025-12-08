@@ -8,6 +8,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums - Using hotfix naming convention (RANGE_0_100) for consistency
+enum category {
+  accommodation
+  food_drinks
+  tours_activities
+  transport_transfers
+  travel_services
+  shopping_souvenirs
+  wellness_medical
+  events_experiences
+  outdoor_gear_rental
+}
+
+enum participant_role {
+  Admin
+  Editor
+  Viewer
+}
+
+enum range {
+  RANGE_0_100     @map("0-100")
+  RANGE_100_200   @map("100-200")
+  RANGE_200_400   @map("200-400")
+  RANGE_400_700   @map("400-700")
+  RANGE_700_1000  @map("700-1000")
+  RANGE_1000_1500 @map("1000-1500")
+  RANGE_1500_PLUS @map("1500+")
+}
+
+enum status_enum {
+  Draft
+  Active
+  Completed
+  Cancelled
+}
+
+enum blog_status {
+  Draft
+  Published
+  Archived
+}
+
+// User and Authentication - Keep lowercase model name from dev
+model user {
+  user_id              Int                    @id @default(autoincrement())
+  auth_id              String?                @unique @db.Uuid
+  first_name           String                 @db.VarChar(100)
+  last_name            String                 @db.VarChar(100)
+  email                String                 @unique @db.VarChar(100)
+  contact_no           String?                @db.VarChar(50)
+  password             String?                @db.VarChar
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(6)
+  auth_provider        String?                @db.VarChar(50)
+  profile_completed    Boolean?               @default(false)
+  has_email_identity   Boolean                @default(false)
+  Blog                 Blog[]
+  activity             activity[]
+  business             business[]
+  business_favorite    business_favorite[]
+  business_review      business_review[]
+  notification         notification[]
+  participant          participant[]
+  travel_plan          travel_plan[]
+  travel_plan_favorite travel_plan_favorite[]
+  travel_plan_review   travel_plan_review[]
+}
+
+// Blog - Keep status field from dev, lowercase model name
 model Blog {
   id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id        Int?
@@ -33,6 +102,7 @@ model Blog {
   @@index([status], map: "idx_blog_status")
 }
 
+// Activity - Keep lowercase model name from dev
 model activity {
   activity_id      Int          @id @default(autoincrement())
   travel_plan_id   Int?
@@ -60,6 +130,8 @@ model activity {
   @@index([user_id], map: "idx_activity_user_id")
 }
 
+// Business - Keep lowercase model name, min_price/max_price fields, and all indexes from dev
+// Add subcategory relation from hotfix
 /// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
 model business {
   business_id          Int                 @id @default(autoincrement())
@@ -95,6 +167,20 @@ model business {
   @@index([user_id], map: "idx_business_user_id")
 }
 
+// Subcategory - From hotfix, but keep lowercase model name
+model subcategory {
+  subcategory_id    Int                 @id @default(autoincrement())
+  main_category     category
+  subcategory_name  String              @db.VarChar(100)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  business_category business_category[]
+  price_range       price_range[]
+
+  @@unique([main_category, subcategory_name])
+  @@index([main_category])
+}
+
+// Business Category - Keep lowercase model name, add subcategory relation from hotfix
 model business_category {
   category_id    Int          @id @default(autoincrement())
   business_id    Int?
@@ -103,6 +189,17 @@ model business_category {
   subcategory    subcategory? @relation(fields: [subcategory_id], references: [subcategory_id], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([business_id], map: "idx_business_category_business_id")
+}
+
+// Price Range - From hotfix, but keep lowercase model name
+model price_range {
+  id             Int          @id @default(autoincrement())
+  subcategory_id Int?
+  min_price      Int
+  max_price      Int
+  subcategory    subcategory? @relation(fields: [subcategory_id], references: [subcategory_id], onUpdate: NoAction)
+
+  @@map("price_range")
 }
 
 model business_favorite {
@@ -158,6 +255,7 @@ model menu_item {
   @@index([business_id], map: "idx_menu_item_business_id")
 }
 
+// Notification - Keep lowercase model name from dev
 model notification {
   notification_id Int      @id @default(autoincrement())
   user_id         Int
@@ -187,17 +285,6 @@ model participant {
   @@unique([user_id, travel_plan_id])
   @@index([travel_plan_id], map: "idx_participant_travel_plan_id")
   @@index([user_id], map: "idx_participant_user_id")
-}
-
-model subcategory {
-  subcategory_id    Int                 @id @default(autoincrement())
-  main_category     category
-  subcategory_name  String              @db.VarChar(100)
-  created_at        DateTime?           @default(now()) @db.Timestamp(6)
-  business_category business_category[]
-
-  @@unique([main_category, subcategory_name])
-  @@index([main_category])
 }
 
 /// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
@@ -250,70 +337,4 @@ model travel_plan_review {
 
   @@index([travel_plan_id], map: "idx_travel_plan_review_plan_id")
   @@index([user_id], map: "idx_travel_plan_review_user_id")
-}
-
-model user {
-  user_id              Int                    @id @default(autoincrement())
-  auth_id              String?                @unique @db.Uuid
-  first_name           String                 @db.VarChar(100)
-  last_name            String                 @db.VarChar(100)
-  email                String                 @unique @db.VarChar(100)
-  contact_no           String?                @db.VarChar(50)
-  password             String?                @db.VarChar
-  created_at           DateTime?              @default(now()) @db.Timestamp(6)
-  updated_at           DateTime?              @default(now()) @db.Timestamp(6)
-  auth_provider        String?                @db.VarChar(50)
-  profile_completed    Boolean?               @default(false)
-  has_email_identity   Boolean                @default(false)
-  Blog                 Blog[]
-  activity             activity[]
-  business             business[]
-  business_favorite    business_favorite[]
-  business_review      business_review[]
-  notification         notification[]
-  participant          participant[]
-  travel_plan          travel_plan[]
-  travel_plan_favorite travel_plan_favorite[]
-  travel_plan_review   travel_plan_review[]
-}
-
-enum blog_status {
-  Draft
-  Published
-  Archived
-}
-
-enum category {
-  accommodation
-  food_drinks
-  tours_activities
-  transport_transfers
-  travel_services
-  shopping_souvenirs
-  wellness_medical
-  events_experiences
-  outdoor_gear_rental
-}
-
-enum participant_role {
-  Admin
-  Editor
-  Viewer
-}
-
-enum range {
-  range_0_100     @map("0-100")
-  range_100_200   @map("100-200")
-  range_200_400   @map("200-400")
-  range_400_700   @map("400-700")
-  range_700_1000  @map("700-1000")
-  range_1000_1500 @map("1000-1500")
-  range_1500_plus @map("1500+")
-}
-
-enum status_enum {
-  Draft
-  Active
-  Completed
-  Cancelled
 }

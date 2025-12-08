@@ -11,6 +11,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { travelPlanKeys } from "../../lib/queryKeys";
+import { travelPlanApi } from "../../services/travelPlanApi";
 import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
 import { fetch_previous_plans, fetch_previous_plans_with_meta, type PreviousPlansResult } from "../../utils/travel_plan/fetch_previous_plans";
 import { fetch_public_plans, fetch_public_plans_with_meta, type PublicPlansResult } from "../../utils/travel_plan/fetch_public_plans";
@@ -20,6 +21,13 @@ import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
 import { fetch_participants } from "../../utils/travel_plan/fetch_participants";
 import type { TravelPlan, Activity } from "../../types/travelPlan";
 import type { Participant } from "../../utils/travel_plan/fetch_participants";
+
+// User role response type
+interface UserRoleResponse {
+  isOwner: boolean;
+  role: "Admin" | "Editor" | "Viewer" | null;
+  isParticipant: boolean;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useOngoingPlans
@@ -145,6 +153,22 @@ export function useTravelPlanParticipants(planId: number | string | undefined) {
     queryFn: () => fetch_participants(Number(planId)),
     enabled: planId !== undefined && planId !== "",
     staleTime: 1000 * 60,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useUserPlanRole
+// Fetches the current user's role for a specific plan.
+// Returns: { isOwner, role, isParticipant }
+// ─────────────────────────────────────────────────────────────────────────────
+export function useUserPlanRole(planId: number | string | undefined) {
+  const hasToken = !!localStorage.getItem("token");
+  
+  return useQuery<UserRoleResponse, Error>({
+    queryKey: ["travel-plan", "user-role", planId],
+    queryFn: () => travelPlanApi.getUserRole(planId!),
+    enabled: planId !== undefined && planId !== "" && hasToken,
+    staleTime: 1000 * 30,
   });
 }
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useOngoingPlans, useTravelPlanActivities } from "../../features/travelPlans/queries";
-import LandingPage from "../../pages/LandingPage";
+import LandingPage, { type MapMarker } from "../../pages/LandingPage";
 import type { Activity } from "../../types/travelPlan";
 import type { RouteInfo } from "../map/RoutingMachine";
 
@@ -97,6 +97,33 @@ export default function OngoingPlans(): React.ReactElement {
     });
   }, [allActivities, selectedPlan?.start_date, selectedDay]);
 
+  // Prepare markers for map (activities + accommodation)
+  const mapMarkers = useMemo((): MapMarker[] => {
+    const markers: MapMarker[] = [];
+
+    // Add activity markers for the selected day
+    activitiesForDay.forEach((activity) => {
+      if (activity.lat && activity.lng) {
+        markers.push({
+          position: [activity.lat, activity.lng],
+          type: activity.is_priority ? 'priority' : 'activity',
+          name: activity.name || activity.location || undefined,
+        });
+      }
+    });
+
+    // Add accommodation marker if available and has coordinates
+    if (selectedPlan?.accommodation?.lat && selectedPlan?.accommodation?.lng) {
+      markers.push({
+        position: [selectedPlan.accommodation.lat, selectedPlan.accommodation.lng],
+        type: 'accommodation',
+        name: selectedPlan.accommodation.name,
+      });
+    }
+
+    return markers;
+  }, [activitiesForDay, selectedPlan?.accommodation]);
+
   // Handle activity click - set route endpoint
   const handleActivityClick = (activity: Activity) => {
     if (activity.lat && activity.lng) {
@@ -184,6 +211,11 @@ export default function OngoingPlans(): React.ReactElement {
               <p className="text-xs text-gray-400">
                 📅 {plan.start_date} - {plan.end_date}
               </p>
+              {plan.accommodation && (
+                <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                  <span>🛏️</span> {plan.accommodation.name}
+                </p>
+              )}
               {plan.approvedParticipants !== undefined && (
                 <p className="text-xs text-gray-400 mt-1">
                   👥 {plan.approvedParticipants}/{plan.max_slots} participants
@@ -211,6 +243,7 @@ export default function OngoingPlans(): React.ReactElement {
               className="w-full h-full"
               start={TAGAYTAY_CENTER}
               end={selectedActivity}
+              markers={mapMarkers}
               onRouteFound={handleRouteFound}
             />
           </div>

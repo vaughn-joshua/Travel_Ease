@@ -1,6 +1,7 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../utils/pagination.js";
 import { formatPlan } from "../utils/formatPlan.js";
+import { getAccommodationForPlans } from "../utils/getAccommodation.js";
 import { Request, Response } from "express";
 
 /**
@@ -70,9 +71,14 @@ export async function fetch_plans(req: Request, res: Response) {
       ])
     );
 
-    // Format response with participant count included
+    // Fetch accommodation for all plans
+    const planIds = plans.map(p => p.travel_plan_id);
+    const accommodationMap = await getAccommodationForPlans(planIds);
+
+    // Format response with participant count and accommodation included
     const data = plans.map(p => formatPlan(p, {
-      approvedParticipants: p._count.participant
+      approvedParticipants: p._count.participant,
+      accommodation: accommodationMap.get(p.travel_plan_id) || null
     }));
 
     res.json(paginatedResponse(data, total, { page, pageSize }));

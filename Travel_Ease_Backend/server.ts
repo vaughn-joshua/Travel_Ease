@@ -9,6 +9,7 @@ import {
   businessRoutes,
   mapRoutes,
   reviewRoutes,
+  notificationRoutes,
   blogRoutes,
 } from "./src/routes/index.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
@@ -84,6 +85,7 @@ app.use("/api/business", businessRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/map", mapRoutes);
+app.use("/api/notification", notificationRoutes);
 
 // Health check with database status
 app.get("/api/health", async (req: Request, res: Response) => {

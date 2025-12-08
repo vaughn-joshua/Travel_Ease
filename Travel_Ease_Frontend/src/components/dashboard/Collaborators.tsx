@@ -13,13 +13,19 @@ import type { Participant } from "../../utils/travel_plan/fetch_participants";
 
 interface CollaboratorsProps {
   planId: string;
-  isOwner: boolean;
+  userRole: "owner" | "Admin" | "Editor" | "Viewer" | null; // Current user's role
+  canDelete: boolean;   // Can delete collaborators (owner/admin only)
+  canInvite: boolean;   // Can invite collaborators (owner/admin/editor)
+  canEditRoles: boolean; // Can edit collaborator roles (owner/admin/editor)
   on_close: () => void;
 }
 
 export default function Collaborators({
   planId,
-  isOwner,
+  userRole,
+  canDelete,
+  canInvite,
+  canEditRoles,
   on_close,
 }: CollaboratorsProps): React.ReactElement {
   const { user } = useAuth();
@@ -52,6 +58,9 @@ export default function Collaborators({
   const updateRoleMutation = useUpdateParticipantRole();
   const approveParticipantMutation = useApproveParticipant();
   const addParticipantMutation = useAddParticipant();
+
+  // Determine if this is owner
+  const isOwner = userRole === "owner";
 
   // Search for users when debounced search changes
   useEffect(() => {
@@ -241,8 +250,8 @@ export default function Collaborators({
           </button>
         </div>
 
-        {/* Invite Section - Only for owners */}
-        {isOwner && (
+        {/* Invite Section - Only for users who can invite */}
+        {canInvite && (
           <div className="mb-4 pb-4 border-b">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Invite Collaborators
@@ -360,7 +369,7 @@ export default function Collaborators({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {isOwner ? (
+                        {canEditRoles ? (
                           <select
                             value={participant.role}
                             onChange={(e) =>
@@ -385,7 +394,7 @@ export default function Collaborators({
                             {participant.role}
                           </span>
                         )}
-                        {isOwner && (
+                        {canDelete && (
                           <button
                             onClick={() => handleRemove(participant.user_id)}
                             disabled={actionLoading === participant.user_id}
@@ -442,7 +451,7 @@ export default function Collaborators({
                           {getStatusBadge(participant.status)}
                         </div>
                       </div>
-                      {isOwner && (
+                      {canEditRoles && (
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleApprove(participant.user_id)}
@@ -514,4 +523,3 @@ export default function Collaborators({
     </div>
   );
 }
-

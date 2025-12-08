@@ -1,12 +1,27 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import MapPage from "./MapPage";
 import MapSearchBox from "./MapSearchBox";
 import RouteForm from "./RouteForm";
 import MapNavMenu from "./MapNavMenu";
 import SelectPlanModal from "./SelectPlanModal";
+import { useTravelSpots } from "../../features/businesses/queries";
 import type { SearchResult, RouteSubmission } from "../../types/map";
 import type { RouteInfo } from "./RoutingMachine";
+import type { MapMarker } from "../../pages/LandingPage";
+
+// Main categories from backend enum
+const CATEGORIES = [
+  { value: "accommodation", label: "Accommodation", icon: "🏨" },
+  { value: "food_drinks", label: "Food & Drinks", icon: "🍽️" },
+  { value: "tours_activities", label: "Tours & Activities", icon: "🎯" },
+  { value: "transport_transfers", label: "Transport & Transfers", icon: "🚗" },
+  { value: "travel_services", label: "Travel Services", icon: "✈️" },
+  { value: "shopping_souvenirs", label: "Shopping & Souvenirs", icon: "🛍️" },
+  { value: "wellness_medical", label: "Wellness & Medical", icon: "💆" },
+  { value: "events_experiences", label: "Events & Experiences", icon: "🎪" },
+  { value: "outdoor_gear_rental", label: "Outdoor / Gear Rental", icon: "🎒" },
+] as const;
 
 // Current Location (Tagaytay City Center - system focus area)
 const CURRENT_LOCATION = {
@@ -18,6 +33,12 @@ const CURRENT_LOCATION = {
 
 export default function MainMapPage(): React.ReactElement {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryFromUrl = searchParams.get("category");
+  
+  // State for selected category (can be set from URL or button click)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(categoryFromUrl);
+  
   const [search_result, set_search_result] = useState<SearchResult | null>(null);
   const [start, setStart] = useState<[number, number] | null>(null);
   const [end, setEnd] = useState<[number, number] | null>(null);
@@ -25,6 +46,67 @@ export default function MainMapPage(): React.ReactElement {
   const [showTagaytayMessage, setShowTagaytayMessage] = useState(false);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+
+  // Sync selectedCategory with URL param
+  useEffect(() => {
+    setSelectedCategory(categoryFromUrl);
+  }, [categoryFromUrl]);
+
+  // Fetch businesses by category
+  const { data: travelSpotsData, isLoading: isLoadingSpots, error: spotsError } = useTravelSpots({
+    category: selectedCategory || undefined,
+    limit: 100, // Get more businesses for map display
+  });
+
+  // Convert businesses to map markers
+  const businessMarkers = useMemo((): MapMarker[] => {
+    // Only show markers when a category is selected
+    if (!selectedCategory) return [];
+    
+    // Return empty array if data is not yet loaded
+    if (!travelSpotsData?.data) return [];
+
+    if (import.meta.env.DEV) {
+      console.log(`Category "${selectedCategory}": Received ${travelSpotsData.data.length} businesses from API`);
+      if (travelSpotsData.data.length > 0) {
+        const firstBusiness = travelSpotsData.data[0];
+        console.log('Sample business fields:', {
+          business_id: firstBusiness.business_id,
+          name: firstBusiness.name,
+          latitude: firstBusiness.latitude,
+          longitude: firstBusiness.longitude,
+        });
+      }
+    }
+
+    const markers = travelSpotsData.data
+      .filter((business) => {
+        const hasCoords = business.latitude != null && business.longitude != null;
+        if (!hasCoords && import.meta.env.DEV) {
+          console.warn(`Business "${business.name}" (ID: ${business.business_id}) missing coordinates`, {
+            latitude: business.latitude,
+            longitude: business.longitude,
+          });
+        }
+        return hasCoords;
+      })
+      .map((business) => ({
+        position: [business.latitude!, business.longitude!] as [number, number],
+        type: 'activity' as const,
+        name: business.name,
+        business_id: business.business_id,
+        city: business.city,
+        brgy: business.brgy,
+        street: business.street,
+        description: business.description,
+      }));
+
+    if (import.meta.env.DEV) {
+      console.log(`Category "${selectedCategory}": Created ${markers.length} markers with valid coordinates`);
+    }
+
+    return markers;
+  }, [selectedCategory, travelSpotsData]);
 
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {
@@ -66,10 +148,49 @@ export default function MainMapPage(): React.ReactElement {
     setStart(null);
     setEnd(null);
     setRouteInfo(null);
+    // Clear category
+    setSelectedCategory(null);
+    setSearchParams({}, { replace: true });
+  };
+
+  // Handle category click - update URL and fetch businesses
+  const handleCategoryClick = (category: string | null): void => {
+    if (category) {
+      setSelectedCategory(category);
+      setSearchParams({ category }, { replace: true });
+      if (import.meta.env.DEV) {
+        console.log(`Category selected: ${category}`);
+      }
+    } else {
+      setSelectedCategory(null);
+      setSearchParams({}, { replace: true });
+      if (import.meta.env.DEV) {
+        console.log('Category cleared');
+      }
+    }
   };
 
   const handleSearch = (result: SearchResult): void => {
     set_search_result(result);
+  };
+
+  // Handle marker click - convert business marker to SearchResult
+  const handleMarkerClick = (marker: MapMarker & { business_id?: number; city?: string | null; brgy?: string | null; street?: string | null; description?: string | null }): void => {
+    if (!marker.business_id) return; // Only handle business markers with business_id
+    
+    const searchResult: SearchResult = {
+      lat: marker.position[0],
+      lng: marker.position[1],
+      name: marker.name || 'Unknown Business',
+      label: marker.name || 'Unknown Business',
+      business_id: marker.business_id,
+      address: {
+        city: marker.city || undefined,
+        barangay: marker.brgy || undefined,
+      },
+    };
+    
+    set_search_result(searchResult);
   };
 
   const getSearchPosition = (): [number, number] | null => {
@@ -84,16 +205,63 @@ export default function MainMapPage(): React.ReactElement {
         search_result={getSearchPosition()}
         start={start}
         end={end}
+        businessMarkers={businessMarkers}
         onMapClear={handleClearMap}
         onRouteFound={handleRouteFound}
-      />
+        onMarkerClick={handleMarkerClick}
+      /> 
 
       {/* Circular Navigation Menu */}
       <MapNavMenu />
 
-      {/* Search and Route Controls */}
-      <div className="absolute top-4 left-20 z-[9998] flex flex-col gap-2 max-w-sm">
-        <MapSearchBox onSearch={handleSearch} />
+      {/* Search and Category Controls - Upper Left (positioned to the right of nav menu) */}
+      <div className="absolute top-4 left-20 z-[9998] flex items-start gap-3">
+        {/* Search Box */}
+        <div className="flex-shrink-0 relative z-[10000]">
+          <MapSearchBox onSearch={handleSearch} />
+        </div>
+
+        {/* Category Buttons */}
+        <div className="flex flex-wrap gap-2 items-start">
+          {CATEGORIES.map((category) => (
+            <button
+              key={category.value}
+              type="button"
+              onClick={() => handleCategoryClick(category.value)}
+              disabled={isLoadingSpots && selectedCategory === category.value}
+              className={`px-3 py-2 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                selectedCategory === category.value
+                  ? "bg-primary-red text-white border border-primary-red shadow-md"
+                  : "bg-white/95 backdrop-blur-md text-gray-700 border border-gray-300 hover:border-primary-red hover:text-primary-red hover:bg-red-50 shadow-lg"
+              } ${isLoadingSpots && selectedCategory === category.value ? "opacity-75 cursor-wait" : ""}`}
+            >
+              <span>{category.icon}</span>
+              <span>{category.label}</span>
+              {isLoadingSpots && selectedCategory === category.value && (
+                <span className="ml-1">⏳</span>
+              )}
+            </button>
+          ))}
+          {selectedCategory && (
+            <button
+              onClick={() => handleCategoryClick(null)}
+              className="px-3 py-2 rounded-full text-xs font-medium bg-gray-200 text-gray-700 border border-gray-300 hover:bg-gray-300 shadow-lg whitespace-nowrap"
+              title="Clear category filter"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        {/* Debug info in development */}
+        {import.meta.env.DEV && selectedCategory && (
+          <div className="absolute top-16 left-20 bg-black/70 text-white text-xs px-2 py-1 rounded z-[9999]">
+            {isLoadingSpots ? "Loading..." : spotsError ? "Error loading" : `${businessMarkers.length} businesses pinned`}
+          </div>
+        )}
+      </div>
+
+      {/* Route Controls - Positioned below search, with lower z-index */}
+      <div className="absolute top-20 left-20 z-[9997] flex flex-col gap-2 max-w-sm">
         <RouteForm onRouteSubmit={handleRouteSubmit} />
         
         {/* ETA Display when route is active */}

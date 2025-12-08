@@ -9,6 +9,7 @@ import {
 } from "../utils/pagination.js";
 import { formatPlan } from "../utils/formatPlan.js";
 import { logger } from "../../../lib/logger.js";
+import { getAccommodationForPlans } from "../utils/getAccommodation.js";
 import { Request, Response } from "express";
 
 /**
@@ -163,10 +164,14 @@ export async function previous_plans(req: Request, res: Response) {
       }
     }
 
+    // Fetch accommodation for all plans
+    const accommodationMap = await getAccommodationForPlans(planIdList);
+
     const data = plans.map((p) =>
       formatPlan(p, {
         participantCount: countMap[p.travel_plan_id] || 0,
         approvedParticipants: countMap[p.travel_plan_id] || 0,
+        accommodation: accommodationMap.get(p.travel_plan_id) || null,
       })
     );
 

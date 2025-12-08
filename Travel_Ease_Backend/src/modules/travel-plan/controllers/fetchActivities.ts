@@ -8,7 +8,10 @@ export async function fetch_activities(req: Request, res: Response) {
 
     const activities = await executeWithRetry(() =>
       prisma.activity.findMany({
-        where: { travel_plan_id: parseInt(id) },
+        where: { 
+          travel_plan_id: parseInt(id),
+          is_accommodation: { not: true } // Exclude accommodation activities
+        },
         include: {
           user: {
             select: {

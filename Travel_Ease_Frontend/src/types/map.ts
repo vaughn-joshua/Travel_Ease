@@ -29,6 +29,7 @@ export interface SearchResult {
   name: string;
   label: string;
   address?: AddressComponents;
+  business_id?: number; // Optional: for linking to a business when adding from suggested businesses
 }
 
 export interface RoutePoint {

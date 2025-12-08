@@ -17,7 +17,7 @@ export interface TravelSpotBusiness {
   brgy: string | null;
   city: string | null;
   latitude: number | null;
-  longtitude: number | null;
+  longitude: number | null; // Fixed: backend returns 'longitude' (Prisma model field name)
   description: string | null;
   rating: number | null;
   status: boolean | null;

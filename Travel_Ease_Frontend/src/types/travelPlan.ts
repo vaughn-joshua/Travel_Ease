@@ -41,6 +41,17 @@ export interface TravelPlan {
     first_name: string;
     last_name: string;
   };
+  // User participation info (returned by public_plans when authenticated)
+  isOwner?: boolean;
+  isParticipant?: boolean;
+  participantRole?: "Owner" | "Admin" | "Editor" | "Viewer" | null;
+  // Accommodation info
+  accommodation?: {
+    business_id: number;
+    name: string;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
 }
 
 export interface TravelPlanDates {
@@ -79,7 +90,7 @@ export interface Activity {
     business_id: number;
     name: string;
     latitude: number | null;
-    longtitude: number | null;
+    longitude: number | null; // Fixed: backend returns 'longitude' (Prisma model field name)
   };
 }
 
@@ -96,12 +107,14 @@ export interface CreatePlanPayload {
   start_date?: string;
   end_date?: string;
   slots?: number;
+  accommodation_id?: number;
   collaborators?: CollaboratorPayload[];
   is_public?: boolean;
 }
 
-export interface UpdatePlanPayload extends Partial<CreatePlanPayload> {
+export interface UpdatePlanPayload extends Omit<Partial<CreatePlanPayload>, 'accommodation_id'> {
   status?: PlanStatus;
+  accommodation_id?: number | null;
 }
 
 export interface CreateActivityPayload {
@@ -118,6 +131,7 @@ export interface CreateActivityPayload {
   target_date?: string;
   budget_range?: BudgetRange;
   notes?: string;
+  business_id?: number; // Optional: link activity to a business
 }
 
 export interface UpdateActivityPayload {

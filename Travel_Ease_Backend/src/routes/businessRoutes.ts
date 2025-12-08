@@ -143,19 +143,17 @@ router.delete("/:id/menu/:itemId", authenticateToken, deleteMenuItem);
 interface TravelSpotsQuery {
   search?: string;
   city?: string;
+  category?: string;
   limit?: string;
-  minPrice?: string;
-  maxPrice?: string;
 }
 
 /**
  * Travel spots endpoints (public for browsing, cached)
  * 
- * Price Filtering Logic (range overlap):
- * A business is included if its price range overlaps with the requested range.
- * - If only minPrice provided: business.max_price >= minPrice OR business.max_price is null
- * - If only maxPrice provided: business.min_price <= maxPrice OR business.min_price is null
- * - If both provided: ranges overlap (business.min <= maxPrice AND business.max >= minPrice)
+ * Category Filtering Logic:
+ * Businesses are filtered by main category via subcategory relation.
+ * - category: Main category enum (accommodation, food_drinks, etc.)
+ * - Businesses must have a subcategory with matching main_category
  * 
  * Cache key: business:travel_spots:<params>
  * TTL: 1 minute
@@ -168,22 +166,8 @@ router.get(
     res: Response
   ) => {
     try {
-      const { search, city, limit, minPrice, maxPrice } = req.query;
+      const { search, city, category, limit } = req.query;
       const maxLimit = Math.min(parseInt(limit || "50", 10) || 50, 100);
-      
-      // Parse price filters
-      const parsedMinPrice = minPrice ? parseInt(minPrice, 10) : undefined;
-      const parsedMaxPrice = maxPrice ? parseInt(maxPrice, 10) : undefined;
-      
-      // Validate price range
-      if (parsedMinPrice !== undefined && parsedMaxPrice !== undefined) {
-        if (parsedMinPrice > parsedMaxPrice) {
-          return res.status(400).json({ 
-            error: 'Invalid price range', 
-            details: 'minPrice must be less than or equal to maxPrice' 
-          });
-        }
-      }
 
       // Build where clause
       const where: Record<string, unknown> = { status: true };
@@ -196,37 +180,15 @@ router.get(
       if (city) {
         where.city = { contains: city, mode: "insensitive" };
       }
-      
-      // Price filtering - use range overlap logic
-      // Business included if: business.min_price <= maxPrice AND business.max_price >= minPrice
-      // This includes businesses where ranges overlap
-      if (parsedMinPrice !== undefined || parsedMaxPrice !== undefined) {
-        const priceConditions: unknown[] = [];
-        
-        if (parsedMinPrice !== undefined) {
-          // Business max_price must be >= minPrice (or null, meaning unlimited)
-          priceConditions.push({
-            OR: [
-              { max_price: { gte: parsedMinPrice } },
-              { max_price: null, min_price: { lte: parsedMinPrice } }, // Has min but no max
-              { max_price: null, min_price: null }, // No price set - include all
-            ]
-          });
-        }
-        
-        if (parsedMaxPrice !== undefined) {
-          // Business min_price must be <= maxPrice (or null, meaning starts from 0)
-          priceConditions.push({
-            OR: [
-              { min_price: { lte: parsedMaxPrice } },
-              { min_price: null }, // No min means starts from 0
-            ]
-          });
-        }
-        
-        if (priceConditions.length > 0) {
-          where.AND = priceConditions;
-        }
+      // Filter by category - businesses must have a subcategory with this main_category
+      if (category) {
+        where.business_category = {
+          some: {
+            subcategory: {
+              main_category: category as any, // Cast to enum type
+            },
+          },
+        };
       }
 
       // Use Redis-backed cache with in-memory fallback
@@ -238,9 +200,8 @@ router.get(
         key: buildCacheKey("business", "travel_spots", {
           search: search || "",
           city: city || "",
+          category: category || "",
           limit: maxLimit,
-          minPrice: parsedMinPrice ?? "",
-          maxPrice: parsedMaxPrice ?? "",
         }),
         ttl: CACHE_TTL.TRAVEL_SPOTS,
         fetchFn: async () => {
@@ -337,6 +298,63 @@ router.get("/travel_spots/reviews/:id", async (req: Request, res: Response) => {
   } catch (error) {
     businessLogger.error({ err: error, businessId }, "Error fetching reviews");
     return handlePrismaError(error, res, "Fetching reviews");
+  }
+});
+
+// Business search endpoint for map search functionality
+router.get("/search", async (req: Request, res: Response) => {
+  try {
+    const { query, limit = "10" } = req.query;
+    const searchLimit = Math.min(parseInt(limit as string, 10) || 10, 20);
+
+    if (!query || typeof query !== "string" || query.length < 2) {
+      return res.json({
+        message: "Success",
+        data: [],
+      });
+    }
+
+    const searchQuery = query as string;
+
+    // Search in name, description, city, brgy, street fields
+    const businesses = await executeWithRetry(() =>
+      prisma.business.findMany({
+        where: {
+          status: true,
+          OR: [
+            { name: { contains: searchQuery, mode: "insensitive" } },
+            { description: { contains: searchQuery, mode: "insensitive" } },
+            { city: { contains: searchQuery, mode: "insensitive" } },
+            { brgy: { contains: searchQuery, mode: "insensitive" } },
+            { street: { contains: searchQuery, mode: "insensitive" } },
+          ],
+          // Only include businesses with valid coordinates
+          latitude: { not: null },
+          longitude: { not: null },
+        },
+        select: {
+          business_id: true,
+          name: true,
+          description: true,
+          city: true,
+          brgy: true,
+          street: true,
+          house_number: true,
+          latitude: true,
+          longitude: true,
+        },
+        orderBy: [{ rating: "desc" }, { business_id: "desc" }],
+        take: searchLimit,
+      })
+    );
+
+    res.json({
+      message: "Success",
+      data: businesses,
+    });
+  } catch (error) {
+    businessLogger.error({ err: error }, "Error searching businesses");
+    return handlePrismaError(error, res, "Searching businesses");
   }
 });
 

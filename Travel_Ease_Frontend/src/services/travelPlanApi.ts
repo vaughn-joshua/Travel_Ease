@@ -66,6 +66,12 @@ interface ParticipantResponse {
   participant?: Participant;
 }
 
+interface UserRoleResponse {
+  isOwner: boolean;
+  role: "Admin" | "Editor" | "Viewer" | null;
+  isParticipant: boolean;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Travel Plan API
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,6 +109,7 @@ export const travelPlanApi = {
     if (data.slots !== undefined) payload.max_slots = data.slots;
     if (data.is_public !== undefined) payload.visibility = data.is_public;
     if (data.status !== undefined) payload.status = data.status;
+    if (data.accommodation_id !== undefined) payload.accommodation_id = data.accommodation_id;
 
     const response = await api.put<UpdatePlanResponse>(
       endpoints.travelPlan.editPlan(id),
@@ -150,6 +157,18 @@ export const travelPlanApi = {
   ): Promise<DeleteActivityResponse> => {
     const response = await api.delete<DeleteActivityResponse>(
       endpoints.travelPlan.deleteActivity(activityId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Toggle an activity's priority
+   */
+  toggleActivityPriority: async (
+    activityId: number | string
+  ): Promise<UpdateActivityResponse> => {
+    const response = await api.patch<UpdateActivityResponse>(
+      `/travel_plan/activity/${activityId}/priority`
     );
     return response.data;
   },
@@ -256,6 +275,16 @@ export const travelPlanApi = {
         role: data.role || "Viewer",
         status: data.status ?? true,
       }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get the current user's role for a specific plan
+   */
+  getUserRole: async (planId: number | string): Promise<UserRoleResponse> => {
+    const response = await api.get<UserRoleResponse>(
+      `/travel_plan/${planId}/user-role`
     );
     return response.data;
   },

@@ -142,6 +142,30 @@ export function useDeleteActivity() {
   });
 }
 
+/**
+ * useToggleActivityPriority
+ * Toggles the is_priority field on an activity.
+ * Invalidates activities list on success.
+ */
+export function useToggleActivityPriority() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      activityId,
+    }: {
+      activityId: number | string;
+      planId: number | string;
+    }) => travelPlanApi.toggleActivityPriority(activityId),
+    onSuccess: (_data, variables) => {
+      // Invalidate activities for the specific plan
+      queryClient.invalidateQueries({
+        queryKey: travelPlanKeys.activities(variables.planId),
+      });
+    },
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Join / Request Mutations
 // ─────────────────────────────────────────────────────────────────────────────

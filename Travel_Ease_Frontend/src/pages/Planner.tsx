@@ -1,26 +1,29 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTravelPlanDetail } from "../features/travelPlans/queries";
+import { useTravelPlanDetail, useUserPlanRole } from "../features/travelPlans/queries";
 import { useUpdatePlan, useRequestJoin } from "../features/travelPlans/mutations";
 import { useTravelSpots } from "../features/businesses/queries";
 import Activities from "../components/dashboard/Activities";
 import EditPlan from "../components/dashboard/EditPlan";
 import CreateActivity from "../components/dashboard/CreateActivity";
 import Collaborators from "../components/dashboard/Collaborators";
+import SuggestedBusinesses from "../components/dashboard/SuggestedBusinesses";
 import React from "react";
-import LandingPage from "./LandingPage";
+import LandingPage, { type MapMarker } from "./LandingPage";
 import type { TravelPlanDates } from "../types/travelPlan";
 import type { RouteInfo } from "../components/map/RoutingMachine";
 import type { SearchResult } from "../types/map";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
+import { useTravelPlanActivities } from "../features/travelPlans/queries";
 
 const itineraryRoute = {
   start: [14.1154, 120.9618] as [number, number],
 };
 
 type ModalType = "" | "activity" | "plan" | "collaborators";
+type RightPanelTab = "activities" | "suggested";
 
 interface ClickedActivity {
   start: [number, number] | null;
@@ -38,11 +41,15 @@ export default function Planner(): React.ReactElement {
   const queryClient = useQueryClient();
   const { user, loading: authLoading, session } = useAuth();
   
+  // Right panel tab state
+  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("activities");
+  
   // Get prefill data from navigation state (from Map page)
   const locationState = location.state as LocationState | null;
   const [prefillActivity, setPrefillActivity] = useState<SearchResult | null>(
     locationState?.prefillActivity || null
   );
+
 
   // Track token availability - re-check when auth loading changes or session changes
   const [tokenReady, setTokenReady] = useState(false);
@@ -83,6 +90,41 @@ export default function Planner(): React.ReactElement {
     refetch: refetchPlan,
   } = useTravelPlanDetail(tokenReady && tokenChecked ? id : undefined);
 
+  // Fetch user's role for this plan
+  const { data: userRoleData, isLoading: roleLoading } = useUserPlanRole(
+    tokenReady && tokenChecked && plan ? id : undefined
+  );
+
+  // Compute permissions based on role
+  const permissions = useMemo(() => {
+    const isOwner = userRoleData?.isOwner || plan?.user_id === user?.id;
+    const role = userRoleData?.role;
+    const isParticipant = userRoleData?.isParticipant || false;
+    
+    // Permission matrix:
+    // - Owner/Admin/Editor: can add/edit activities, edit plan, edit roles
+    // - Owner/Admin: can delete collaborators
+    // - Owner/Admin/Editor/Viewer: can invite collaborators, start plan (if not active)
+    // - Non-participant: can only view and request to join
+    
+    const canEdit = isOwner || role === "Admin" || role === "Editor";
+    const canDelete = isOwner || role === "Admin";
+    const canStart = isOwner || isParticipant; // All participants can start
+    const canInvite = isOwner || role === "Admin" || role === "Editor" || role === "Viewer";
+    const isNonParticipant = !isOwner && !isParticipant;
+    
+    return {
+      isOwner,
+      role,
+      isParticipant,
+      canEdit,
+      canDelete,
+      canStart,
+      canInvite,
+      isNonParticipant,
+    };
+  }, [userRoleData, plan?.user_id, user?.id]);
+
   const [days, setDays] = useState<number>(0);
   const [loadActivity, setLoadActivity] = useState<boolean>(false);
   const [daySelected, setDaySelected] = useState<number>(1);
@@ -104,6 +146,9 @@ export default function Planner(): React.ReactElement {
 
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
+  // Fetch activities for the plan
+  const { data: allActivities = [] } = useTravelPlanActivities(id);
+
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {
     if (info.distance > 0 && info.time > 0) {
@@ -112,6 +157,54 @@ export default function Planner(): React.ReactElement {
       setRouteInfo(null);
     }
   }, []);
+
+  // Filter activities by selected day
+  const activitiesForDay = useMemo(() => {
+    if (!allActivities.length || !dates.start) return [];
+
+    const starting_date = new Date(dates.start);
+    let current_day: Date;
+
+    if (daySelected === 1) {
+      current_day = starting_date;
+    } else {
+      const selected_day_ms = 1000 * 60 * 60 * 24 * (daySelected - 1);
+      current_day = new Date(starting_date.getTime() + selected_day_ms);
+    }
+
+    return allActivities.filter((item) => {
+      if (!item.target_date) return false;
+      const activity_date = new Date(item.target_date);
+      return activity_date.toDateString() === current_day.toDateString();
+    });
+  }, [allActivities, dates.start, daySelected]);
+
+  // Prepare markers for map (activities + accommodation)
+  const mapMarkers = useMemo((): MapMarker[] => {
+    const markers: MapMarker[] = [];
+
+    // Add activity markers for the selected day
+    activitiesForDay.forEach((activity) => {
+      if (activity.lat && activity.lng) {
+        markers.push({
+          position: [activity.lat, activity.lng],
+          type: activity.is_priority ? 'priority' : 'activity',
+          name: activity.name || activity.location || undefined,
+        });
+      }
+    });
+
+    // Add accommodation marker if available and has coordinates
+    if (plan?.accommodation?.lat && plan?.accommodation?.lng) {
+      markers.push({
+        position: [plan.accommodation.lat, plan.accommodation.lng],
+        type: 'accommodation',
+        name: plan.accommodation.name,
+      });
+    }
+
+    return markers;
+  }, [activitiesForDay, plan?.accommodation]);
 
   const handle_close = (): void => {
     // Invalidate and refetch instead of full page reload
@@ -124,6 +217,22 @@ export default function Planner(): React.ReactElement {
   const handleChildData = (lat: number, long: number): void => {
     console.log({ lat, long });
     setClickActivity({ start: null, end: [lat, long] });
+  };
+
+  // Handler when a business is selected from suggested tab
+  const handleBusinessSelect = (business: { lat?: number; lng?: number; longitude?: number }) => {
+    const lat = business.lat;
+    const lng = business.lng || business.longitude;
+    if (lat && lng) {
+      setClickActivity({ start: null, end: [lat, lng] });
+    }
+  };
+
+  // Handler to add business as activity
+  const handleAddBusinessToActivity = (business: SearchResult) => {
+    setPrefillActivity(business);
+    setActiveModal("activity");
+    setActiveRightTab("activities");
   };
 
   // Refetch plan when modal closes (for edit updates)
@@ -170,12 +279,13 @@ export default function Planner(): React.ReactElement {
 
   // Auto-open activity modal if coming from Map page with prefill data
   useEffect(() => {
-    if (prefillActivity && plan && dates.start) {
+    if (prefillActivity && plan && dates.start && permissions.canEdit) {
       setActiveModal("activity");
       // Clear the location state to prevent re-opening on refresh
       window.history.replaceState({}, document.title);
     }
-  }, [prefillActivity, plan, dates.start]);
+  }, [prefillActivity, plan, dates.start, permissions.canEdit]);
+
 
   const click_day = (i: number): void => {
     setLoadActivity((prev) => !prev);
@@ -184,6 +294,7 @@ export default function Planner(): React.ReactElement {
 
   // Use TanStack Query mutation for updating plan status
   const updatePlanMutation = useUpdatePlan();
+
 
   // Use TanStack Query mutation for requesting to join
   const requestJoinMutation = useRequestJoin();
@@ -209,7 +320,7 @@ export default function Planner(): React.ReactElement {
   };
 
   // Show loading state - wait for auth to complete and token to be checked
-  if (authLoading || !tokenChecked || planLoading) {
+  if (authLoading || !tokenChecked || planLoading || roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
@@ -271,24 +382,35 @@ export default function Planner(): React.ReactElement {
     );
   }
 
+  // Determine which buttons to show based on permissions
+  const showAddActivity = permissions.canEdit && status !== "join";
+  const showEditPlan = permissions.canEdit;
+  const showStartNow = permissions.canStart && (plan?.status === "Draft" || plan?.status === "Completed");
+  const showRequestJoin = permissions.isNonParticipant && status === "join";
+
   return (
-    <div className="p-5">
-      <div className="flex gap-6">
-        <div className="w-9/12 h-[60vh] relative">
-          <div id="map-container" className="card w-full h-full">
+    <div className="h-screen flex flex-col">
+      {/* Main Content - Flex Row */}
+      <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+        {/* LEFT COLUMN - Map + Plan Details */}
+        <div className="flex-[2] flex flex-col gap-4 min-w-0">
+          {/* Map Container */}
+          <div className="flex-1 relative rounded-xl overflow-hidden shadow-lg border border-gray-200">
+            <div id="map-container" className="w-full h-full">
             <LandingPage
               start={itineraryRoute.start}
               end={clickedActivity.end}
-              className="w-full h-full grid col-span-8"
+              markers={mapMarkers}
+              className="w-full h-full"
               onRouteFound={handleRouteFound}
             />
           </div>
-          {/* Plan title overlay - outside map container */}
+            {/* Plan title overlay */}
           <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-lg z-[1000] pointer-events-none">
             <h3 className="font-semibold text-gray-900">{plan.title}</h3>
             <p className="text-xs text-gray-500">{plan.location}</p>
           </div>
-          {/* ETA overlay - outside map container to avoid Leaflet re-render issues */}
+            {/* ETA overlay */}
           {routeInfo && clickedActivity.end && (
             <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg z-[1000] pointer-events-none">
               <p className="text-xs text-gray-500 mb-1">Estimated Travel</p>
@@ -310,87 +432,41 @@ export default function Planner(): React.ReactElement {
             </div>
           )}
         </div>
-        <div className="activities w-3/12">
-          <div className="flex justify-between">
-            <div className="flex gap-5">
-              {Array.from({ length: days }, (_, i) => (
-                <h3
-                  className="font-bold cursor-pointer"
-                  key={i}
-                  onClick={() => click_day(i + 1)}
-                >
-                  Day {i + 1}
-                </h3>
-              ))}
-            </div>
+
+          {/* Plan Details Card */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+            <div className="flex justify-between items-start mb-3">
             <div>
-              {status !== "join" && (
-                <button
-                  onClick={() => setActiveModal("activity")}
-                  className="hard_btn"
-                >
-                  Add Activity
-                </button>
-              )}
+                <h1 className="text-xl font-bold text-gray-900">{plan.title}</h1>
+                <p className="text-gray-500 text-sm">{plan.location}</p>
             </div>
-          </div>
-          <div className="activities">
-            {dates.start && id && (
-              <Activities
-                status={status}
-                reference_id={id}
-                load_state={loadActivity}
-                day_selected={daySelected}
-                dates={dates}
-                onSendData={handleChildData}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div id="travel_plan_details_header" className="card mt-6">
-        <div className="flex justify-between">
-          <h1>{plan.title}</h1>
-
-          <div id="buttons_container" className="space-x-2">
-            {/* Draft + start: Start Now, Edit, Collaborators */}
-            {/* Completed + start: Start Now, Edit, Collaborators */}
-            {status === "start" && (plan?.status === "Draft" || plan?.status === "Completed") && (
-              <>
+              <div className="flex gap-2">
+                {showStartNow && (
                 <button
-                  className="hard_btn"
+                    className="hard_btn text-sm"
                   onClick={handle_start}
                   disabled={updatePlanMutation.isPending}
                 >
                   {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
                 </button>
+                )}
+                {showEditPlan && (
                 <button
                   onClick={() => setActiveModal("plan")}
-                  className="soft_btn"
+                    className="soft_btn text-sm"
                   disabled={updatePlanMutation.isPending}
                 >
                   Edit
                 </button>
-                <button
-                  className="soft_btn"
-                  onClick={() => setActiveModal("collaborators")}
-                >
-                  Collaborators
-                </button>
-              </>
-            )}
-
-            {/* Join: Request to Join, Collaborators (any plan status) */}
-            {status === "join" && (
-              <>
-                {joinSuccess ? (
-                  <span className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
+                )}
+                {showRequestJoin && (
+                  joinSuccess ? (
+                    <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
                     Request Sent!
                   </span>
                 ) : (
                   <button
-                    className="hard_btn"
+                      className="hard_btn text-sm"
                     onClick={() =>
                       requestJoinMutation.mutate(
                         { travel_plan_id: Number(id) },
@@ -407,94 +483,128 @@ export default function Planner(): React.ReactElement {
                   >
                     {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
                   </button>
+                  )
                 )}
                 <button
-                  className="soft_btn"
+                  className="soft_btn text-sm"
                   onClick={() => setActiveModal("collaborators")}
                 >
                   Collaborators
                 </button>
-              </>
-            )}
-
-            {/* Active + view: Edit, Collaborators */}
-            {status === "view" && plan?.status === "Active" && (
-              <>
-                <button
-                  onClick={() => setActiveModal("plan")}
-                  className="soft_btn"
-                >
-                  Edit
-                </button>
-                <button
-                  className="soft_btn"
-                  onClick={() => setActiveModal("collaborators")}
-                >
-                  Collaborators
-                </button>
-              </>
-            )}
-
-            {/* Draft + view: Start Now, Edit, Collaborators */}
-            {status === "view" && plan?.status === "Draft" && (
-              <>
-                <button
-                  className="hard_btn"
-                  onClick={handle_start}
-                  disabled={updatePlanMutation.isPending}
-                >
-                  {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
-                </button>
-                <button
-                  onClick={() => setActiveModal("plan")}
-                  className="soft_btn"
-                >
-                  Edit
-                </button>
-                <button
-                  className="soft_btn"
-                  onClick={() => setActiveModal("collaborators")}
-                >
-                  Collaborators
-                </button>
-              </>
-            )}
-
-            {/* Completed + view: Start Now, Edit, Collaborators */}
-            {status === "view" && plan?.status === "Completed" && (
-              <>
-                <button
-                  className="hard_btn"
-                  onClick={handle_start}
-                  disabled={updatePlanMutation.isPending}
-                >
-                  {updatePlanMutation.isPending ? "Starting..." : "Start Now"}
-                </button>
-                <button
-                  onClick={() => setActiveModal("plan")}
-                  className="soft_btn"
-                >
-                  Edit
-                </button>
-                <button
-                  className="soft_btn"
-                  onClick={() => setActiveModal("collaborators")}
-                >
-                  Collaborators
-                </button>
-              </>
-            )}
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm mb-2">{plan.description}</p>
+            {/* Plan Details Below Border Line */}
+            <div className="pt-2 border-t border-gray-200 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="font-medium">Date:</span>
+                <span className="text-gray-500">📅 {plan.start_date} - {plan.end_date}</span>
+              </div>
+              {plan.slots && (
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <span className="font-medium">Slots:</span>
+                  <span className="text-gray-500">👥 {plan.slots} slots</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="font-medium">Accommodation:</span>
+                {plan.accommodation ? (
+                  <span className="text-gray-700">🛏️ {plan.accommodation.name}</span>
+                ) : (
+                  <span className="text-gray-400 italic">No accommodation set</span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <p>{plan.description}</p>
-        <p>{plan.location}</p>
-        <p>{plan.start_date}</p>
-        <p>{plan.end_date}</p>
-        <p>{plan.slots}</p>
+        {/* RIGHT COLUMN - Tabbed Panel (Activities / Suggested) */}
+        <div className="w-96 flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          {/* Tab Navigation */}
+          <div className="flex border-b border-gray-200">
+                <button
+              onClick={() => setActiveRightTab("activities")}
+              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                activeRightTab === "activities"
+                  ? "text-red-600 border-b-2 border-red-600 bg-red-50/50"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Activities
+                </button>
+                <button
+              onClick={() => setActiveRightTab("suggested")}
+              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                activeRightTab === "suggested"
+                  ? "text-red-600 border-b-2 border-red-600 bg-red-50/50"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Suggested
+                </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto">
+            {activeRightTab === "activities" && (
+              <div className="p-4">
+                {/* Day Selector */}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {Array.from({ length: days }, (_, i) => (
+                <button
+                        key={i}
+                        onClick={() => click_day(i + 1)}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
+                          daySelected === i + 1
+                            ? "bg-red-600 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        Day {i + 1}
+                </button>
+                    ))}
+                  </div>
+                  {showAddActivity && (
+                <button
+                      onClick={() => setActiveModal("activity")}
+                      className="hard_btn text-sm whitespace-nowrap ml-2"
+                >
+                      + Add
+                </button>
+                  )}
+                </div>
+
+                {/* Activities List */}
+                {dates.start && id && (
+                  <Activities
+                    status={status}
+                    reference_id={id}
+                    load_state={loadActivity}
+                    day_selected={daySelected}
+                    dates={dates}
+                    canEdit={permissions.canEdit}
+                    onSendData={handleChildData}
+                  />
+                )}
+              </div>
+            )}
+
+            {activeRightTab === "suggested" && (
+              <SuggestedBusinesses
+                planId={id!}
+                dates={dates}
+                canEdit={permissions.canEdit}
+                onBusinessSelect={handleBusinessSelect}
+                onAddToActivity={handleAddBusinessToActivity}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
-      {activeModal === "activity" && id && (
+      {/* Modals */}
+      {activeModal === "activity" && id && permissions.canEdit && (
         <CreateActivity
           dates={dates}
           id={id}
@@ -506,16 +616,20 @@ export default function Planner(): React.ReactElement {
           }}
         />
       )}
-      {activeModal === "plan" && id && plan && (
+      {activeModal === "plan" && id && plan && permissions.canEdit && (
         <EditPlan data={[plan]} travel_plan={id} on_close={handle_close} />
       )}
       {activeModal === "collaborators" && id && (
         <Collaborators
           planId={id}
-          isOwner={plan?.user_id === user?.id}
+          userRole={permissions.isOwner ? "owner" : (permissions.role || null)}
+          canDelete={permissions.canDelete}
+          canInvite={permissions.canInvite}
+          canEditRoles={permissions.canEdit}
           on_close={() => setActiveModal("")}
         />
       )}
+
     </div>
   );
 }

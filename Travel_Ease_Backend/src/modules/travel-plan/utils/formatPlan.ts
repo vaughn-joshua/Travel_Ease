@@ -37,6 +37,12 @@ interface PlanDTO {
   visibility_timestamp?: Date | null;
   visibility_end_date?: Date | null;
   user?: any;
+  accommodation?: {
+    business_id: number;
+    name: string;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
 }
 
 /**

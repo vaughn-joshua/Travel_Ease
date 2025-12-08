@@ -1,5 +1,53 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
 import { Request, Response } from "express";
+import { createNotification } from "../../notification/index.js";
+
+/**
+ * Get the current user's role for a specific plan
+ * Returns: { isOwner, role, isParticipant }
+ */
+export async function get_user_role(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+    const planId = parseInt(id);
+
+    // Get the plan to check ownership
+    const plan = await executeWithRetry(() =>
+      prisma.travelPlan.findUnique({
+        where: { travel_plan_id: planId },
+        select: { user_id: true }
+      })
+    );
+
+    if (!plan) {
+      return res.status(404).json({ error: "Travel plan not found" });
+    }
+
+    const isOwner = plan.user_id === userId;
+
+    // Check if user is a participant
+    const participant = await executeWithRetry(() =>
+      prisma.participant.findFirst({
+        where: { 
+          travel_plan_id: planId, 
+          user_id: userId,
+          status: true // Only approved participants
+        },
+        select: { role: true }
+      })
+    );
+
+    res.json({
+      isOwner,
+      role: participant?.role || null,
+      isParticipant: !!participant
+    });
+  } catch (error) {
+    console.error("Error getting user role:", error);
+    return handlePrismaError(error, res, 'Getting user role');
+  }
+}
 
 /**
  * Get all participants for a travel plan
@@ -79,19 +127,43 @@ export async function add_participant(req: Request, res: Response) {
     );
 
     if (existing) {
-      return res.status(409).json({ error: "User is already a participant" });
+      return res.status(409).json({ error: "User is already a participant or has pending invitation" });
     }
 
-    // Add participant with approved status (owner/admin is adding directly)
+    // Get inviter info
+    const inviterId = req.user!.id;
+    const inviter = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { user_id: inviterId },
+        select: { first_name: true, last_name: true }
+      })
+    );
+    const inviterName = inviter ? `${inviter.first_name} ${inviter.last_name}` : "Someone";
+
+    // Add participant with PENDING status (invitation flow)
     const participant = await executeWithRetry(() =>
       prisma.participant.create({
         data: {
           travel_plan_id: planId,
           user_id,
           role,
-          status: true // Directly added = approved
+          status: false // Pending until user accepts invitation
         }
       })
+    );
+
+    // Create notification for the invited user
+    await createNotification(
+      user_id,
+      "plan_invitation",
+      "You've been invited to a travel plan!",
+      `${inviterName} invited you to join "${plan.name}"`,
+      {
+        travel_plan_id: planId,
+        inviter_id: inviterId,
+        inviter_name: inviterName,
+        plan_name: plan.name
+      }
     );
 
     // Fetch with user info
@@ -111,7 +183,7 @@ export async function add_participant(req: Request, res: Response) {
     );
 
     res.status(201).json({
-      message: "Participant added successfully",
+      message: "Invitation sent successfully",
       participant: participantWithUser
     });
   } catch (error: any) {

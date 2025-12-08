@@ -32,6 +32,10 @@ export interface TravelPlanDTO {
   visibility_end_date?: Date | null;
   approvedParticipants?: number;
   participantCount?: number;
+  accommodation?: {
+    business_id: number;
+    name: string;
+  } | null;
 }
 
 export interface CreatePlanInput {
@@ -41,6 +45,7 @@ export interface CreatePlanInput {
   start_date?: string;
   end_date?: string;
   max_slots?: number | null;
+  accommodation_id?: number;
   collaborators?: Array<{
     user_id: number;
     role?: 'Admin' | 'Editor' | 'Viewer';
@@ -58,6 +63,7 @@ export interface UpdatePlanInput {
   max_slots?: number | null;
   visibility?: boolean;
   status?: 'Draft' | 'Active' | 'Completed' | 'Cancelled';
+  accommodation_id?: number | null;
 }
 
 export interface PlanFilters {
@@ -343,7 +349,7 @@ export async function createPlan(
   userId: number,
   input: CreatePlanInput
 ): Promise<TravelPlanDTO> {
-  const { title, description, location, start_date, end_date, max_slots, collaborators = [] } = input;
+  const { title, description, location, start_date, end_date, max_slots, accommodation_id, collaborators = [] } = input;
 
   const result = await prisma.$transaction(async (tx) => {
     // Create travel plan
@@ -369,6 +375,19 @@ export async function createPlan(
         status: true
       }
     });
+
+    // Create accommodation activity if provided
+    if (accommodation_id) {
+      await tx.activity.create({
+        data: {
+          travel_plan_id: travelPlan.travel_plan_id,
+          business_id: accommodation_id,
+          is_accommodation: true,
+          target_date: null,
+          user_id: userId
+        }
+      });
+    }
 
     // Add collaborators with slot enforcement
     if (collaborators.length > 0) {
@@ -424,6 +443,54 @@ export async function updatePlan(
   if (input.max_slots !== undefined) updateData.max_slots = input.max_slots;
   if (input.visibility !== undefined) updateData.visibility = input.visibility;
   if (input.status !== undefined) updateData.status = input.status;
+
+  // Handle accommodation update
+  if (input.accommodation_id !== undefined) {
+    await prisma.$transaction(async (tx) => {
+      // Find existing accommodation activity
+      const existingAccommodation = await tx.activity.findFirst({
+        where: {
+          travel_plan_id: planId,
+          is_accommodation: true
+        }
+      });
+
+      if (input.accommodation_id === null) {
+        // Delete existing accommodation if any
+        if (existingAccommodation) {
+          await tx.activity.delete({
+            where: { activity_id: existingAccommodation.activity_id }
+          });
+        }
+      } else {
+        // Update or create accommodation activity
+        if (existingAccommodation) {
+          await tx.activity.update({
+            where: { activity_id: existingAccommodation.activity_id },
+            data: {
+              business_id: input.accommodation_id,
+              target_date: null
+            }
+          });
+        } else {
+          // Get plan owner for user_id
+          const plan = await tx.travelPlan.findUnique({
+            where: { travel_plan_id: planId },
+            select: { user_id: true }
+          });
+          await tx.activity.create({
+            data: {
+              travel_plan_id: planId,
+              business_id: input.accommodation_id,
+              is_accommodation: true,
+              target_date: null,
+              user_id: plan?.user_id ?? null
+            }
+          });
+        }
+      }
+    });
+  }
 
   const updated = await executeWithRetry(() =>
     prisma.travel_plan.update({

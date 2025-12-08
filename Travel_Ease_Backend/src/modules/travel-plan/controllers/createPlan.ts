@@ -16,6 +16,7 @@ interface ValidatedCreatePlan {
   end_date?: string;
   slots?: number;
   max_slots?: number;
+  accommodation_id?: number;
   collaborators?: Collaborator[];
 }
 
@@ -30,6 +31,7 @@ export async function create_plan(req: Request, res: Response) {
     end_date,
     slots,
     max_slots: maxSlotsParam,
+    accommodation_id,
     collaborators = [],
   } = validated;
   
@@ -72,6 +74,19 @@ export async function create_plan(req: Request, res: Response) {
           status: true
         }
       });
+
+      // Create accommodation activity if provided
+      if (accommodation_id) {
+        await tx.activity.create({
+          data: {
+            travel_plan_id: travelPlan.travel_plan_id,
+            business_id: accommodation_id,
+            is_accommodation: true,
+            target_date: null,
+            user_id: userId
+          }
+        });
+      }
 
       // Add collaborators with slot enforcement for approved ones
       if (collaborators?.length > 0) {

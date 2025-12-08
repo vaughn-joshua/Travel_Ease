@@ -57,11 +57,28 @@ export async function get_businesses(req: Request, res: Response) {
       ];
     }
 
-    // Filter by category
+    // Filter by category - Get business IDs with this main category via subcategory relation
     if (category) {
-      where.categories = {
-        some: { category_name: category as string }
-      };
+      const businessesWithCategory = await executeWithRetry(() =>
+        prisma.business_category.findMany({
+          where: {
+            subcategory: {
+              main_category: category as any, // Cast to enum type
+            },
+          },
+          select: { business_id: true }
+        })
+      );
+      const businessIds = businessesWithCategory.map(b => b.business_id).filter((id): id is number => id !== null);
+      if (businessIds.length > 0) {
+        where.business_id = { in: businessIds };
+      } else {
+        // No businesses with this category
+        return res.status(200).json({
+          items: [],
+          ...buildPaginationMeta(0, page, pageSize)
+        });
+      }
     }
 
     // Filter by price range using business fields directly
