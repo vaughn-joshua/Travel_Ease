@@ -25,7 +25,7 @@ interface BusinessSeedData {
   brgy: string;
   city: string;
   latitude: number;
-  longitude: number;
+  longtitude: number;
   description: string;
   rating: number;
   status: boolean;
@@ -121,7 +121,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Maharlika West',
     city: 'Tagaytay',
     latitude: 14.1153,
-    longitude: 120.9621,
+    longtitude: 120.9621,
     description: 'A cozy cafe famous for its breakfast meals and scenic garden views. Perfect spot for a relaxing morning in Tagaytay.',
     rating: 4.5,
     status: true,
@@ -134,7 +134,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Kaybagal South',
     city: 'Tagaytay',
     latitude: 14.1089,
-    longitude: 120.9567,
+    longtitude: 120.9567,
     description: 'The best bulalo (beef bone marrow soup) in Tagaytay! A must-visit for Filipino comfort food lovers.',
     rating: 4.7,
     status: true,
@@ -147,7 +147,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Silang Junction South',
     city: 'Tagaytay',
     latitude: 14.1078,
-    longitude: 120.9445,
+    longtitude: 120.9445,
     description: 'Luxury hotel with stunning views of Taal Volcano. Features world-class amenities and dining options.',
     rating: 4.8,
     status: true,
@@ -160,7 +160,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Silang Junction South',
     city: 'Tagaytay',
     latitude: 14.1234,
-    longitude: 120.9678,
+    longtitude: 120.9678,
     description: 'Popular outdoor recreational area with cable cars, ziplines, and horseback riding. Great for family outings!',
     rating: 4.3,
     status: true,
@@ -173,7 +173,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Mendez Crossing',
     city: 'Tagaytay',
     latitude: 14.1156,
-    longitude: 120.9234,
+    longtitude: 120.9234,
     description: 'Home to the world\'s largest collection of jigsaw puzzles! A unique attraction for puzzle enthusiasts.',
     rating: 4.2,
     status: true,
@@ -186,7 +186,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Maharlika East',
     city: 'Tagaytay',
     latitude: 14.1098,
-    longitude: 120.9512,
+    longtitude: 120.9512,
     description: 'Premium Starbucks experience with exclusive reserve coffees and breathtaking Taal Lake views.',
     rating: 4.6,
     status: true,
@@ -199,7 +199,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'San Jose',
     city: 'Tagaytay',
     latitude: 14.1201,
-    longitude: 120.9389,
+    longtitude: 120.9389,
     description: 'Fine dining restaurant serving Filipino-Spanish cuisine with panoramic views of Taal Lake.',
     rating: 4.4,
     status: true,
@@ -212,7 +212,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Calabuso',
     city: 'Tagaytay',
     latitude: 14.1345,
-    longitude: 120.9567,
+    longtitude: 120.9567,
     description: 'Exclusive mountain resort with golf courses, spa, and premium accommodations.',
     rating: 4.9,
     status: true,
@@ -225,7 +225,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Silang Junction North',
     city: 'Tagaytay',
     latitude: 14.1067,
-    longitude: 120.9423,
+    longtitude: 120.9423,
     description: 'Best place to buy Tagaytay souvenirs and delicacies like buko pie, tarts, and local crafts.',
     rating: 4.1,
     status: true,
@@ -238,7 +238,7 @@ const businesses: BusinessSeedData[] = [
     brgy: 'Kaybagal Central',
     city: 'Tagaytay',
     latitude: 14.1178,
-    longitude: 120.9534,
+    longtitude: 120.9534,
     description: 'Theme park featuring the iconic Sky Eye ferris wheel with amazing views of Taal Lake and volcano.',
     rating: 4.4,
     status: true,
