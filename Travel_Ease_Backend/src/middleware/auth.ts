@@ -14,6 +14,11 @@ interface JwtPayload {
   email?: string;
 }
 
+interface PrismaError extends Error {
+  code?: string;
+  meta?: { target?: string | string[] };
+}
+
 /**
  * Check if an error is a Prisma database connection error (P1xxx codes)
  * These indicate the database is unreachable, not an auth problem
@@ -26,6 +31,28 @@ function isDatabaseConnectionError(error: unknown): boolean {
   // Also check for initialization errors
   if (err.name === 'PrismaClientInitializationError') return true;
   return false;
+}
+
+/**
+ * Check if an error is a Prisma unique constraint violation (P2002)
+ * This typically happens during race conditions when creating users
+ */
+function isUniqueConstraintError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as PrismaError;
+  return err.code === 'P2002';
+}
+
+/**
+ * Get the fields that caused the unique constraint violation
+ */
+function getUniqueConstraintFields(error: unknown): string[] {
+  if (!error || typeof error !== 'object') return [];
+  const err = error as PrismaError;
+  const target = err.meta?.target;
+  if (Array.isArray(target)) return target;
+  if (typeof target === 'string') return [target];
+  return [];
 }
 
 /**
@@ -154,6 +181,7 @@ export const requireGoogleAuth = async (
     }
 
     // Find or auto-provision user for Google OAuth
+    // Use a safe find-or-create pattern that handles race conditions
     let user = await executeWithRetry(() =>
       prisma.user.findUnique({
         where: { email: googleEmail },
@@ -161,30 +189,96 @@ export const requireGoogleAuth = async (
     );
 
     if (!user) {
+      // Also check by auth_id in case user exists with different email
+      user = await executeWithRetry(() =>
+        prisma.user.findUnique({
+          where: { auth_id: data.user.id },
+        })
+      );
+    }
+
+    if (!user) {
       // AUTO-PROVISION: Create a minimal user record for new Google OAuth users
       const { firstName, lastName } = extractUserName(data.user);
       
       logger.info({
         module: 'auth',
-        event: 'AUTO_PROVISIONED',
+        event: 'AUTO_PROVISIONING',
         email: googleEmail,
         provider: 'google',
         supabaseUserId: data.user.id,
         middleware: 'requireGoogleAuth',
       }, 'Auto-provisioning new user from Google OAuth');
 
-      user = await executeWithRetry(() =>
-        prisma.user.create({
-          data: {
+      try {
+        user = await executeWithRetry(() =>
+          prisma.user.create({
+            data: {
+              email: googleEmail,
+              auth_id: data.user.id,
+              first_name: firstName,
+              last_name: lastName,
+              auth_provider: 'google',
+              profile_completed: false, // Requires onboarding
+            },
+          })
+        );
+        
+        logger.info({
+          module: 'auth',
+          event: 'AUTO_PROVISIONED',
+          email: googleEmail,
+          userId: user.user_id,
+          middleware: 'requireGoogleAuth',
+        }, 'Successfully auto-provisioned new user');
+      } catch (createError) {
+        // Handle race condition: if P2002, the user was just created by another request
+        if (isUniqueConstraintError(createError)) {
+          const constraintFields = getUniqueConstraintFields(createError);
+          logger.info({
+            module: 'auth',
+            event: 'AUTO_PROVISION_RACE',
             email: googleEmail,
-            auth_id: data.user.id,
-            first_name: firstName,
-            last_name: lastName,
-            auth_provider: 'google',
-            profile_completed: false, // Requires onboarding
-          },
-        })
-      );
+            supabaseUserId: data.user.id,
+            constraintFields,
+            middleware: 'requireGoogleAuth',
+          }, 'User was created by concurrent request, re-fetching');
+
+          // Re-fetch the user that was created by the concurrent request
+          // Try by auth_id first (most likely cause of P2002), then by email
+          user = await executeWithRetry(() =>
+            prisma.user.findUnique({
+              where: { auth_id: data.user.id },
+            })
+          );
+          
+          if (!user) {
+            user = await executeWithRetry(() =>
+              prisma.user.findUnique({
+                where: { email: googleEmail },
+              })
+            );
+          }
+
+          if (!user) {
+            // This shouldn't happen, but log and fail gracefully
+            logger.error({
+              module: 'auth',
+              event: 'AUTO_PROVISION_FAILED',
+              email: googleEmail,
+              supabaseUserId: data.user.id,
+              middleware: 'requireGoogleAuth',
+            }, 'Failed to find user after P2002 race condition');
+            return res.status(500).json({
+              error: "User synchronization failed. Please try again.",
+              code: "USER_SYNC_ERROR",
+            });
+          }
+        } else {
+          // Re-throw non-P2002 errors
+          throw createError;
+        }
+      }
     } else if (!user.auth_id || user.auth_id !== data.user.id) {
       // Sync auth_id if needed for existing users
       user = await executeWithRetry(() =>
@@ -224,7 +318,26 @@ export const requireGoogleAuth = async (
       });
     }
     
-    console.error("Google auth verification error:", error);
+    // Check if this is a unique constraint error that wasn't handled above
+    if (isUniqueConstraintError(error)) {
+      const constraintFields = getUniqueConstraintFields(error);
+      logger.error({
+        module: 'auth',
+        middleware: 'requireGoogleAuth',
+        error: String(error),
+        constraintFields,
+      }, 'Unexpected unique constraint error during Google auth');
+      return res.status(500).json({
+        error: "User synchronization failed. Please try again.",
+        code: "USER_SYNC_ERROR",
+      });
+    }
+    
+    logger.error({
+      module: 'auth',
+      middleware: 'requireGoogleAuth',
+      error: String(error),
+    }, 'Google auth verification error');
     return res
       .status(403)
       .json({ error: "Authentication verification failed" });
@@ -384,6 +497,7 @@ export const authenticateToken = async (
       });
     }
 
+    // Find user by email first
     let user = await executeWithRetry(() =>
       prisma.user.findUnique({
         where: { email },
@@ -392,6 +506,33 @@ export const authenticateToken = async (
 
     const provider = mapAuthProvider(data.user.app_metadata?.provider);
 
+    // If not found by email, also check by auth_id (handles email changes in Supabase)
+    if (!user) {
+      user = await executeWithRetry(() =>
+        prisma.user.findUnique({
+          where: { auth_id: data.user.id },
+        })
+      );
+      
+      // If found by auth_id but email differs, update the email
+      if (user && user.email !== email) {
+        logger.info({
+          module: 'auth',
+          event: 'EMAIL_SYNC',
+          oldEmail: user.email,
+          newEmail: email,
+          userId: user.user_id,
+        }, 'Syncing email change from Supabase');
+        
+        user = await executeWithRetry(() =>
+          prisma.user.update({
+            where: { user_id: user!.user_id },
+            data: { email },
+          })
+        );
+      }
+    }
+
     if (!user) {
       // AUTO-PROVISION: Create a minimal user record for new OAuth users
       // This allows the onboarding flow to work correctly
@@ -399,24 +540,78 @@ export const authenticateToken = async (
       
       logger.info({
         module: 'auth',
-        event: 'AUTO_PROVISIONED',
+        event: 'AUTO_PROVISIONING',
         email,
         provider,
         supabaseUserId: data.user.id,
       }, 'Auto-provisioning new user from OAuth');
 
-      user = await executeWithRetry(() =>
-        prisma.user.create({
-          data: {
+      try {
+        user = await executeWithRetry(() =>
+          prisma.user.create({
+            data: {
+              email,
+              auth_id: data.user.id,
+              first_name: firstName,
+              last_name: lastName,
+              auth_provider: provider,
+              profile_completed: false, // Requires onboarding
+            },
+          })
+        );
+        
+        logger.info({
+          module: 'auth',
+          event: 'AUTO_PROVISIONED',
+          email,
+          userId: user.user_id,
+        }, 'Successfully auto-provisioned new user');
+      } catch (createError) {
+        // Handle race condition: if P2002, the user was just created by another request
+        if (isUniqueConstraintError(createError)) {
+          const constraintFields = getUniqueConstraintFields(createError);
+          logger.info({
+            module: 'auth',
+            event: 'AUTO_PROVISION_RACE',
             email,
-            auth_id: data.user.id,
-            first_name: firstName,
-            last_name: lastName,
-            auth_provider: provider,
-            profile_completed: false, // Requires onboarding
-          },
-        })
-      );
+            supabaseUserId: data.user.id,
+            constraintFields,
+          }, 'User was created by concurrent request, re-fetching');
+
+          // Re-fetch the user that was created by the concurrent request
+          // Try by auth_id first (most likely cause of P2002), then by email
+          user = await executeWithRetry(() =>
+            prisma.user.findUnique({
+              where: { auth_id: data.user.id },
+            })
+          );
+          
+          if (!user) {
+            user = await executeWithRetry(() =>
+              prisma.user.findUnique({
+                where: { email },
+              })
+            );
+          }
+
+          if (!user) {
+            // This shouldn't happen, but log and fail gracefully
+            logger.error({
+              module: 'auth',
+              event: 'AUTO_PROVISION_FAILED',
+              email,
+              supabaseUserId: data.user.id,
+            }, 'Failed to find user after P2002 race condition');
+            return res.status(500).json({
+              error: "User synchronization failed. Please try again.",
+              code: "USER_SYNC_ERROR",
+            });
+          }
+        } else {
+          // Re-throw non-P2002 errors to be handled below
+          throw createError;
+        }
+      }
     } else if (!user.auth_id || user.auth_id !== data.user.id || user.auth_provider !== provider) {
       // Sync auth_id and provider if needed for existing users
       user = await executeWithRetry(() =>
@@ -454,7 +649,27 @@ export const authenticateToken = async (
       });
     }
     
-    console.error("Auth error:", error);
+    // Check if this is a unique constraint error that wasn't handled above
+    // This shouldn't happen with the new logic, but handle it gracefully
+    if (isUniqueConstraintError(error)) {
+      const constraintFields = getUniqueConstraintFields(error);
+      logger.error({
+        module: 'auth',
+        middleware: 'authenticateToken',
+        error: String(error),
+        constraintFields,
+      }, 'Unexpected unique constraint error during auth');
+      return res.status(500).json({
+        error: "User synchronization failed. Please try again.",
+        code: "USER_SYNC_ERROR",
+      });
+    }
+    
+    logger.error({
+      module: 'auth',
+      middleware: 'authenticateToken',
+      error: String(error),
+    }, 'Auth error');
     return res.status(403).json({ error: "Invalid or expired token" });
   }
 };
