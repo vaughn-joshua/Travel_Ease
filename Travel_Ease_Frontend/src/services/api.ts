@@ -5,7 +5,7 @@ import type {
   BlogQueryParams,
   BlogOverviewResponse,
 } from "../types/blog";
-import { handleAuthRecovery, isAuthError } from "../lib/authRecovery";
+import { handleAuthRecovery, isAuthError, isNetworkError } from "../lib/authRecovery";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -85,6 +85,16 @@ api.interceptors.response.use(
 
     const status = error.response?.status;
     const code = error.response?.data?.code;
+
+    // Network errors (ECONNREFUSED, ERR_NETWORK, etc.) are NOT auth problems
+    // Don't trigger auth recovery - the server is unreachable
+    if (isNetworkError(error)) {
+      // Log network error in development but don't trigger auth recovery
+      if (import.meta.env.DEV) {
+        console.warn("[API] Network error detected, skipping auth recovery:", error.code || error.message);
+      }
+      return Promise.reject(error);
+    }
 
     // 503 with DB_UNAVAILABLE means the database is down, NOT an auth problem
     // Don't trigger auth recovery for this - let the request fail gracefully

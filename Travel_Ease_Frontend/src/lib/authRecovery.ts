@@ -36,29 +36,51 @@
  * | 401/403/419 from any API call      | Page reload (one-shot)          |
  * | Token expired                      | Page reload (one-shot)          |
  * | DB unavailable (503)               | Show error, no auth change      |
+ * | Network errors (ECONNREFUSED)      | Show error, no reload           |
  * | ACCOUNT_NOT_REGISTERED             | Clear auth, show registration   |
  * | OAUTH_EMAIL_MISSING                | Clear auth, show error          |
  * | User clicks Logout                 | Clear auth + redirect           |
  * | User deletes account               | Clear auth + redirect           |
  * 
  * ## Reload Guard
- * - Only ONE reload per 15-second window to prevent infinite loops
- * - In-memory flag resets after timeout
- * - Reload allows Supabase to refresh tokens automatically on page load
+ * - Uses sessionStorage to persist across page reloads (prevents infinite loops)
+ * - 30-second cooldown between reload attempts
+ * - Only ONE reload per session unless cooldown expires AND user navigates away
  * 
  * ## Testing Expectations
  * 
  * 1. 401 on a protected page → triggers recovery (reload), not logout
  * 2. Explicit logout button → calls signOut(), clears auth, navigates to /
  * 3. Multiple 401s in quick succession → only ONE reload (guard prevents loops)
+ * 4. Network errors → no reload, error shown to user
  */
 
-// In-memory guard to prevent infinite reload loops
-let hasAttemptedAuthRecovery = false;
-let authRecoveryTimeoutId: number | null = null;
+// Session storage keys for persistent reload guard
+const AUTH_RECOVERY_KEY = "auth_recovery_attempted";
+const AUTH_RECOVERY_TIMESTAMP_KEY = "auth_recovery_timestamp";
+
+// Cooldown period in milliseconds (30 seconds)
+const AUTH_RECOVERY_COOLDOWN_MS = 30_000;
+
+// Debounce window in milliseconds (prevents multiple simultaneous calls)
+const DEBOUNCE_WINDOW_MS = 100;
+
+// In-memory debounce tracker (for same-page simultaneous errors)
+let pendingReload = false;
+let debounceTimeoutId: number | null = null;
 
 // Auth-related HTTP status codes
 const AUTH_ERROR_STATUSES = [401, 403, 419];
+
+// Network error codes that should NOT trigger auth recovery
+const NETWORK_ERROR_CODES = [
+  "ECONNREFUSED",
+  "ERR_NETWORK",
+  "ERR_CANCELED",
+  "ECONNABORTED",
+  "ETIMEDOUT",
+  "ERR_CONNECTION_REFUSED",
+];
 
 // Error codes that indicate auth issues
 const AUTH_ERROR_CODES = [
@@ -111,6 +133,45 @@ const AUTH_ERROR_MESSAGES = [
 ];
 
 /**
+ * Check if an error is a network error (connection refused, timeout, etc.)
+ * These should NOT trigger auth recovery - they indicate the server is unreachable
+ */
+function isNetworkError(error: unknown): boolean {
+  if (!error) return false;
+
+  const err = error as Record<string, unknown>;
+  
+  // Check axios error code
+  const errorCode = err?.code;
+  if (typeof errorCode === "string" && NETWORK_ERROR_CODES.includes(errorCode)) {
+    return true;
+  }
+
+  // Check if response is missing (indicates network failure, not server response)
+  const axiosResponse = err?.response;
+  if (err?.isAxiosError && axiosResponse === undefined) {
+    // Axios error without response = network error
+    return true;
+  }
+
+  // Check error message for network-related keywords
+  const message = err?.message;
+  if (typeof message === "string") {
+    const msgLower = message.toLowerCase();
+    if (
+      msgLower.includes("network error") ||
+      msgLower.includes("connection refused") ||
+      msgLower.includes("timeout") ||
+      msgLower.includes("econnrefused")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Check if an error code indicates a user-initiated action error
  * These should NOT trigger auth recovery - they need to be displayed to the user
  */
@@ -134,11 +195,17 @@ function isUserActionMessage(message: unknown): boolean {
 /**
  * Detect if an error is auth-related (401, 403, 419, or auth-specific messages)
  * 
- * Important: User action errors (wrong password, etc.) are NOT treated as auth errors
- * even if they return 401. These need to be shown to the user, not cause a reload.
+ * Important: 
+ * - User action errors (wrong password, etc.) are NOT treated as auth errors
+ * - Network errors (connection refused, timeout) are NOT treated as auth errors
  */
 export function isAuthError(error: unknown): boolean {
   if (!error) return false;
+
+  // Network errors are NOT auth errors - server is unreachable
+  if (isNetworkError(error)) {
+    return false;
+  }
 
   const err = error as Record<string, unknown>;
 
@@ -221,8 +288,57 @@ export function isAuthError(error: unknown): boolean {
 }
 
 /**
+ * Check if we're within the cooldown period from a previous reload attempt.
+ * Uses sessionStorage to persist across page reloads.
+ */
+function isWithinCooldown(): boolean {
+  try {
+    const timestampStr = sessionStorage.getItem(AUTH_RECOVERY_TIMESTAMP_KEY);
+    if (!timestampStr) return false;
+
+    const timestamp = parseInt(timestampStr, 10);
+    if (isNaN(timestamp)) return false;
+
+    const elapsed = Date.now() - timestamp;
+    return elapsed < AUTH_RECOVERY_COOLDOWN_MS;
+  } catch {
+    // sessionStorage may be unavailable (private browsing, etc.)
+    return false;
+  }
+}
+
+/**
+ * Check if auth recovery has already been attempted this session.
+ * Uses sessionStorage to persist across page reloads.
+ */
+function hasRecoveryBeenAttempted(): boolean {
+  try {
+    return sessionStorage.getItem(AUTH_RECOVERY_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mark that auth recovery has been attempted.
+ * Stores both the flag and timestamp in sessionStorage.
+ */
+function markRecoveryAttempted(): void {
+  try {
+    sessionStorage.setItem(AUTH_RECOVERY_KEY, "true");
+    sessionStorage.setItem(AUTH_RECOVERY_TIMESTAMP_KEY, Date.now().toString());
+  } catch {
+    // sessionStorage unavailable - continue anyway
+  }
+}
+
+/**
  * Handle auth errors by reloading the page (one-shot per session).
  * This allows Supabase to refresh tokens and restore the session.
+ * 
+ * Uses sessionStorage to prevent infinite reload loops across page reloads.
+ * Includes debouncing to prevent multiple simultaneous errors from triggering
+ * multiple reload attempts.
  * 
  * @param error - Optional error to check. If not an auth error, does nothing.
  * @returns true if a reload was triggered, false otherwise
@@ -233,39 +349,64 @@ export function handleAuthRecovery(error?: unknown): boolean {
     return false;
   }
 
-  // Reload guard: avoid infinite loops
-  if (hasAttemptedAuthRecovery) {
-    console.warn("[AuthRecovery] Already attempted recovery this session, skipping reload");
+  // Debounce: if a reload is already pending, skip
+  if (pendingReload) {
+    console.warn("[AuthRecovery] Reload already pending, skipping duplicate call");
     return false;
   }
 
-  hasAttemptedAuthRecovery = true;
-
-  // Reset guard after timeout to allow retry if user stays on page
-  if (authRecoveryTimeoutId === null) {
-    authRecoveryTimeoutId = window.setTimeout(() => {
-      hasAttemptedAuthRecovery = false;
-      authRecoveryTimeoutId = null;
-    }, 15_000); // 15 seconds before allowing another reload attempt
+  // Check sessionStorage-based guard (persists across page reloads)
+  if (hasRecoveryBeenAttempted() && isWithinCooldown()) {
+    console.warn("[AuthRecovery] Already attempted recovery within cooldown period, skipping reload");
+    return false;
   }
 
-  console.log("[AuthRecovery] Auth error detected, reloading to restore session...");
+  // Set debounce flag
+  pendingReload = true;
 
-  // IMPORTANT: Do NOT clear tokens or redirect manually
-  // Just reload - Supabase will handle token refresh on page load
-  window.location.reload();
-  
+  // Clear any existing debounce timeout
+  if (debounceTimeoutId !== null) {
+    clearTimeout(debounceTimeoutId);
+  }
+
+  // Debounce: wait a short time to batch multiple simultaneous errors
+  debounceTimeoutId = window.setTimeout(() => {
+    // Double-check the guard (another call might have triggered reload)
+    if (hasRecoveryBeenAttempted() && isWithinCooldown()) {
+      console.warn("[AuthRecovery] Recovery was attempted by another call, skipping");
+      pendingReload = false;
+      return;
+    }
+
+    // Mark as attempted BEFORE reload (persists in sessionStorage)
+    markRecoveryAttempted();
+
+    console.log("[AuthRecovery] Auth error detected, reloading to restore session...");
+
+    // IMPORTANT: Do NOT clear tokens or redirect manually
+    // Just reload - Supabase will handle token refresh on page load
+    window.location.reload();
+  }, DEBOUNCE_WINDOW_MS);
+
   return true;
 }
 
 /**
- * Reset the auth recovery guard (useful for testing or after successful re-auth)
+ * Reset the auth recovery guard.
+ * Call this after successful re-authentication or when user explicitly logs out.
+ * Clears both sessionStorage and in-memory state.
  */
 export function resetAuthRecoveryGuard(): void {
-  hasAttemptedAuthRecovery = false;
-  if (authRecoveryTimeoutId !== null) {
-    clearTimeout(authRecoveryTimeoutId);
-    authRecoveryTimeoutId = null;
+  pendingReload = false;
+  if (debounceTimeoutId !== null) {
+    clearTimeout(debounceTimeoutId);
+    debounceTimeoutId = null;
+  }
+  try {
+    sessionStorage.removeItem(AUTH_RECOVERY_KEY);
+    sessionStorage.removeItem(AUTH_RECOVERY_TIMESTAMP_KEY);
+  } catch {
+    // sessionStorage unavailable
   }
 }
 
@@ -273,6 +414,10 @@ export function resetAuthRecoveryGuard(): void {
  * Check if auth recovery has been attempted this session
  */
 export function hasAttemptedRecovery(): boolean {
-  return hasAttemptedAuthRecovery;
+  return hasRecoveryBeenAttempted() || pendingReload;
 }
 
+/**
+ * Check if an error is a network error (exported for use by api.ts)
+ */
+export { isNetworkError };
