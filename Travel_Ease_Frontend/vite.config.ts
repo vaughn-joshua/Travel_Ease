@@ -14,6 +14,25 @@ export default defineConfig({
     sourcemap: false,
     // Ensure clean builds
     emptyOutDir: true,
+    // Increase warning limit (Leaflet maps are inherently large ~700KB)
+    chunkSizeWarningLimit: 750,
+    // Manual chunk splitting for better caching and smaller initial load
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React libraries
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Map libraries (large)
+          'vendor-leaflet': ['leaflet', 'react-leaflet', 'leaflet-routing-machine'],
+          // Data fetching
+          'vendor-query': ['@tanstack/react-query'],
+          // Form handling
+          'vendor-forms': ['react-hook-form'],
+          // Supabase auth
+          'vendor-supabase': ['@supabase/supabase-js'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,
