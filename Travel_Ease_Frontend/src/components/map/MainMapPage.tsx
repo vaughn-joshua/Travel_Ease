@@ -421,7 +421,7 @@ export default function MainMapPage(): React.ReactElement {
       {/* Go to Current Location Button - responsive positioning */}
       <button
         className="
-          absolute bottom-20 sm:bottom-24 right-4 z-[9998]
+          absolute bottom-24 sm:bottom-28 right-4 z-[9998]
           w-10 h-10 sm:w-12 sm:h-12 rounded-full
           bg-white/95 backdrop-blur-md
           shadow-lg shadow-black/20

@@ -83,7 +83,7 @@ export default function Map_Page({
   };
 
   return (
-    <div className="[&_.leaflet-pane]:z-[1] [&_.leaflet-control]:z-[1] [&_.leaflet-routing-container]:z-[1000]">
+    <div className="[&_.leaflet-pane]:z-[1] [&_.leaflet-control]:z-[1] [&_.leaflet-routing-container]:z-[1000] [&_.leaflet-top.leaflet-right]:top-4 [&_.leaflet-top.leaflet-right]:right-4">
       <MapContainer
         center={Tagaytay_Center}
         zoom={zoom}
@@ -110,8 +110,8 @@ export default function Map_Page({
       {/* Enable scroll wheel zoom */}
       <ScrollWheelZoom />
 
-      {/* Zoom controls at bottom right */}
-      <ZoomControl position="bottomright" />
+      {/* Zoom controls at top right */}
+      <ZoomControl position="topright" />
 
       {/* Start marker (person icon) */}
       {start && (
