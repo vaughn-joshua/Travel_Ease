@@ -27,3 +27,4 @@ const Badge = ({ children, variant = 'default', className = '', icon }: BadgePro
 
 export default Badge;
 
+
