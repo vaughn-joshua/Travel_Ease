@@ -2,16 +2,20 @@
  * Redis Client Module
  * 
  * Provides a shared Redis client instance with:
- * - Configurable via REDIS_ENABLED, REDIS_URL, or REDIS_HOST/PORT/PASSWORD env vars
+ * - Configurable via REDIS_ENABLED and REDIS_URL env vars
  * - Graceful degradation when Redis is unavailable (no app crash)
  * - Connection logging and error handling
  * - Helper methods for common operations
+ * 
+ * Environment Variables:
+ *   REDIS_URL - Full connection URL (e.g., redis://default:password@host:port)
+ *   REDIS_ENABLED - Optional, auto-enabled if REDIS_URL is set
  * 
  * Usage:
  *   import { redis, isRedisAvailable, redisGet, redisSet, redisDel } from './redisClient.js';
  */
 
-import { Redis as IORedis, type RedisOptions } from 'ioredis';
+import { Redis as IORedis } from 'ioredis';
 
 // ============================================================================
 // Configuration
@@ -19,61 +23,22 @@ import { Redis as IORedis, type RedisOptions } from 'ioredis';
 
 /**
  * Check if Redis is explicitly enabled via environment
- * Defaults to true if REDIS_URL or REDIS_HOST is provided
+ * Defaults to true if REDIS_URL is provided
  */
 function isRedisEnabled(): boolean {
   const explicitFlag = process.env.REDIS_ENABLED;
   if (explicitFlag !== undefined) {
     return explicitFlag.toLowerCase() === 'true' || explicitFlag === '1';
   }
-  // Auto-enable if connection info is provided
-  return !!(process.env.REDIS_URL || process.env.REDIS_HOST);
+  // Auto-enable if REDIS_URL is provided
+  return !!process.env.REDIS_URL;
 }
 
 /**
- * Build Redis connection options from environment variables
+ * Get Redis connection URL from environment variables
  */
-function getRedisOptions(): RedisOptions | string | null {
-  // Option 1: Full connection URL (preferred for production)
-  if (process.env.REDIS_URL) {
-    return process.env.REDIS_URL;
-  }
-
-  // Option 2: Individual host/port/password
-  const host = process.env.REDIS_HOST;
-  const port = parseInt(process.env.REDIS_PORT || '6379', 10);
-  const password = process.env.REDIS_PASSWORD;
-  const db = parseInt(process.env.REDIS_DB || '0', 10);
-
-  if (host) {
-    const options: RedisOptions = {
-      host,
-      port,
-      db,
-      // Connection settings for resilience
-      connectTimeout: 5000,
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times: number) => {
-        if (times > 3) {
-          // Stop retrying after 3 attempts
-          console.warn('[Redis] Max retry attempts reached, giving up');
-          return null;
-        }
-        // Exponential backoff: 200ms, 400ms, 800ms
-        return Math.min(times * 200, 1000);
-      },
-      // Don't block the app if Redis is slow
-      enableOfflineQueue: false,
-    };
-
-    if (password) {
-      options.password = password;
-    }
-
-    return options;
-  }
-
-  return null;
+function getRedisUrl(): string | null {
+  return process.env.REDIS_URL || null;
 }
 
 // ============================================================================
@@ -88,30 +53,28 @@ let connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'd
  */
 function initRedisClient(): IORedis | null {
   if (!isRedisEnabled()) {
-    console.log('[Redis] Disabled via configuration (REDIS_ENABLED=false or no connection info)');
+    console.log('[Redis] Disabled via configuration (REDIS_ENABLED=false or no REDIS_URL)');
     return null;
   }
 
-  const options = getRedisOptions();
-  if (!options) {
-    console.warn('[Redis] No connection configuration found. Running without Redis cache.');
+  const url = getRedisUrl();
+  if (!url) {
+    console.warn('[Redis] No REDIS_URL found. Running without Redis cache.');
     return null;
   }
 
   try {
     connectionStatus = 'connecting';
     
-    const client = typeof options === 'string' 
-      ? new IORedis(options, {
-          connectTimeout: 5000,
-          maxRetriesPerRequest: 3,
-          enableOfflineQueue: false,
-          retryStrategy: (times: number) => {
-            if (times > 3) return null;
-            return Math.min(times * 200, 1000);
-          },
-        })
-      : new IORedis(options);
+    const client = new IORedis(url, {
+      connectTimeout: 5000,
+      maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
+      retryStrategy: (times: number) => {
+        if (times > 3) return null;
+        return Math.min(times * 200, 1000);
+      },
+    });
 
     // Event handlers for connection lifecycle
     client.on('connect', () => {

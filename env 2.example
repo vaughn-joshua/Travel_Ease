@@ -1,0 +1,87 @@
+# ===============================================
+# TRAVEL_EASE MONOREPO ENVIRONMENT VARIABLES
+# ===============================================
+# This file documents all environment variables used across the monorepo.
+# Copy relevant sections to:
+#   - Travel_Ease_Frontend/.env.local (frontend vars)
+#   - Travel_Ease_Backend/.env (backend vars)
+#
+# For deployment:
+#   - Vercel: Set frontend vars in Vercel Dashboard > Settings > Environment Variables
+#   - Railway: Set backend vars in Railway Dashboard > Variables
+
+# ===============================================
+# FRONTEND VARIABLES (Travel_Ease_Frontend)
+# ===============================================
+# Copy to: Travel_Ease_Frontend/.env.local
+
+# Backend API URL (leave as /api for Vercel with rewrites)
+VITE_API_BASE_URL=/api
+
+# Supabase (required for auth)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Feature flags
+VITE_ENABLE_EDITOR=false
+
+# ===============================================
+# BACKEND VARIABLES (Travel_Ease_Backend)
+# ===============================================
+# Copy to: Travel_Ease_Backend/.env
+
+# Database (Required - Supabase PostgreSQL or local)
+DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
+
+# Server
+PORT=3001
+NODE_ENV=production
+
+# Supabase (Required for auth & storage)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+SUPABASE_STORAGE_BUCKET=images
+
+# JWT (for testing - production uses Supabase)
+JWT_SECRET=your-jwt-secret-for-testing
+
+# CORS (comma-separated allowed origins)
+ALLOWED_ORIGINS=https://your-frontend.vercel.app,https://your-custom-domain.com
+
+# Redis (Optional - for caching)
+REDIS_ENABLED=true
+REDIS_URL=redis://default:password@host:port
+
+# Map Services
+MAP_PROVIDER=nominatim
+NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
+OSRM_BASE_URL=https://router.project-osrm.org
+
+# Rate Limiting
+MAP_RATE_LIMIT_WINDOW_MS=60000
+MAP_RATE_LIMIT_MAX=30
+
+# Cache TTL (seconds)
+CACHE_TTL_SEARCH=300
+CACHE_TTL_GEOCODE=86400
+CACHE_TTL_ROUTE=120
+
+# ===============================================
+# DEPLOYMENT QUICK REFERENCE
+# ===============================================
+#
+# VERCEL (Frontend):
+# 1. Connect GitHub repo
+# 2. Set Root Directory: Travel_Ease_Frontend
+# 3. Build Command: npm run build
+# 4. Output Directory: dist
+# 5. Add environment variables (VITE_*)
+#
+# RAILWAY (Backend):
+# 1. Connect GitHub repo  
+# 2. Set Root Directory: Travel_Ease_Backend
+# 3. Add environment variables
+# 4. Procfile handles start & migrations
+# 5. Add PostgreSQL and Redis addons if needed
+
