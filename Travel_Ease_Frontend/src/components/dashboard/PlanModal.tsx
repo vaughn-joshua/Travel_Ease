@@ -30,7 +30,7 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
   // Check if a plan belongs to the current user
   const isUserOwnPlan = (plan: TravelPlan): boolean => {
     if (!user?.id) return false;
-    return plan.user_id === user.id || (plan.user && plan.user.user_id === user.id);
+    return plan.user_id === user.id || (plan.user?.user_id === user.id);
   };
 
   const handleViewPlan = (planId: number): void => {

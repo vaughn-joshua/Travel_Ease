@@ -1,12 +1,20 @@
 import { Request, Response, NextFunction } from "express";
 import {
-  TravelPlan,
-  Activity,
-  Business,
-  User,
-  Participant,
+  travel_plan,
+  activity,
+  business,
+  user,
+  participant,
   Blog,
 } from "@prisma/client";
+
+// Type aliases for backwards compatibility (PascalCase -> snake_case)
+export type TravelPlan = travel_plan;
+export type Activity = activity;
+export type Business = business;
+export type User = user;
+export type Participant = participant;
+export { Blog };
 
 // Extend Express Request to include custom properties
 declare global {

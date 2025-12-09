@@ -10,7 +10,7 @@
  * Also includes original fields for backward compatibility.
  */
 
-import { TravelPlan, User } from '@prisma/client';
+import type { travel_plan as TravelPlan, user as User } from '@prisma/client';
 
 interface PlanWithUser extends Partial<TravelPlan> {
   travel_plan_id: number;

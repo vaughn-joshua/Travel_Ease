@@ -22,8 +22,10 @@ export default function RouteForm({ onRouteSubmit }: RouteFormProps): React.Reac
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
-    if (startPoint && endPoint) {
-      const routeSubmission = {
+    if (startPoint && endPoint && 
+        startPoint.lat !== undefined && startPoint.lng !== undefined &&
+        endPoint.lat !== undefined && endPoint.lng !== undefined) {
+      const routeSubmission: RouteSubmission = {
         start: { lat: startPoint.lat, lng: startPoint.lng, name: startPoint.name },
         end: { lat: endPoint.lat, lng: endPoint.lng, name: endPoint.name },
       };

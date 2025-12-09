@@ -152,20 +152,23 @@ export default function Create_Activity({
   };
 
   const handleSearch = (result: SearchResult): void => {
-    // Ensure coordinates are numbers if provided
-    const validatedResult: SearchResult = {
-      ...result,
-      lat: result.lat !== undefined ? (typeof result.lat === 'string' ? parseFloat(result.lat) : Number(result.lat)) : undefined,
-      lng: result.lng !== undefined ? (typeof result.lng === 'string' ? parseFloat(result.lng) : Number(result.lng)) : undefined,
-    };
+    // Ensure coordinates are valid numbers (default to 0 if business_id is provided and coords missing)
+    const parsedLat = typeof result.lat === 'string' ? parseFloat(result.lat) : Number(result.lat);
+    const parsedLng = typeof result.lng === 'string' ? parseFloat(result.lng) : Number(result.lng);
     
-    // If business_id is provided, coordinates are optional (backend will fetch from business if needed)
+    // If business_id is provided, backend can fetch coordinates from business
     // Otherwise, validate coordinates are valid numbers
-    if (!validatedResult.business_id && (validatedResult.lat === undefined || validatedResult.lng === undefined || isNaN(validatedResult.lat) || isNaN(validatedResult.lng))) {
+    if (!result.business_id && (isNaN(parsedLat) || isNaN(parsedLng))) {
       console.error("Invalid coordinates in search result:", result);
       alert("Invalid location coordinates. Please try selecting the location again.");
       return;
     }
+    
+    const validatedResult: SearchResult = {
+      ...result,
+      lat: isNaN(parsedLat) ? 0 : parsedLat,
+      lng: isNaN(parsedLng) ? 0 : parsedLng,
+    };
     
     set_search_result(validatedResult);
   };

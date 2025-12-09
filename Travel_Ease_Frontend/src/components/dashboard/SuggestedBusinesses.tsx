@@ -113,8 +113,11 @@ export default function SuggestedBusinesses({
     });
 
     // Convert to SearchResult format for CreateActivity
-    // Include business_id - coordinates will be fetched from business in backend if available
-    // If business doesn't have coordinates, the activity can still be created without them
+    // Include business_id - coordinates will be fetched from business in backend if not available
+    // Default to 0 for coordinates when missing (backend uses business_id to fetch actual coords)
+    const lat = business.latitude != null && !isNaN(Number(business.latitude)) ? Number(business.latitude) : 0;
+    const lng = business.longitude != null && !isNaN(Number(business.longitude)) ? Number(business.longitude) : 0;
+    
     const searchResult: SearchResult = {
       name: business.name,
       label: business.name,
@@ -122,17 +125,10 @@ export default function SuggestedBusinesses({
         city: business.city || undefined,
         country: undefined,
       },
-      // Use business coordinates if available and valid, otherwise undefined
-      // Backend will fetch coordinates from business if business_id is provided
-      lat: business.latitude != null && !isNaN(Number(business.latitude)) ? Number(business.latitude) : undefined,
-      lng: business.longitude != null && !isNaN(Number(business.longitude)) ? Number(business.longitude) : undefined,
+      lat,
+      lng,
       business_id: business.business_id, // Pass business_id to link the activity
     };
-    
-    console.log("[SuggestedBusinesses] SearchResult created:", searchResult);
-    console.log("[SuggestedBusinesses] Has business_id:", !!searchResult.business_id);
-    console.log("[SuggestedBusinesses] Has coordinates:", { hasLat: searchResult.lat !== undefined, hasLng: searchResult.lng !== undefined });
-    console.log("[SuggestedBusinesses] Calling onAddToActivity...");
     
     onAddToActivity(searchResult);
     setSelectedBusiness(null);

@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '../src/lib/prisma.js';
-import type { User, Business, BusinessCategory, TravelPlan, Blog, category, status_enum } from '@prisma/client';
+import type { user as User, business as Business, business_category as BusinessCategory, travel_plan as TravelPlan, Blog, category, status_enum } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 // Type definitions for seed data

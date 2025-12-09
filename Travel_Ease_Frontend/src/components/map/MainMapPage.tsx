@@ -218,7 +218,7 @@ export default function MainMapPage(): React.ReactElement {
   };
 
   const getSearchPosition = (): [number, number] | null => {
-    if (!search_result) return null;
+    if (!search_result || search_result.lat === undefined || search_result.lng === undefined) return null;
     return [search_result.lat, search_result.lng];
   };
 
@@ -524,7 +524,7 @@ export default function MainMapPage(): React.ReactElement {
             </div>
           </div>
           <div className="px-3 sm:px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
-            📍 {search_result.lat.toFixed(4)}, {search_result.lng.toFixed(4)}
+            📍 {search_result.lat?.toFixed(4) ?? '0.0000'}, {search_result.lng?.toFixed(4) ?? '0.0000'}
           </div>
         </div>
       )}

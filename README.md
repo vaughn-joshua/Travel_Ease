@@ -443,28 +443,159 @@ Frontend uses a single API configuration file (`src/config/api.ts`) that:
 
 ## Deployment
 
-1. **Build both applications**:
+This monorepo is designed for deployment to:
+- **Frontend**: Vercel (Vite SPA)
+- **Backend**: Railway (Express/Prisma/Redis)
 
-   ```bash
-   # Backend
-   cd Travel_Ease_Backend
-   npm install --production
+### Prerequisites
 
-   # Frontend
-   cd ../Travel_Ease_Frontend
-   npm run build
+- Supabase project with:
+  - PostgreSQL database
+  - Auth configured (Google OAuth optional)
+  - Storage bucket named "images" (public)
+- Redis instance (optional, for caching)
+
+### Frontend Deployment (Vercel)
+
+1. **Connect Repository**:
+   - Go to [vercel.com](https://vercel.com) and import your GitHub repo
+   - Set **Root Directory** to `Travel_Ease_Frontend`
+
+2. **Build Settings** (auto-detected from `vercel.json`):
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Framework: Vite
+
+3. **Environment Variables** (set in Vercel Dashboard > Settings > Environment Variables):
+   ```env
+   VITE_API_BASE_URL=/api
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   VITE_ENABLE_EDITOR=false
    ```
 
-2. **Set up production database**:
-   - Create PostgreSQL database
-   - Run migrations: `npx prisma migrate deploy`
-   - Set DATABASE_URL environment variable
+4. **API Rewrites**:
+   - Update `Travel_Ease_Frontend/vercel.json` with your Railway backend URL:
+   ```json
+   {
+     "rewrites": [
+       {
+         "source": "/api/:path*",
+         "destination": "https://your-backend.railway.app/api/:path*"
+       }
+     ]
+   }
+   ```
 
-3. **Configure environment variables** for production
+5. **Deploy**: Push to main branch or trigger manual deployment
 
-4. **Deploy**:
-   - Backend: Deploy to Node.js hosting (Heroku, Railway, etc.)
-   - Frontend: Deploy dist/ folder to static hosting (Vercel, Netlify, etc.)
+### Backend Deployment (Railway)
+
+1. **Connect Repository**:
+   - Go to [railway.app](https://railway.app) and create new project from GitHub
+   - Set **Root Directory** to `Travel_Ease_Backend`
+
+2. **Add Services**:
+   - **PostgreSQL**: Add from Railway's database options, or use Supabase connection string
+   - **Redis** (optional): Add Railway Redis addon for caching
+
+3. **Environment Variables** (set in Railway Dashboard > Variables):
+   ```env
+   # Database (Required)
+   DATABASE_URL=postgresql://postgres:password@host:5432/postgres
+   
+   # Server
+   PORT=3001
+   NODE_ENV=production
+   
+   # Supabase (Required)
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   SUPABASE_STORAGE_BUCKET=images
+   
+   # JWT (for local auth fallback)
+   JWT_SECRET=your-secure-random-string
+   
+   # CORS (your Vercel frontend URL)
+   ALLOWED_ORIGINS=https://your-app.vercel.app
+   
+   # Redis (optional - auto-detected if set)
+   REDIS_URL=redis://default:password@host:port
+   
+   # Map Services
+   MAP_PROVIDER=nominatim
+   NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
+   OSRM_BASE_URL=https://router.project-osrm.org
+   ```
+
+4. **Procfile** handles startup:
+   - `release`: Runs `npx prisma migrate deploy` on each deployment
+   - `web`: Runs `npm run start` to start the Express server
+
+5. **Deploy**: Push to main branch or trigger manual deployment
+
+### Monorepo Build Commands
+
+From the root directory:
+
+```bash
+# Install all dependencies (both workspaces)
+npm install
+
+# Build frontend only
+npm run build --workspace=Travel_Ease_Frontend
+
+# Build backend only
+npm run build --workspace=Travel_Ease_Backend
+
+# Run all tests
+npm run test
+
+# Development (run in separate terminals)
+npm run dev:backend
+npm run dev:frontend
+```
+
+### Environment Files
+
+- `env.example` - Root reference for all variables
+- `Travel_Ease_Frontend/env.example` - Frontend-specific variables
+- `Travel_Ease_Backend/env.example` - Backend-specific variables (comprehensive)
+
+### Post-Deployment Checklist
+
+- [ ] Frontend loads at Vercel URL
+- [ ] API health check works: `curl https://your-backend.railway.app/api/health`
+- [ ] Frontend can reach backend: Check Network tab for `/api/*` requests
+- [ ] Authentication works (login/signup)
+- [ ] Image uploads work (requires Supabase Storage bucket)
+- [ ] No CORS errors in browser console
+
+### Troubleshooting Deployment
+
+**CORS Errors**:
+- Ensure `ALLOWED_ORIGINS` in backend includes your Vercel frontend URL
+- Check that the URL doesn't have a trailing slash
+
+**API Calls Failing**:
+- Verify `vercel.json` has correct backend URL in rewrites
+- Check Railway logs for backend errors
+- Ensure `DATABASE_URL` is correctly set
+
+**Database Migrations**:
+- Railway's `release` phase runs migrations automatically
+- For manual migrations: `npx prisma migrate deploy`
+
+**Redis Connection Errors**:
+- Redis is optional; app works without it
+- If `REDIS_URL` is set but invalid, check connection string format
+
+**TypeScript Build Warnings (Backend)**:
+- The backend has known TypeScript errors related to Prisma naming conventions
+- Build continues despite errors (`noEmitOnError: false` in tsconfig)
+- These are type-level issues; runtime behavior is unaffected
+- To fix: Update code to use snake_case Prisma model names (e.g., `travel_plan` instead of `travelPlan`)
 
 ## Troubleshooting
 
