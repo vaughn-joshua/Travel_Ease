@@ -1,7 +1,17 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
 import { normalizeBudgetRange, formatActivity } from "../utils/activityConstants.js";
 import { Request, Response } from "express";
-import { range } from "@prisma/client";
+
+// Valid range enum values as strings (Prisma accepts string values for enums)
+const VALID_RANGE_VALUES = [
+  'RANGE_0_100',
+  'RANGE_100_200',
+  'RANGE_200_400',
+  'RANGE_400_700',
+  'RANGE_700_1000',
+  'RANGE_1000_1500',
+  'RANGE_1500_PLUS',
+] as const;
 
 export async function create_activity(req: Request, res: Response) {
   console.log('[create_activity] ========== CREATE ACTIVITY REQUEST ==========');
@@ -109,23 +119,12 @@ export async function create_activity(req: Request, res: Response) {
     }
     
     // Only include budget_range if it's a valid enum value
-    // Prisma accepts enum values as the enum type or as strings matching the enum value
+    // Prisma accepts string values for enums at runtime
     if (normalizedBudgetRange) {
-      // Map string to enum value
-      const enumMap: Record<string, range> = {
-        'RANGE_0_100': range.RANGE_0_100,
-        'RANGE_100_200': range.RANGE_100_200,
-        'RANGE_200_400': range.RANGE_200_400,
-        'RANGE_400_700': range.RANGE_400_700,
-        'RANGE_700_1000': range.RANGE_700_1000,
-        'RANGE_1000_1500': range.RANGE_1000_1500,
-        'RANGE_1500_PLUS': range.RANGE_1500_PLUS,
-      };
-      
-      const enumValue = enumMap[normalizedBudgetRange];
-      if (enumValue) {
-        activityData.budget_range = enumValue;
-        console.log('[create_activity] Using enum value:', enumValue, 'from string:', normalizedBudgetRange);
+      // Validate that the string is a valid enum value
+      if (VALID_RANGE_VALUES.includes(normalizedBudgetRange as typeof VALID_RANGE_VALUES[number])) {
+        activityData.budget_range = normalizedBudgetRange;
+        console.log('[create_activity] Using budget_range value:', normalizedBudgetRange);
       } else {
         console.error('[create_activity] ❌ Invalid budget_range value:', normalizedBudgetRange);
         // Don't include budget_range if invalid
