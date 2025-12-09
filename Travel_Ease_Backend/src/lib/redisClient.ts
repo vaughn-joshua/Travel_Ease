@@ -2,14 +2,17 @@
  * Redis Client Module
  * 
  * Provides a shared Redis client instance with:
- * - Configurable via REDIS_ENABLED and REDIS_URL env vars
+ * - Configurable via REDIS_URL or REDIS_HOST/REDIS_PORT env vars
  * - Graceful degradation when Redis is unavailable (no app crash)
  * - Connection logging and error handling
  * - Helper methods for common operations
  * 
  * Environment Variables:
  *   REDIS_URL - Full connection URL (e.g., redis://default:password@host:port)
- *   REDIS_ENABLED - Optional, auto-enabled if REDIS_URL is set
+ *   REDIS_HOST - Redis server hostname (used if REDIS_URL not provided)
+ *   REDIS_PORT - Redis server port (default: 6379, used if REDIS_URL not provided)
+ *   REDIS_PASSWORD - Optional password (used if REDIS_URL not provided)
+ *   REDIS_ENABLED - Optional, auto-enabled if REDIS_URL or REDIS_HOST is set
  * 
  * Usage:
  *   import { redis, isRedisAvailable, redisGet, redisSet, redisDel } from './redisClient.js';
@@ -23,22 +26,41 @@ import { Redis as IORedis } from 'ioredis';
 
 /**
  * Check if Redis is explicitly enabled via environment
- * Defaults to true if REDIS_URL is provided
+ * Defaults to true if REDIS_URL or REDIS_HOST is provided
  */
 function isRedisEnabled(): boolean {
   const explicitFlag = process.env.REDIS_ENABLED;
   if (explicitFlag !== undefined) {
     return explicitFlag.toLowerCase() === 'true' || explicitFlag === '1';
   }
-  // Auto-enable if REDIS_URL is provided
-  return !!process.env.REDIS_URL;
+  // Auto-enable if REDIS_URL or REDIS_HOST is provided
+  return !!(process.env.REDIS_URL || process.env.REDIS_HOST);
 }
 
 /**
  * Get Redis connection URL from environment variables
+ * Supports both REDIS_URL and individual REDIS_HOST/REDIS_PORT/REDIS_PASSWORD config
  */
 function getRedisUrl(): string | null {
-  return process.env.REDIS_URL || null;
+  // Prefer explicit REDIS_URL if provided
+  if (process.env.REDIS_URL) {
+    return process.env.REDIS_URL;
+  }
+  
+  // Fall back to constructing URL from individual parameters
+  const host = process.env.REDIS_HOST;
+  if (!host) {
+    return null;
+  }
+  
+  const port = process.env.REDIS_PORT || '6379';
+  const password = process.env.REDIS_PASSWORD;
+  
+  // Construct URL: redis://[:password@]host:port
+  if (password) {
+    return `redis://:${encodeURIComponent(password)}@${host}:${port}`;
+  }
+  return `redis://${host}:${port}`;
 }
 
 // ============================================================================
@@ -53,13 +75,13 @@ let connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'd
  */
 function initRedisClient(): IORedis | null {
   if (!isRedisEnabled()) {
-    console.log('[Redis] Disabled via configuration (REDIS_ENABLED=false or no REDIS_URL)');
+    console.log('[Redis] Disabled via configuration (REDIS_ENABLED=false or no REDIS_URL/REDIS_HOST)');
     return null;
   }
 
   const url = getRedisUrl();
   if (!url) {
-    console.warn('[Redis] No REDIS_URL found. Running without Redis cache.');
+    console.warn('[Redis] No REDIS_URL or REDIS_HOST found. Running without Redis cache.');
     return null;
   }
 
