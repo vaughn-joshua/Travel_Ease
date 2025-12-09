@@ -2,6 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import type { Blog } from "../../types/blog";
 import OptimizedImage from "../../components/OptimizedImage";
+import Card from "../ui/Card";
+import Badge from "../ui/Badge";
+import { User, Calendar, Clock, ChevronRight } from "lucide-react";
 
 interface BlogCardProps {
   blog: Blog;
@@ -17,34 +20,20 @@ const BlogCard: React.FC<BlogCardProps> = ({
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
     });
   };
 
   const isDark = variant === "dark";
 
-  const cardBase =
-    "flex h-full flex-col overflow-hidden rounded-3xl border transition duration-300 ease-out";
-  const cardStyles = isDark
-    ? "border-primary-red/20 bg-white/95 text-gray-900 shadow-lg shadow-primary-red/10 backdrop-blur hover:-translate-y-1 hover:border-primary-red/40"
-    : "border-primary-red/10 bg-white shadow-sm hover:-translate-y-1 hover:shadow-xl";
-
-  const titleColor = "text-gray-900 group-hover:text-primary-red";
-  const bodyColor = "text-gray-600";
-  const metaColor = "text-gray-500";
-
   return (
     <Link
       to={`/blogs/${blog.slug}`}
-      className={`group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-4 ${
-        isDark
-          ? "focus-visible:ring-offset-primary-red"
-          : "focus-visible:ring-offset-white"
-      } ${className}`}
+      className={`group block focus:outline-none ${className}`}
       aria-label={`Read blog post: ${blog.title}`}
     >
-      <article className={`${cardBase} ${cardStyles}`}>
+      <Card noPadding className={`h-full flex flex-col transition-all duration-300 group-hover:-translate-y-1 ${isDark ? 'bg-white/95 border-primary-red/20 shadow-lg shadow-primary-red/10' : 'hover:shadow-lg'}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
           <OptimizedImage
             src={blog.coverImageUrl}
@@ -52,89 +41,52 @@ const BlogCard: React.FC<BlogCardProps> = ({
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-70 transition duration-500 group-hover:opacity-80 pointer-events-none"
-            aria-hidden="true"
-          />
-          <span
-            className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] z-10 ${
-              isDark
-                ? "bg-primary-red text-white"
-                : "bg-primary-red/10 text-primary-red"
-            }`}
-          >
-            {blog.category}
-          </span>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
+          
+          <div className="absolute top-4 left-4 z-10">
+            <Badge variant={isDark ? "error" : "default"} className="bg-white/90 backdrop-blur-sm shadow-sm text-primary-red">
+              {blog.category}
+            </Badge>
+          </div>
         </div>
 
-        <div className="flex h-full flex-col gap-4 p-6">
-          <div className="space-y-3">
-            <h3 className={`text-xl font-semibold leading-tight ${titleColor}`}>
+        <div className="flex h-full flex-col p-6 gap-4">
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold leading-tight text-gray-900 group-hover:text-primary-red transition-colors line-clamp-2">
               {blog.title}
             </h3>
-            <p className={`text-sm leading-relaxed line-clamp-3 ${bodyColor}`}>
+            <p className="text-sm leading-relaxed text-gray-600 line-clamp-3">
               {blog.excerpt}
             </p>
           </div>
 
-          <div className="mt-auto space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div className={`flex items-center gap-2 ${metaColor}`}>
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span>By {blog.author}</span>
+          <div className="mt-auto space-y-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" />
+                <span>{blog.author}</span>
               </div>
-
-              <time
-                className={`${metaColor}`}
-                dateTime={blog.publishedAt}
-                aria-label={`Published on ${formatDate(blog.publishedAt)}`}
-              >
-                {formatDate(blog.publishedAt)}
-              </time>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <time dateTime={blog.publishedAt}>
+                  {formatDate(blog.publishedAt)}
+                </time>
+              </div>
             </div>
 
-            <div
-              className={`flex items-center justify-between border-t pt-4 text-sm ${
-                isDark ? "border-primary-red/20" : "border-primary-red/10"
-              }`}
-            >
-              <span className={`${metaColor}`}>
-                {blog.readingMinutes} min read
-              </span>
-              <span className="flex items-center gap-2 font-medium text-primary-red transition group-hover:gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{blog.readingMinutes} min read</span>
+              </div>
+              <span className="flex items-center gap-1 text-sm font-semibold text-primary-red group-hover:translate-x-1 transition-transform">
                 Read More
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
+                <ChevronRight className="w-4 h-4" />
               </span>
             </div>
           </div>
         </div>
-      </article>
+      </Card>
     </Link>
   );
 };

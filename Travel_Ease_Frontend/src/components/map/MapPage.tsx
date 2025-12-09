@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, ZoomControl, useMap, Popup } from "react-leaflet";
 import { Icon, LatLngBoundsExpression, LatLngExpression } from "leaflet";
@@ -55,20 +55,9 @@ export default function Map_Page({
   end,
   businessMarkers = [],
   mapCenter,
-  onMapClear,
   onRouteFound,
   onMarkerClick,
 }: MapPageProps): React.ReactElement {
-  console.log("[MapPage] ========== MAP PAGE RENDER ==========");
-  console.log("[MapPage] Props received:", {
-    hasSearchResult: !!search_result,
-    hasStart: !!start,
-    hasEnd: !!end,
-    businessMarkersCount: businessMarkers.length,
-    hasMapCenter: !!mapCenter,
-    hasOnRouteFound: !!onRouteFound,
-  });
-
   const Tagaytay_Center: LatLngExpression = [14.1154, 120.962];
   const zoom = 14;
   const Min_Zoom = 12;
@@ -86,37 +75,10 @@ export default function Map_Page({
 
   const position = getPosition();
 
-  // Log route props changes
-  useEffect(() => {
-    console.log("[MapPage] ========== ROUTE PROPS UPDATE ==========");
-    console.log("[MapPage] start:", start);
-    console.log("[MapPage] end:", end);
-    console.log("[MapPage] start type:", typeof start, Array.isArray(start));
-    console.log("[MapPage] end type:", typeof end, Array.isArray(end));
-    
-    if (start && end) {
-      console.log("[MapPage] ✅ Route is active - both start and end provided");
-      console.log("[MapPage] Start coordinates:", start);
-      console.log("[MapPage] End coordinates:", end);
-      console.log("[MapPage] RoutingMachine will be rendered");
-    } else {
-      console.log("[MapPage] ⏳ Route not active");
-      if (!start) console.log("[MapPage] Missing start point");
-      if (!end) console.log("[MapPage] Missing end point");
-    }
-  }, [start, end]);
-
-  // Log when RoutingMachine callback is triggered
+  // Handle route found callback
   const handleRouteFound = (routeInfo: RouteInfo) => {
-    console.log("[MapPage] ========== ROUTE FOUND CALLBACK ==========");
-    console.log("[MapPage] Route info received:", routeInfo);
-    console.log("[MapPage] Distance:", routeInfo.distance, "km");
-    console.log("[MapPage] Time:", routeInfo.time, "minutes");
     if (onRouteFound) {
-      console.log("[MapPage] ✅ Calling parent onRouteFound callback");
       onRouteFound(routeInfo);
-    } else {
-      console.warn("[MapPage] ⚠️ No onRouteFound callback provided");
     }
   };
 
@@ -166,51 +128,41 @@ export default function Map_Page({
       {(position || mapCenter) && <MapMover position={position || mapCenter || null} />}
 
       {/* Render business markers */}
-      {businessMarkers.length > 0 && businessMarkers.map((marker, index) => {
-        if (index === 0) {
-          console.log(`[MapPage] Rendering ${businessMarkers.length} business markers`);
-        }
-        console.log(`[MapPage] Rendering marker ${index}:`, marker.name, marker.position);
-        return (
-          <Marker
-            key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
-            position={marker.position as LatLngExpression}
-            icon={custom_icon}
-            eventHandlers={{
-              click: () => {
-                if (onMarkerClick) {
-                  onMarkerClick(marker);
-                }
-              },
-            }}
-          >
-            {marker.name && (
-              <Popup>
-                <div className="text-sm font-medium">{marker.name}</div>
-                {onMarkerClick && (
-                  <button
-                    className="mt-2 text-xs text-primary-red hover:underline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMarkerClick(marker);
-                    }}
-                  >
-                    Add to Travel Plan
-                  </button>
-                )}
-              </Popup>
-            )}
-          </Marker>
-        );
-      })}
+      {businessMarkers.map((marker, index) => (
+        <Marker
+          key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
+          position={marker.position as LatLngExpression}
+          icon={custom_icon}
+          eventHandlers={{
+            click: () => {
+              if (onMarkerClick) {
+                onMarkerClick(marker);
+              }
+            },
+          }}
+        >
+          {marker.name && (
+            <Popup>
+              <div className="text-sm font-medium">{marker.name}</div>
+              {onMarkerClick && (
+                <button
+                  className="mt-2 text-xs text-primary-red hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkerClick(marker);
+                  }}
+                >
+                  Add to Travel Plan
+                </button>
+              )}
+            </Popup>
+          )}
+        </Marker>
+      ))}
 
-      {(() => {
-        if (start && end) {
-          console.log("[MapPage] Rendering RoutingMachine with:", { start, end });
-          return <RoutingMachine start={start} end={end} onRouteFound={handleRouteFound} />;
-        }
-        return null;
-      })()}
+      {start && end && (
+        <RoutingMachine start={start} end={end} onRouteFound={handleRouteFound} />
+      )}
       </MapContainer>
     </div>
   );

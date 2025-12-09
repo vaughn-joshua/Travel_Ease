@@ -1,6 +1,7 @@
 import React from "react";
 import type { Blog } from "../../types/blog";
 import BlogCard from "./BlogCard";
+import { Sparkles } from "lucide-react";
 
 interface SectionProps {
   title: string;
@@ -10,12 +11,6 @@ interface SectionProps {
   className?: string;
   id?: string;
 }
-
-const backgroundStyles: Record<NonNullable<SectionProps["tone"]>, string> = {
-  light: "bg-white text-gray-900",
-  muted: "bg-primary-red/5 text-gray-900",
-  contrast: "bg-primary-red text-white",
-};
 
 const Section: React.FC<SectionProps> = ({
   title,
@@ -29,41 +24,37 @@ const Section: React.FC<SectionProps> = ({
     return null;
   }
 
-  const wrapperClasses = `${backgroundStyles[tone]} py-20 ${className}`;
+  const bgColors = {
+    light: "bg-white",
+    muted: "bg-gray-50",
+    contrast: "bg-primary-red text-white",
+  };
+
   const isContrast = tone === "contrast";
 
   return (
-    <section id={id} className={wrapperClasses}>
+    <section id={id} className={`${bgColors[tone]} py-24 ${className}`}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p
-            className={`mb-3 inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
-              isContrast
-                ? "bg-white/15 text-white"
-                : "bg-primary-red/10 text-primary-red"
-            }`}
-          >
-            TravelEase Picks
-          </p>
-          <h2
-            className={`text-3xl font-bold sm:text-4xl ${
-              isContrast ? "text-white" : "text-primary-red"
-            }`}
-          >
+        <div className="mx-auto max-w-3xl text-center mb-16">
+          <div className={`inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-6 ${
+            isContrast ? "bg-white/10 text-white" : "bg-primary-red/10 text-primary-red"
+          }`}>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>TravelEase Picks</span>
+          </div>
+          
+          <h2 className={`text-3xl font-bold sm:text-4xl mb-6 ${isContrast ? "text-white" : "text-gray-900"}`}>
             {title}
           </h2>
+          
           {description && (
-            <p
-              className={`mt-4 text-base sm:text-lg ${
-                isContrast ? "text-white/90" : "text-gray-600"
-              }`}
-            >
+            <p className={`text-lg leading-relaxed ${isContrast ? "text-white/90" : "text-gray-600"}`}>
               {description}
             </p>
           )}
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {blogs.slice(0, 3).map((blog) => (
             <BlogCard
               key={blog.id}

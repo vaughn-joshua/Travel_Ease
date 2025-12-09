@@ -49,6 +49,7 @@ export default function MainMapPage(): React.ReactElement {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name: string; label: string } | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null); // For centering map without showing search result card
+  const [showMobileFilters, setShowMobileFilters] = useState(false); // Mobile filter panel visibility
 
   // Sync selectedCategory with URL param
   useEffect(() => {
@@ -58,7 +59,6 @@ export default function MainMapPage(): React.ReactElement {
   // Get user's current location
   const getUserLocation = useCallback((): void => {
     if (!navigator.geolocation) {
-      console.warn("[MainMapPage] Geolocation is not supported by this browser");
       // Fallback to default location
       setUserLocation(DEFAULT_LOCATION);
       return;
@@ -68,7 +68,6 @@ export default function MainMapPage(): React.ReactElement {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        console.log("[MainMapPage] ✅ Got user location:", { latitude, longitude });
         setUserLocation({
           lat: latitude,
           lng: longitude,
@@ -77,8 +76,7 @@ export default function MainMapPage(): React.ReactElement {
         });
         setIsGettingLocation(false);
       },
-      (error) => {
-        console.error("[MainMapPage] ❌ Error getting user location:", error);
+      () => {
         // Fallback to default location
         setUserLocation(DEFAULT_LOCATION);
         setIsGettingLocation(false);
@@ -102,73 +100,21 @@ export default function MainMapPage(): React.ReactElement {
     limit: 100, // Get more businesses for map display
   });
 
-  // Log category fetch status
-  useEffect(() => {
-    console.log("[MainMapPage] ========== CATEGORY FETCH STATUS ==========");
-    console.log("[MainMapPage] selectedCategory:", selectedCategory);
-    console.log("[MainMapPage] isLoadingSpots:", isLoadingSpots);
-    console.log("[MainMapPage] spotsError:", spotsError);
-    if (travelSpotsData) {
-      console.log("[MainMapPage] travelSpotsData received:", {
-        dataLength: travelSpotsData.data?.length || 0,
-        fromCache: travelSpotsData.fromCache,
-        message: travelSpotsData.message,
-      });
-    }
-  }, [selectedCategory, isLoadingSpots, spotsError, travelSpotsData]);
 
   // Convert businesses to map markers
   const businessMarkers = useMemo((): MapMarker[] => {
-    console.log("[MainMapPage] ========== CREATING BUSINESS MARKERS ==========");
-    console.log("[MainMapPage] selectedCategory:", selectedCategory);
-    console.log("[MainMapPage] travelSpotsData:", travelSpotsData);
-    console.log("[MainMapPage] isLoadingSpots:", isLoadingSpots);
-    console.log("[MainMapPage] spotsError:", spotsError);
-    
     // Only show markers when a category is selected
-    if (!selectedCategory) {
-      console.log("[MainMapPage] ❌ No category selected, returning empty markers");
-      return [];
-    }
+    if (!selectedCategory) return [];
     
     // Return empty array if data is not yet loaded
-    if (!travelSpotsData?.data) {
-      console.log("[MainMapPage] ⏳ No data yet, returning empty markers");
-      return [];
-    }
-
-    console.log(`[MainMapPage] ✅ Category "${selectedCategory}": Received ${travelSpotsData.data.length} businesses from API`);
-    if (travelSpotsData.data.length > 0) {
-      const firstBusiness = travelSpotsData.data[0];
-      console.log('[MainMapPage] Sample business fields:', {
-        business_id: firstBusiness.business_id,
-        name: firstBusiness.name,
-        latitude: firstBusiness.latitude,
-        longitude: firstBusiness.longitude,
-        // Check for longtitude typo variant
-        longtitude: (firstBusiness as any).longtitude,
-        allKeys: Object.keys(firstBusiness),
-      });
-    }
+    if (!travelSpotsData?.data) return [];
 
     const markers = travelSpotsData.data
       .filter((business) => {
         // Handle both longitude and longtitude (database typo)
         const lng = business.longitude ?? (business as any).longtitude;
         const lat = business.latitude;
-        const hasCoords = lat != null && lng != null;
-        
-        if (!hasCoords) {
-          console.warn(`[MainMapPage] ⚠️ Business "${business.name}" (ID: ${business.business_id}) missing coordinates`, {
-            latitude: lat,
-            longitude: business.longitude,
-            longtitude: (business as any).longtitude,
-            hasLatitude: lat != null,
-            hasLongitude: business.longitude != null,
-            hasLongtitude: (business as any).longtitude != null,
-          });
-        }
-        return hasCoords;
+        return lat != null && lng != null;
       })
       .map((business) => {
         // Handle both longitude and longtitude (database typo)
@@ -187,54 +133,15 @@ export default function MainMapPage(): React.ReactElement {
         };
       });
 
-    console.log(`[MainMapPage] ✅ Category "${selectedCategory}": Created ${markers.length} markers with valid coordinates`);
-    if (markers.length > 0) {
-      console.log("[MainMapPage] Sample marker:", markers[0]);
-      console.log("[MainMapPage] All marker positions:", markers.map(m => m.position));
-    } else {
-      console.warn("[MainMapPage] ⚠️ No markers created! Check if businesses have coordinates.");
-    }
-
     return markers;
-  }, [selectedCategory, travelSpotsData, isLoadingSpots, spotsError]);
+  }, [selectedCategory, travelSpotsData]);
 
-  // Log route state changes
-  useEffect(() => {
-    console.log("[MainMapPage] ========== ROUTE STATE UPDATE ==========");
-    console.log("[MainMapPage] start:", start);
-    console.log("[MainMapPage] end:", end);
-    console.log("[MainMapPage] routeInfo:", routeInfo);
-    if (start && end) {
-      console.log("[MainMapPage] ✅ Route is active, RoutingMachine should be calculating");
-    } else {
-      console.log("[MainMapPage] ⏳ Route not active (waiting for start/end points)");
-    }
-  }, [start, end, routeInfo]);
-
-  // Log business markers changes
-  useEffect(() => {
-    console.log("[MainMapPage] ========== BUSINESS MARKERS UPDATE ==========");
-    console.log("[MainMapPage] businessMarkers count:", businessMarkers.length);
-    console.log("[MainMapPage] businessMarkers:", businessMarkers);
-    if (businessMarkers.length > 0) {
-      console.log("[MainMapPage] ✅ Markers will be passed to MapPage");
-      console.log("[MainMapPage] First 3 marker positions:", businessMarkers.slice(0, 3).map(m => m.position));
-    } else {
-      console.log("[MainMapPage] ⏳ No markers to display");
-    }
-  }, [businessMarkers]);
 
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {
-    console.log("[MainMapPage] ========== ROUTE FOUND ==========");
-    console.log("[MainMapPage] Route info:", info);
-    console.log("[MainMapPage] Distance:", info.distance, "km");
-    console.log("[MainMapPage] Time:", info.time, "minutes");
     if (info.distance > 0 && info.time > 0) {
-      console.log("[MainMapPage] ✅ Valid route found, setting route info");
       setRouteInfo(info);
     } else {
-      console.log("[MainMapPage] ❌ Invalid route (distance or time is 0), clearing route info");
       setRouteInfo(null);
     }
   }, []);
@@ -261,21 +168,8 @@ export default function MainMapPage(): React.ReactElement {
   }, []);
 
   const handleRouteSubmit = ({ start: startPoint, end: endPoint }: RouteSubmission): void => {
-    console.log("[MainMapPage] ========== ROUTE SUBMITTED ==========");
-    console.log("[MainMapPage] Start point:", {
-      lat: startPoint.lat,
-      lng: startPoint.lng,
-      name: startPoint.name,
-    });
-    console.log("[MainMapPage] End point:", {
-      lat: endPoint.lat,
-      lng: endPoint.lng,
-      name: endPoint.name,
-    });
-    console.log("[MainMapPage] Setting route start and end coordinates");
     setStart([startPoint.lat, startPoint.lng]);
     setEnd([endPoint.lat, endPoint.lng]);
-    console.log("[MainMapPage] ✅ Route coordinates set, RoutingMachine will calculate route");
   };
 
   const handleClearMap = (): void => {
@@ -291,18 +185,12 @@ export default function MainMapPage(): React.ReactElement {
 
   // Handle category click - update URL and fetch businesses
   const handleCategoryClick = (category: string | null): void => {
-    console.log("[MainMapPage] ========== CATEGORY CLICKED ==========");
-    console.log("[MainMapPage] Previous category:", selectedCategory);
-    console.log("[MainMapPage] New category:", category);
     if (category) {
       setSelectedCategory(category);
       setSearchParams({ category }, { replace: true });
-      console.log("[MainMapPage] ✅ Category selected, fetching businesses for category:", category);
-      console.log("[MainMapPage] API will be called with params: { category:", category, ", limit: 100 }");
     } else {
       setSelectedCategory(null);
       setSearchParams({}, { replace: true });
-      console.log("[MainMapPage] ✅ Category cleared, removing all pins");
     }
   };
 
@@ -351,95 +239,195 @@ export default function MainMapPage(): React.ReactElement {
       {/* Circular Navigation Menu */}
       <MapNavMenu />
 
-      {/* Search and Category Controls - Upper Left (positioned to the right of nav menu) */}
-      <div className="absolute top-4 left-20 z-[9998] flex items-start gap-3">
-        {/* Search Box */}
-        <div className="flex-shrink-0 relative z-[9999]">
-          <MapSearchBox 
-            onSearch={handleSearch}
-            onAddToPlan={(result) => {
-              set_search_result(result);
-              setShowPlanModal(true);
-            }}
-          />
-        </div>
-
-        {/* Category Buttons */}
-        <div className="flex flex-wrap gap-2 items-start">
-          {CATEGORIES.map((category) => (
-            <button
-              key={category.value}
-              type="button"
-              onClick={() => handleCategoryClick(category.value)}
-              disabled={isLoadingSpots && selectedCategory === category.value}
-              className={`px-3 py-2 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-                selectedCategory === category.value
-                  ? "bg-primary-red text-white border border-primary-red shadow-md"
-                  : "bg-white/95 backdrop-blur-md text-gray-700 border border-gray-300 hover:border-primary-red hover:text-primary-red hover:bg-red-50 shadow-lg"
-              } ${isLoadingSpots && selectedCategory === category.value ? "opacity-75 cursor-wait" : ""}`}
-            >
-              <span>{category.icon}</span>
-              <span>{category.label}</span>
-              {isLoadingSpots && selectedCategory === category.value && (
-                <span className="ml-1">⏳</span>
-              )}
-            </button>
-          ))}
+      {/* Top Controls - Search Box Only */}
+      <div className="absolute top-4 left-16 sm:left-20 right-4 z-[9998]">
+        <div className="flex items-center gap-3">
+          {/* Search Box */}
+          <div className="flex-shrink-0 w-64 sm:w-80 relative z-[9999]">
+            <MapSearchBox 
+              onSearch={handleSearch}
+              onAddToPlan={(result) => {
+                set_search_result(result);
+                setShowPlanModal(true);
+              }}
+            />
+          </div>
+          
+          {/* Active filter indicator - iOS glass effect */}
           {selectedCategory && (
-            <button
-              onClick={() => handleCategoryClick(null)}
-              className="px-3 py-2 rounded-full text-xs font-medium bg-gray-200 text-gray-700 border border-gray-300 hover:bg-gray-300 shadow-lg whitespace-nowrap"
-              title="Clear category filter"
-            >
-              Clear
-            </button>
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white/70 backdrop-blur-xl rounded-xl text-sm shadow-lg border border-white/50 text-gray-800">
+              <span className="text-base">{CATEGORIES.find(c => c.value === selectedCategory)?.icon}</span>
+              <span className="font-semibold text-primary-red">{CATEGORIES.find(c => c.value === selectedCategory)?.label}</span>
+              <button 
+                onClick={() => handleCategoryClick(null)}
+                className="ml-1 hover:bg-gray-200/50 rounded-full p-1 transition-colors text-gray-500 hover:text-primary-red"
+                title="Clear filter"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
-        {/* Debug info in development */}
-        {import.meta.env.DEV && selectedCategory && (
-          <div className="absolute top-16 left-20 bg-black/70 text-white text-xs px-2 py-1 rounded z-[9999]">
-            {isLoadingSpots ? "Loading..." : spotsError ? "Error loading" : `${businessMarkers.length} businesses pinned`}
-          </div>
-        )}
       </div>
 
-      {/* Route Controls - Positioned below search, with lower z-index */}
-      <div className="absolute top-20 left-20 z-[9997] flex flex-col gap-2 max-w-sm">
+      {/* Bottom Slide-Up Filter Panel */}
+      <div 
+        className={`
+          fixed bottom-0 left-0 right-0 z-[9997]
+          transition-transform duration-500 ease-out
+          ${showMobileFilters ? 'translate-y-0' : 'translate-y-[calc(100%-56px)]'}
+        `}
+      >
+        {/* Glass morphism panel */}
+        <div className="bg-white/90 backdrop-blur-xl border-t border-gray-200/50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl">
+          {/* Pull tab / Handle */}
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="w-full flex flex-col items-center pt-3 pb-2 group cursor-pointer"
+            aria-label={showMobileFilters ? "Close filters" : "Open filters"}
+          >
+            {/* Drag handle indicator */}
+            <div className="w-12 h-1 bg-gray-300 rounded-full mb-2 group-hover:bg-primary-red transition-colors" />
+            
+            {/* Arrow and label */}
+            <div className="flex items-center gap-2 text-gray-600 group-hover:text-primary-red transition-colors">
+              <svg 
+                className={`w-5 h-5 transition-transform duration-300 ${showMobileFilters ? 'rotate-180' : ''}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+              <span className="text-sm font-medium">
+                {showMobileFilters ? 'Close Filters' : 'Filter by Category'}
+              </span>
+            </div>
+          </button>
+
+          {/* Filter content */}
+          <div className="px-4 sm:px-6 lg:px-8 pb-6 pt-2">
+            {/* Category Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+              {CATEGORIES.map((category, index) => (
+                <button
+                  key={category.value}
+                  type="button"
+                  onClick={() => {
+                    handleCategoryClick(category.value);
+                    // Auto-close on mobile after selection
+                    if (window.innerWidth < 640) {
+                      setTimeout(() => setShowMobileFilters(false), 300);
+                    }
+                  }}
+                  disabled={isLoadingSpots && selectedCategory === category.value}
+                  style={{ 
+                    animationDelay: showMobileFilters ? `${index * 40}ms` : '0ms',
+                  }}
+                  className={`
+                    filter-panel-btn
+                    relative flex items-center gap-2 px-3 py-3 sm:py-4 rounded-xl text-sm font-medium
+                    transition-all duration-200 ease-out
+                    hover:scale-[1.02] active:scale-[0.98]
+                    ${selectedCategory === category.value
+                      ? "bg-primary-red text-white shadow-lg shadow-primary-red/25"
+                      : "bg-white text-gray-700 border border-gray-200 hover:border-primary-red hover:text-primary-red hover:bg-red-50/50 shadow-sm hover:shadow-md"
+                    }
+                    ${isLoadingSpots && selectedCategory === category.value ? "opacity-75" : ""}
+                  `}
+                >
+                  <span className="text-lg">{category.icon}</span>
+                  <span className="flex-1 text-left truncate">{category.label}</span>
+                  {isLoadingSpots && selectedCategory === category.value && (
+                    <svg className="w-4 h-4 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {selectedCategory === category.value && !isLoadingSpots && (
+                    <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Clear filter button */}
+            {selectedCategory && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => {
+                    handleCategoryClick(null);
+                    setTimeout(() => setShowMobileFilters(false), 200);
+                  }}
+                  className="px-6 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-700 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-200 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear Filter
+                </button>
+              </div>
+            )}
+
+            {/* Results count in dev mode */}
+            {import.meta.env.DEV && selectedCategory && (
+              <div className="mt-3 text-center text-xs text-gray-500">
+                {isLoadingSpots ? "Loading businesses..." : spotsError ? "Error loading businesses" : `${businessMarkers.length} businesses found`}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Overlay when filter panel is open */}
+      {showMobileFilters && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-[9996] transition-opacity duration-300"
+          onClick={() => setShowMobileFilters(false)}
+        />
+      )}
+
+      {/* Route Controls - Responsive positioning */}
+      <div className="absolute top-28 sm:top-20 left-4 sm:left-20 z-[9997] flex flex-col gap-2 w-[calc(100%-2rem)] sm:w-auto sm:max-w-sm">
         <RouteForm onRouteSubmit={handleRouteSubmit} />
         
         {/* ETA Display when route is active */}
         {routeInfo && start && end && (
-          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-lg p-4 border border-white/50">
+          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-lg p-3 sm:p-4 border border-white/50">
             <p className="text-xs text-gray-500 mb-2">Estimated Travel</p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="font-semibold text-gray-900 text-lg">{routeInfo.time} min</span>
+                <span className="font-semibold text-gray-900 text-base sm:text-lg">{routeInfo.time} min</span>
               </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span className="font-semibold text-gray-900 text-lg">{routeInfo.distance} km</span>
+                <span className="font-semibold text-gray-900 text-base sm:text-lg">{routeInfo.distance} km</span>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Go to Current Location Button */}
+      {/* Go to Current Location Button - responsive positioning */}
       <button
         className="
-          absolute bottom-24 right-4 z-[9998]
-          w-12 h-12 rounded-full
+          absolute bottom-20 sm:bottom-24 right-4 z-[9998]
+          w-10 h-10 sm:w-12 sm:h-12 rounded-full
           bg-white/95 backdrop-blur-md
           shadow-lg shadow-black/20
           border border-white/50
           flex items-center justify-center
-          text-2xl
+          text-xl sm:text-2xl
           transition-all duration-200
           hover:scale-105 hover:shadow-xl hover:bg-white
           focus:outline-none focus:ring-2 focus:ring-primary-red
@@ -451,8 +439,6 @@ export default function MainMapPage(): React.ReactElement {
         onClick={() => {
           if (userLocation) {
             // Just center the map on user location, don't set search_result
-            // This prevents the "Add to Travel Plan" card from showing
-            console.log("[MainMapPage] 📍 Centering map on user location (not adding to plan)");
             setMapCenter([userLocation.lat, userLocation.lng]);
             setShowTagaytayMessage(true);
             setTimeout(() => setShowTagaytayMessage(false), 3000);
@@ -480,32 +466,32 @@ export default function MainMapPage(): React.ReactElement {
         </div>
       )}
 
-      {/* Search Result Card */}
+      {/* Search Result Card - responsive positioning */}
       {search_result && !start && !end && (
         <div 
           className="
-            absolute bottom-24 left-4 z-[9998]
-            w-80 bg-white/95 backdrop-blur-md
+            absolute bottom-20 sm:bottom-24 left-4 right-4 sm:right-auto z-[9998]
+            sm:w-80 bg-white/95 backdrop-blur-md
             rounded-xl shadow-xl shadow-black/20
             border border-white/50
             overflow-hidden
           "
         >
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 truncate">{search_result.name}</h3>
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{search_result.name}</h3>
                 {search_result.label && search_result.label !== search_result.name && (
-                  <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{search_result.label}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-2">{search_result.label}</p>
                 )}
                 {search_result.address && (
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-1 truncate">
                     {[
                       search_result.address.barangay,
                       search_result.address.city,
@@ -515,15 +501,16 @@ export default function MainMapPage(): React.ReactElement {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex items-center gap-2 mt-3 sm:mt-4">
               <button
                 onClick={() => setShowPlanModal(true)}
-                className="flex-1 hard_btn text-sm py-2"
+                className="flex-1 hard_btn text-xs sm:text-sm py-2"
               >
-                <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Add to Travel Plan
+                <span className="hidden sm:inline">Add to Travel Plan</span>
+                <span className="sm:hidden">Add to Plan</span>
               </button>
               <button
                 onClick={() => set_search_result(null)}
@@ -536,18 +523,18 @@ export default function MainMapPage(): React.ReactElement {
               </button>
             </div>
           </div>
-          <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+          <div className="px-3 sm:px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
             📍 {search_result.lat.toFixed(4)}, {search_result.lng.toFixed(4)}
           </div>
         </div>
       )}
 
-      {/* Clear Map Button (only show when there's content) */}
+      {/* Clear Map Button (only show when there's content) - responsive */}
       {(search_result || start || end) && (
         <button
           className="
-            absolute bottom-40 right-4 z-[9998]
-            w-12 h-12 rounded-full
+            absolute bottom-32 sm:bottom-40 right-4 z-[9998]
+            w-10 h-10 sm:w-12 sm:h-12 rounded-full
             bg-red-500/90 backdrop-blur-md
             shadow-lg shadow-black/20
             border border-red-400/50
@@ -561,39 +548,30 @@ export default function MainMapPage(): React.ReactElement {
           title="Clear map"
           onClick={handleClearMap}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       )}
 
-      {/* ESC Exit Hint */}
+      {/* ESC Exit Hint - responsive */}
       {showExitHint && (
         <div 
           className="
             absolute bottom-4 left-1/2 -translate-x-1/2 z-[9998]
-            px-4 py-2 rounded-full
+            px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
             bg-black/70 backdrop-blur-md
-            text-white text-sm
+            text-white text-xs sm:text-sm
             animate-fade-in
             transition-opacity duration-500
+            max-w-[90vw] text-center
           "
         >
-          Press <kbd className="px-2 py-0.5 mx-1 bg-white/20 rounded font-mono">ESC</kbd> to exit map
+          <span className="hidden sm:inline">Press <kbd className="px-2 py-0.5 mx-1 bg-white/20 rounded font-mono">ESC</kbd> to exit map</span>
+          <span className="sm:hidden">Tap TE menu to exit</span>
         </div>
       )}
 
-      {/* Zoom hint */}
-      <div 
-        className="
-          absolute bottom-4 right-4 z-[9997]
-          px-3 py-1.5 rounded-lg
-          bg-black/50 backdrop-blur-sm
-          text-white/70 text-xs
-        "
-      >
-        Scroll to zoom
-      </div>
 
       {/* Select Plan Modal */}
       {showPlanModal && search_result && (

@@ -66,20 +66,21 @@ const socialLinks = [
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-white text-gray-700">
+    <footer className="bg-white border-t border-gray-100 text-gray-700">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-primary-red px-6 py-8 text-white shadow-lg shadow-primary-red/15 sm:px-10 lg:flex lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <h2 className="text-2xl font-semibold sm:text-3xl">
+        {/* Newsletter Section - Refined */}
+        <div className="mb-16 grid gap-8 lg:grid-cols-2 lg:items-center">
+          <div className="max-w-xl">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
               Join the TravelEase Community
             </h2>
-            <p className="mt-3 text-white/90">
+            <p className="mt-3 text-lg text-gray-600">
               Be the first to receive destination spotlights, travel planning
               checklists, and insider perks crafted by our travel strategists.
             </p>
           </div>
           <form
-            className="mt-6 flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:mt-0 lg:w-auto"
+            className="flex w-full flex-col gap-3 sm:flex-row lg:justify-end"
             onSubmit={(event) => event.preventDefault()}
           >
             <label htmlFor="footer-email" className="sr-only">
@@ -90,103 +91,38 @@ const Footer: React.FC = () => {
               type="email"
               required
               placeholder="you@example.com"
-              className="w-full rounded-lg border border-transparent bg-white px-4 py-3 text-base text-gray-900 placeholder-primary-red/60 focus:border-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-red sm:max-w-xs"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:border-primary-red focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-red sm:max-w-xs transition-colors"
             />
             <button
               type="submit"
-              className="w-full rounded-lg border border-white bg-white px-5 py-3 text-sm font-semibold uppercase tracking-wide text-primary-red transition hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-red sm:w-auto"
+              className="w-full rounded-lg bg-primary-red px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 sm:w-auto"
             >
               Subscribe
             </button>
           </form>
         </div>
 
-        <div className="mt-12 grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 border-t border-gray-100 pt-16 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary-red text-white font-semibold">
+            <Link to="/" className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-red text-xs font-bold text-white shadow-sm">
                 TE
               </span>
-              <span className="text-lg font-semibold text-primary-red">
+              <span className="text-lg font-bold text-gray-900">
                 TravelEase
               </span>
-            </div>
+            </Link>
             <p className="text-sm leading-relaxed text-gray-600">
               We craft seamless journeys for curious explorers. From curated
               itineraries to on-call travel support, TravelEase elevates every
               trip with local insight and human-first planning.
             </p>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-red">
-              Explore
-            </h3>
-            <ul className="mt-5 space-y-3 text-sm font-medium">
-              <li>
-                <Link className="transition hover:text-primary-red" to="/blogs">
-                  Blog Stories
-                </Link>
-              </li>
-              <li>
-                <Link className="transition hover:text-primary-red" to="/travel_spots_page">
-                  Featured Spots
-                </Link>
-              </li>
-              <li>
-                <Link className="transition hover:text-primary-red" to="/map">
-                  Interactive Map
-                </Link>
-              </li>
-              <li>
-                <Link className="transition hover:text-primary-red" to="/contact">
-                  Plan a Trip
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-red">
-              Resources
-            </h3>
-            <ul className="mt-5 space-y-3 text-sm font-medium">
-              <li>
-                <Link className="transition hover:text-primary-red" to="/about">
-                  About TravelEase
-                </Link>
-              </li>
-              <li>
-                <Link className="transition hover:text-primary-red" to="/faqs">
-                  FAQs
-                </Link>
-              </li>
-              <li>
-                <Link className="transition hover:text-primary-red" to="/privacy">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link className="transition hover:text-primary-red" to="/terms">
-                  Terms &amp; Conditions
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-red">
-              Follow TravelEase
-            </h3>
-            <p className="mt-5 text-sm text-gray-600">
-              Get behind-the-scenes looks at our scouting trips and meet our
-              local partners.
-            </p>
-            <div className="mt-4 flex gap-3">
+            
+            <div className="flex gap-4 pt-2">
               {socialLinks.map((link) => (
                 <a
                   key={link.name}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-primary-red/40 text-primary-red transition hover:border-primary-red hover:bg-primary-red hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="text-gray-400 hover:text-primary-red transition-colors"
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
@@ -197,18 +133,88 @@ const Footer: React.FC = () => {
               ))}
             </div>
           </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Explore
+            </h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/blogs">
+                  Blog Stories
+                </Link>
+              </li>
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/travel_spots_page">
+                  Featured Spots
+                </Link>
+              </li>
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/map">
+                  Interactive Map
+                </Link>
+              </li>
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/contact">
+                  Plan a Trip
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Resources
+            </h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/about">
+                  About TravelEase
+                </Link>
+              </li>
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/faqs">
+                  FAQs
+                </Link>
+              </li>
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/privacy">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/terms">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">
+              Contact
+            </h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li>
+                <a className="text-gray-600 hover:text-primary-red transition-colors" href="mailto:hello@travelease.com">
+                  hello@travelease.com
+                </a>
+              </li>
+              <li>
+                <a className="text-gray-600 hover:text-primary-red transition-colors" href="tel:+1234567890">
+                  +1 (234) 567-890
+                </a>
+              </li>
+              <li className="text-gray-500 text-xs mt-4">
+                123 Travel Street<br />
+                San Francisco, CA 94103
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <div className="mt-12 border-t border-primary-red/15 pt-6 text-sm text-gray-500 sm:flex sm:items-center sm:justify-between">
+        <div className="mt-12 border-t border-gray-100 pt-8 text-sm text-gray-500 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p>&copy; {new Date().getFullYear()} TravelEase. All rights reserved.</p>
-          <div className="mt-3 flex gap-6 sm:mt-0">
-            <a className="hover:text-primary-red" href="mailto:hello@travelease.com">
-              hello@travelease.com
-            </a>
-            <a className="hover:text-primary-red" href="tel:+1234567890">
-              +1 (234) 567-890
-            </a>
-          </div>
         </div>
       </div>
     </footer>

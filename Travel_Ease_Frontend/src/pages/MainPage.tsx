@@ -7,6 +7,7 @@ import PreviousPlans from "../components/dashboard/PreviousPlans";
 import PublicPlans from "../components/dashboard/PublicPlans";
 import QuickJoin from "../components/dashboard/QuickJoin";
 import PlanModal from "../components/dashboard/PlanModal";
+import PageContainer from "../components/ui/PageContainer";
 import type { TravelPlan } from "../types/travelPlan";
 import { travelPlanKeys } from "../lib/queryKeys";
 import { useAuth } from "../context/AuthContext";
@@ -125,7 +126,7 @@ export default function MainPage(): React.ReactElement {
   // Show loading overlay
   if (showLoadingOverlay) {
     return (
-      <div className="bg-gray-50 w-full min-h-screen flex items-center justify-center">
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-primary-red" />
           <p className="text-lg text-gray-600 font-medium animate-pulse">
@@ -137,52 +138,54 @@ export default function MainPage(): React.ReactElement {
   }
 
   return (
-    <div className="bg-gray-50 w-full min-h-screen p-5">
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* LEFT COLUMN (Ongoing + Upcoming) */}
-        <div className="flex-[3] min-w-0">
-          <div id="ongoing_plans">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-semibold text-gray-900">
-                Ongoing Plans
-              </h3>
-              <button
-                onClick={() => setActiveModal("create")}
-                className="hard_btn"
-              >
-                + Create Plan
-              </button>
-            </div>
-            <OngoingPlans />
+    <div className="bg-gray-50 min-h-screen">
+      <PageContainer>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* LEFT COLUMN (Ongoing + Upcoming) */}
+          <div className="w-full lg:w-2/3 min-w-0">
+            <section id="ongoing_plans">
+              <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  Ongoing Plans
+                </h3>
+                <button
+                  onClick={() => setActiveModal("create")}
+                  className="hard_btn"
+                >
+                  + Create Plan
+                </button>
+              </div>
+              <OngoingPlans />
+            </section>
+
+            <section className="mt-8">
+              <UpcomingPlans />
+            </section>
           </div>
 
-          <div className="mt-6">
-            <UpcomingPlans />
+          {/* RIGHT COLUMN (Suggested + Previous) */}
+          <div className="w-full lg:w-1/3 min-w-0 lg:max-w-sm">
+            <section>
+              <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  Suggested Plans
+                </h3>
+                <button
+                  onClick={() => setActiveModal("join")}
+                  className="hard_btn"
+                >
+                  Quick Join
+                </button>
+              </div>
+              <PublicPlans />
+            </section>
+
+            <section className="mt-8">
+              <PreviousPlans />
+            </section>
           </div>
         </div>
-
-        {/* RIGHT COLUMN (Suggested + Previous) */}
-        <div className="flex-1 min-w-0">
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-semibold text-gray-900">
-                Suggested Plans
-              </h3>
-              <button
-                onClick={() => setActiveModal("join")}
-                className="hard_btn"
-              >
-                Quick Join
-              </button>
-            </div>
-            <PublicPlans />
-          </div>
-
-          <div className="mt-6">
-            <PreviousPlans />
-          </div>
-        </div>
-      </div>
+      </PageContainer>
 
       {/* MODAL: Quick Join */}
       {activeModal === "join" && (

@@ -76,8 +76,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-red/5 via-white to-secondary-blue/10">
-      <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 gap-8 px-6 py-12 lg:grid-cols-2 lg:px-10">
+    <div className="min-h-screen bg-gradient-to-br from-primary-red/5 via-white to-secondary-blue/10 flex items-center justify-center">
+      <div className="mx-auto grid w-full min-h-screen max-w-6xl grid-cols-1 gap-8 px-4 sm:px-6 py-8 sm:py-12 lg:grid-cols-2 lg:px-10 lg:min-h-0">
         <section className="relative hidden overflow-hidden rounded-3xl bg-gradient-to-br from-primary-red to-secondary-blue text-white shadow-2xl lg:flex lg:flex-col lg:justify-between">
           <div className="absolute inset-0 opacity-20 mix-blend-overlay">
             <div className="absolute -left-10 top-10 h-40 w-40 rounded-full bg-white blur-3xl" />

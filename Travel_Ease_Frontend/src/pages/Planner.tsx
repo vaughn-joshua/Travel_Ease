@@ -396,13 +396,13 @@ export default function Planner(): React.ReactElement {
   const showRequestJoin = permissions.isNonParticipant && status === "join";
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Main Content - Flex Row */}
-      <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Main Content - Flex Row on lg, stacked on mobile/tablet */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
         {/* LEFT COLUMN - Map + Plan Details */}
-        <div className="flex-[2] flex flex-col gap-4 min-w-0">
+        <div className="flex-1 lg:flex-[2] flex flex-col gap-4 min-w-0 min-h-[50vh] lg:min-h-0">
           {/* Map Container */}
-          <div className="flex-1 relative rounded-xl overflow-hidden shadow-lg border border-gray-200">
+          <div className="flex-1 relative rounded-xl overflow-hidden shadow-lg border border-gray-200 min-h-[300px]">
             <div id="map-container" className="w-full h-full">
             <LandingPage
               start={itineraryRoute.start}
@@ -526,7 +526,7 @@ export default function Planner(): React.ReactElement {
         </div>
 
         {/* RIGHT COLUMN - Tabbed Panel (Activities / Suggested) */}
-        <div className="w-96 flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="w-full lg:w-96 flex flex-col bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-h-[50vh] lg:max-h-none">
           {/* Tab Navigation */}
           <div className="flex border-b border-gray-200">
                 <button

@@ -68,8 +68,8 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary-blue/10 via-white to-primary-red/5">
-      <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 gap-8 px-6 py-12 lg:grid-cols-2 lg:px-10">
+    <div className="min-h-screen bg-gradient-to-br from-secondary-blue/10 via-white to-primary-red/5 flex items-center justify-center">
+      <div className="mx-auto grid w-full min-h-screen max-w-6xl grid-cols-1 gap-8 px-4 sm:px-6 py-8 sm:py-12 lg:grid-cols-2 lg:px-10 lg:min-h-0">
         <section className="relative hidden overflow-hidden rounded-3xl bg-white/70 shadow-2xl backdrop-blur lg:flex lg:flex-col lg:justify-between">
           <div className="absolute inset-0 bg-gradient-to-br from-primary-red/10 via-white to-secondary-blue/20" />
           <div className="relative p-10">

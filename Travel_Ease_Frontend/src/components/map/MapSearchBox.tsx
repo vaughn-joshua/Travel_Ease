@@ -149,7 +149,7 @@ export default function MapSearchBox({
     dbError?.message || nominatimError?.message || geocodeError?.message || "Search failed";
 
   return (
-    <div ref={boxRef} className="relative w-72 z-[10000]">
+    <div ref={boxRef} className="relative w-full z-[10000]">
       <div className="relative">
         <input
           ref={inputRef}
@@ -158,7 +158,7 @@ export default function MapSearchBox({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full px-4 py-3 pr-12 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-gray-800 placeholder-gray-400"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 bg-white/95 backdrop-blur-md border border-white/50 rounded-xl shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-sm sm:text-base text-gray-800 placeholder-gray-400"
         />
         <button
           type="button"

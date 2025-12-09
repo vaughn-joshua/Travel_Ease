@@ -45,26 +45,32 @@ export default function PublicPlans(): React.ReactElement {
   // Empty state
   if (plans.length === 0) {
     return (
-      <div className="text-center py-4 text-gray-500">
-        <p>No public plans available</p>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 text-center">
+        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+        <p className="text-gray-600 font-medium">No public plans available</p>
+        <p className="text-sm text-gray-400 mt-1">Check back later for community plans</p>
       </div>
     );
   }
 
   // Plans list
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="space-y-3">
       {plans.map((plan) => (
         <div
           key={plan.id}
-          className={`card cursor-pointer hover:shadow-lg transition-shadow relative ${
+          className={`bg-white rounded-xl shadow-sm border border-gray-100 p-4 cursor-pointer hover:shadow-md hover:border-primary-red/20 transition-all relative ${
             plan.isParticipant ? "border-l-4 border-l-green-500" : ""
           }`}
           onClick={() => handle_click(plan)}
         >
           {/* Participation Badge */}
           {plan.isParticipant && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-3 right-3">
               <span
                 className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${getRoleBadgeStyle(
                   plan.participantRole
@@ -86,26 +92,26 @@ export default function PublicPlans(): React.ReactElement {
             </div>
           )}
 
-          <div className="pr-20">
-            <h3 className="font-semibold">{plan.title}</h3>
-            <p className="text-sm text-gray-600">{plan.location}</p>
-            <p className="text-sm text-gray-500">
-              {plan.start_date} - {plan.end_date}
+          <div className={plan.isParticipant ? "pr-24" : ""}>
+            <h4 className="font-semibold text-gray-900 line-clamp-1">{plan.title}</h4>
+            <p className="text-sm text-gray-500 mt-1 line-clamp-1">📍 {plan.location}</p>
+            <p className="text-xs text-gray-400 mt-1">
+              📅 {plan.start_date} - {plan.end_date}
             </p>
             {plan.accommodation && (
-              <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1 line-clamp-1">
                 <span>🛏️</span> {plan.accommodation.name}
               </p>
             )}
             {plan.slots && (
-              <p className="text-sm text-gray-500">
-                {plan.approvedParticipants || 0}/{plan.slots} slots
+              <p className="text-xs text-gray-400 mt-1">
+                👥 {plan.approvedParticipants || 0}/{plan.slots} slots
               </p>
             )}
           </div>
 
           {/* Action hint */}
-          <div className="mt-2 text-xs text-gray-400">
+          <div className="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-400">
             {plan.isParticipant ? (
               <span className="flex items-center gap-1">
                 <svg
@@ -130,7 +136,7 @@ export default function PublicPlans(): React.ReactElement {
                 Click to view plan
               </span>
             ) : (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-primary-red">
                 <svg
                   className="w-3 h-3"
                   fill="none"

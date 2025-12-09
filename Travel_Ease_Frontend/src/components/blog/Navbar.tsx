@@ -1,23 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { 
+  Menu, 
+  X, 
+  Map as MapIcon, 
+  BookOpen, 
+  Compass, 
+  Calendar, 
+  LogIn, 
+  UserPlus,
+  Briefcase
+} from 'lucide-react';
+import Button from "../ui/Button";
 
 interface NavItem {
   label: string;
   path: string;
+  icon: React.ReactNode;
 }
 
 // Nav items for guests (not logged in)
 const guestNavItems: NavItem[] = [
-  { label: "Blogs", path: "/blogs" },
+  { label: "Blogs", path: "/blogs", icon: <BookOpen className="w-4 h-4" /> },
+  { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="w-4 h-4" /> },
 ];
 
 // Nav items for authenticated users - order: Travel Plans, Map, Travel Spots, Blogs
 const authNavItems: NavItem[] = [
-  { label: "Travel Plans", path: "/plans" },
-  { label: "Map", path: "/map" },
-  { label: "Travel Spots", path: "/travel_spots_page" },
-  { label: "Blogs", path: "/blogs" },
+  { label: "Travel Plans", path: "/plans", icon: <Calendar className="w-4 h-4" /> },
+  { label: "Map", path: "/map", icon: <MapIcon className="w-4 h-4" /> },
+  { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="w-4 h-4" /> },
+  { label: "Blogs", path: "/blogs", icon: <BookOpen className="w-4 h-4" /> },
 ];
 
 const isEditorEnabled = () => {
@@ -45,7 +59,6 @@ const Navbar: React.FC = () => {
 
   const isActive = (path: string) => {
     if (path === "/blogs") {
-      // Blogs is active for /blogs routes
       return location.pathname === "/blogs" || location.pathname.startsWith("/blogs/");
     }
     if (path === "/plans") {
@@ -54,7 +67,6 @@ const Navbar: React.FC = () => {
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
-  // Build nav items based on auth state
   const navItems = user ? authNavItems : guestNavItems;
 
   return (
@@ -63,54 +75,56 @@ const Navbar: React.FC = () => {
         className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
         aria-label="Primary navigation"
       >
-        {/* Logo - always goes to home (blogs) */}
+        {/* Logo */}
         <Link
           to="/"
           className="flex shrink-0 items-center gap-2 text-lg font-bold text-gray-900 transition-opacity hover:opacity-80"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-red text-sm font-bold text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-red text-sm font-bold text-white shadow-sm">
             TE
           </span>
-          <span className="hidden sm:inline">TravelEase</span>
+          <span className="hidden sm:inline font-semibold tracking-tight">TravelEase</span>
         </Link>
 
         {/* Desktop Navigation Links */}
         <div className="hidden items-center gap-1 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                isActive(item.path)
-                  ? "text-primary-red"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-              aria-current={isActive(item.path) ? "page" : undefined}
-            >
-              {item.label}
-              {isActive(item.path) && (
-                <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-primary-red" />
-              )}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`group relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  active
+                    ? "text-primary-red bg-primary-red/5"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+                aria-current={active ? "page" : undefined}
+              >
+                {/* Clone icon to apply specific classes if needed, or use as is */}
+                <span className={active ? "text-primary-red" : "text-gray-400 group-hover:text-gray-600"}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Desktop Right Actions */}
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-3 md:flex">
           {/* Guest Actions */}
           {!user && !loading && (
             <>
-              <Link
-                to="/login"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-              >
-                Log in
+              <Link to="/login">
+                <Button variant="ghost" size="sm" leftIcon={<LogIn className="w-4 h-4" />}>
+                  Log in
+                </Button>
               </Link>
-              <Link
-                to="/signup"
-                className="rounded-lg bg-primary-red px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-red-dark"
-              >
-                Sign up
+              <Link to="/signup">
+                <Button variant="primary" size="sm" leftIcon={<UserPlus className="w-4 h-4" />}>
+                  Sign up
+                </Button>
               </Link>
             </>
           )}
@@ -122,21 +136,20 @@ const Navbar: React.FC = () => {
 
           {/* Authenticated Actions */}
           {user && !loading && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Publish (for Google users with editor enabled) */}
               {isEditorEnabled() && isGoogleAuth && (
-                <Link
-                  to="/blogs/new"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50"
-                >
-                  Publish
+                <Link to="/blogs/new">
+                  <Button variant="outline" size="sm" leftIcon={<Briefcase className="w-4 h-4" />}>
+                    Publish
+                  </Button>
                 </Link>
               )}
 
               {/* Profile Avatar */}
               <Link
                 to="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-red text-sm font-semibold text-white ring-2 ring-white transition-shadow hover:ring-primary-red/30"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-red text-sm font-semibold text-white ring-2 ring-white transition-shadow hover:ring-primary-red/30 shadow-sm"
                 title="View Profile"
               >
                 {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
@@ -155,13 +168,9 @@ const Navbar: React.FC = () => {
           aria-label={isMenuOpen ? "Close menu" : "Open menu"}
         >
           {isMenuOpen ? (
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-6 w-6" />
           ) : (
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <Menu className="h-6 w-6" />
           )}
         </button>
       </nav>
@@ -173,61 +182,54 @@ const Navbar: React.FC = () => {
       >
         <div className="space-y-1 px-4 pb-4 pt-2">
           {/* Navigation Links */}
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center justify-between rounded-lg px-4 py-3 text-base font-medium transition-colors ${
-                isActive(item.path)
-                  ? "bg-primary-red/5 text-primary-red"
-                  : "text-gray-700 hover:bg-gray-50"
-              }`}
-              aria-current={isActive(item.path) ? "page" : undefined}
-            >
-              <span>{item.label}</span>
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors ${
+                  active
+                    ? "bg-primary-red/5 text-primary-red"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+                aria-current={active ? "page" : undefined}
+              >
+                <span className={active ? "text-primary-red" : "text-gray-400"}>
+                  {item.icon}
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
           {/* Divider */}
           <div className="my-2 border-t border-gray-100" />
 
           {/* Guest Actions */}
           {!user && !loading && (
-            <div className="mt-2 flex gap-2">
-              <Link
-                to="/login"
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-3 text-center text-base font-medium text-gray-700 transition-colors hover:bg-gray-50"
-              >
-                Log in
+            <div className="mt-4 flex flex-col gap-3">
+              <Link to="/login" className="w-full">
+                <Button variant="outline" className="w-full justify-center" leftIcon={<LogIn className="w-4 h-4" />}>
+                  Log in
+                </Button>
               </Link>
-              <Link
-                to="/signup"
-                className="flex-1 rounded-lg bg-primary-red px-4 py-3 text-center text-base font-medium text-white transition-colors hover:bg-primary-red-dark"
-              >
-                Sign up
+              <Link to="/signup" className="w-full">
+                <Button variant="primary" className="w-full justify-center" leftIcon={<UserPlus className="w-4 h-4" />}>
+                  Sign up
+                </Button>
               </Link>
-            </div>
-          )}
-
-          {/* Loading State */}
-          {loading && (
-            <div className="flex justify-center py-3">
-              <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200" />
             </div>
           )}
 
           {/* Authenticated User Section */}
           {user && !loading && (
             <div className="mt-2 space-y-2">
-              {/* User Info */}
               <Link
                 to="/profile"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-gray-50"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-red text-sm font-semibold text-white">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-red text-sm font-semibold text-white shadow-sm">
                   {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -236,18 +238,13 @@ const Navbar: React.FC = () => {
                   </p>
                   <p className="truncate text-xs text-gray-500">{user.email}</p>
                 </div>
-                <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
               </Link>
 
-              {/* Publish (for Google users with editor enabled) */}
               {isEditorEnabled() && isGoogleAuth && (
-                <Link
-                  to="/blogs/new"
-                  className="block rounded-lg border border-gray-200 px-4 py-3 text-center text-base font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                >
-                  Publish a Blog
+                <Link to="/blogs/new" className="block mt-2">
+                  <Button variant="outline" className="w-full justify-center" leftIcon={<Briefcase className="w-4 h-4" />}>
+                    Publish a Blog
+                  </Button>
                 </Link>
               )}
             </div>
