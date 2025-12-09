@@ -5,16 +5,17 @@ import { formatBusinessListItemDetailed } from "../../../services/businessServic
 
 interface BusinessWhere {
   status?: boolean;
+  business_id?: { in: number[] };
   OR?: Array<{ name?: { contains: string; mode: string }; description?: { contains: string; mode: string }; city?: { contains: string; mode: string } }>;
-  categories?: {
+  business_category?: {
     some: {
-      category_name?: string;
+      subcategory_id?: number;
     };
   };
   AND?: Array<{
-    categories?: {
+    business_category?: {
       some: {
-        category_name?: string;
+        subcategory_id?: number;
       };
     };
     min_price?: { lte: number };

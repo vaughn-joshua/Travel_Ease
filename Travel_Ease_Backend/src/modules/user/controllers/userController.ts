@@ -172,7 +172,7 @@ export async function favorite(req: Request, res: Response) {
       });
     } else if (travel_plan_id) {
       const fav = await executeWithRetry(() =>
-        prisma.travel_planFavorite.create({
+        prisma.travel_plan_favorite.create({
           data: { user_id, travel_plan_id }
         })
       );
@@ -224,7 +224,7 @@ export async function remove_favorite(req: Request, res: Response) {
       return res.json({ message: 'Business removed from favorites' });
     } else if (travel_plan_id) {
       const existing = await executeWithRetry(() =>
-        prisma.travel_planFavorite.findFirst({
+        prisma.travel_plan_favorite.findFirst({
           where: { user_id, travel_plan_id }
         })
       );
@@ -234,7 +234,7 @@ export async function remove_favorite(req: Request, res: Response) {
       }
 
       await executeWithRetry(() =>
-        prisma.travel_planFavorite.delete({
+        prisma.travel_plan_favorite.delete({
           where: { favorite_id: existing.favorite_id }
         })
       );
@@ -271,7 +271,7 @@ export async function favorite_id(req: Request, res: Response) {
             }
           }
         }),
-        prisma.travel_planFavorite.findMany({
+        prisma.travel_plan_favorite.findMany({
           where: { user_id: userId },
           include: {
             travel_plan: {
@@ -713,6 +713,12 @@ export async function set_password(req: Request, res: Response) {
 
     // Use admin API to update user's password
     // This creates an email identity for OAuth users
+    if (!authId) {
+      return res.status(400).json({ 
+        error: 'User auth ID not found',
+        code: 'NO_AUTH_ID'
+      });
+    }
     const { error: updateError } = await supabaseAdmin!.auth.admin.updateUserById(
       authId,
       { password }

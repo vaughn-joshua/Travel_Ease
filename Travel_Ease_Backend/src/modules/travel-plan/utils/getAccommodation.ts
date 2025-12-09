@@ -40,7 +40,7 @@ export async function getAccommodationForPlans(
   
   // Set accommodation for plans that have it
   accommodations.forEach(acc => {
-    if (acc.business) {
+    if (acc.business && acc.travel_plan_id !== null) {
       // Use activity lat/lng first, fallback to business latitude/longtitude
       const lat = acc.lat ?? acc.business.latitude;
       const lng = acc.lng ?? acc.business.longtitude; // Note: DB column has typo 'longtitude'

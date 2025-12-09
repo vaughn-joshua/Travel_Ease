@@ -411,7 +411,7 @@ export async function getActivityWithPlanAccess(
           select: {
             travel_plan_id: true,
             user_id: true,
-            participants: {
+            participant: {
               where: { user_id: userId, status: true },
               select: { participant_id: true }
             }
@@ -424,7 +424,7 @@ export async function getActivityWithPlanAccess(
   if (!activity) return null;
 
   const isOwner = activity.travel_plan?.user_id === userId;
-  const isParticipant = (activity.travel_plan?.participants?.length ?? 0) > 0;
+  const isParticipant = (activity.travel_plan?.participant?.length ?? 0) > 0;
   const hasAccess = isOwner || isParticipant;
 
   return {

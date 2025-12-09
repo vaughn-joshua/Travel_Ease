@@ -8,11 +8,11 @@ export async function price_range(req: Request, res: Response) {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Create price ranges for categories
+      // Create price ranges for subcategories
       if (categories && categories.length > 0) {
-        await tx.priceRange.createMany({
-          data: categories.map((cat: { category_id: number; min_price: number; max_price: number }) => ({
-            category_id: cat.category_id,
+        await tx.price_range.createMany({
+          data: categories.map((cat: { subcategory_id: number; min_price: number; max_price: number }) => ({
+            subcategory_id: cat.subcategory_id,
             min_price: cat.min_price,
             max_price: cat.max_price,
           }))

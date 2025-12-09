@@ -160,9 +160,10 @@ const BUSINESS_LIST_SELECT = {
   latitude: true,
   longtitude: true, // Note: DB column has typo
   city: true,
-  categories: {
+  business_category: {
     select: {
-      category_name: true,
+      category_id: true,
+      subcategory_id: true,
     },
   },
 } as const;
@@ -183,10 +184,10 @@ const BUSINESS_DETAIL_SELECT = {
   user_id: true,
   min_price: true,
   max_price: true,
-  categories: {
+  business_category: {
     select: {
       category_id: true,
-      category_name: true,
+      subcategory_id: true,
     },
   },
   business_hours: true,
@@ -194,7 +195,7 @@ const BUSINESS_DETAIL_SELECT = {
     where: { is_available: true },
     orderBy: [{ category: "asc" as const }, { name: "asc" as const }],
   },
-  reviews: {
+  business_review: {
     take: 5,
     orderBy: { review_date: "desc" as const },
     include: {
@@ -523,10 +524,10 @@ export async function getBusinessById(
         prisma.business.findUnique({
           where: { business_id: businessId },
           include: {
-            categories: {
+            business_category: {
               select: {
                 category_id: true,
-                category_name: true,
+                subcategory_id: true,
               },
             },
             business_hours: true,
@@ -534,7 +535,7 @@ export async function getBusinessById(
               where: { is_available: true },
               orderBy: [{ category: "asc" }, { name: "asc" }],
             },
-            reviews: {
+            business_review: {
               take: 5,
               orderBy: { review_date: "desc" },
               include: {
@@ -633,15 +634,18 @@ export async function createBusiness(
       },
     });
 
-    // Add categories
+    // Add categories - input.category should be subcategory_ids
     if (input.category?.length > 0) {
-      for (const categoryName of input.category) {
-        await tx.business_category.create({
-          data: {
-            business_id: business.business_id,
-            category_name: categoryName as any,
-          },
-        });
+      for (const subcategoryId of input.category) {
+        const subId = typeof subcategoryId === 'number' ? subcategoryId : parseInt(subcategoryId);
+        if (!isNaN(subId)) {
+          await tx.business_category.create({
+            data: {
+              business_id: business.business_id,
+              subcategory_id: subId,
+            },
+          });
+        }
       }
     }
 
@@ -764,20 +768,20 @@ export async function userOwnsBusiness(
 }
 
 /**
- * Get all business categories
+ * Get all business categories (returns distinct subcategory_ids)
  */
-export async function getAllCategories(): Promise<string[]> {
-  const result = await cacheResult<string[]>({
+export async function getAllCategories(): Promise<number[]> {
+  const result = await cacheResult<number[]>({
     key: "business:categories:all",
     ttl: 3600, // 1 hour
     fetchFn: async () => {
       const categories = await executeWithRetry(() =>
         prisma.business_category.findMany({
-          distinct: ["category_name"],
-          select: { category_name: true },
+          distinct: ["subcategory_id"],
+          select: { subcategory_id: true },
         })
       );
-      return categories.map((c) => c.category_name);
+      return categories.map((c) => c.subcategory_id).filter((id): id is number => id !== null);
     },
   });
   return result.data;

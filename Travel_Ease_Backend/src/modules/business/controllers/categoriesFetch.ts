@@ -12,7 +12,13 @@ export async function categories_fetch(req: Request, res: Response) {
           where: { business_id: parseInt(id) },
           select: {
             category_id: true,
-            category_name: true,
+            subcategory_id: true,
+            subcategory: {
+              select: {
+                subcategory_name: true,
+                main_category: true,
+              }
+            }
           }
         }),
         prisma.business.findUnique({
