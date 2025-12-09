@@ -2,13 +2,13 @@ import { prisma } from "../../../lib/prisma.js";
 
 interface CategoryInput {
   category_id?: number;
-  category_name: string;
+  subcategory_id: number;
 }
 
 /**
  * Update business categories - handles add/update/delete
  * @param business_id - Business ID
- * @param categories - Array of {category_id?, category_name}
+ * @param categories - Array of {category_id?, subcategory_id}
  */
 export async function updateBusinessCategories(business_id: number, categories: CategoryInput[]) {
   // Use Prisma transaction for atomicity
@@ -39,14 +39,14 @@ export async function updateBusinessCategories(business_id: number, categories: 
         // Update existing
         await tx.business_category.update({
           where: { category_id: c.category_id },
-          data: { category_name: c.category_name as any }
+          data: { subcategory_id: c.subcategory_id }
         });
       } else {
         // Insert new
         await tx.business_category.create({
           data: {
             business_id,
-            category_name: c.category_name as any
+            subcategory_id: c.subcategory_id
           }
         });
       }

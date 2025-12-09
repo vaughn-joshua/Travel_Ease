@@ -100,7 +100,7 @@ const PLAN_DETAIL_SELECT = {
       email: true,
     }
   },
-  participant: {
+  participants: {
     where: { status: true },
     select: {
       participant_id: true,
@@ -117,8 +117,8 @@ const PLAN_DETAIL_SELECT = {
   },
   _count: {
     select: {
-      participant: true,
-      activity: true,
+      participants: { where: { status: true } },
+      activities: true,
     }
   }
 } as const;
@@ -216,7 +216,7 @@ export async function getUpcomingPlans(
         select: {
           ...PLAN_LIST_SELECT,
           _count: {
-            select: { participant: true }
+            select: { participants: { where: { status: true } } }
           }
         },
         orderBy: [{ start_date: 'asc' }, { travel_plan_id: 'desc' }],
@@ -228,7 +228,7 @@ export async function getUpcomingPlans(
   );
 
   const data = plans.map(p => formatPlanToDTO(p, {
-    approvedParticipants: (p as any)._count?.participant ?? 0
+    approvedParticipants: (p as any)._count?.participants ?? 0
   }));
 
   return { data, total };
@@ -263,7 +263,7 @@ export async function getOngoingPlans(
         select: {
           ...PLAN_LIST_SELECT,
           _count: {
-            select: { participant: true }
+            select: { participants: { where: { status: true } } }
           }
         },
         orderBy: [{ start_date: 'desc' }],
@@ -275,7 +275,7 @@ export async function getOngoingPlans(
   );
 
   const data = plans.map(p => formatPlanToDTO(p, {
-    approvedParticipants: (p as any)._count?.participant ?? 0
+    approvedParticipants: (p as any)._count?.participants ?? 0
   }));
 
   return { data, total };
@@ -335,9 +335,9 @@ export async function getPlanById(planId: number): Promise<TravelPlanDTO | null>
   if (!plan) return null;
 
   return formatPlanToDTO(plan, {
-    approvedParticipants: (plan as any)._count?.participant ?? 0,
-    activityCount: (plan as any)._count?.activity ?? 0,
-    participants: (plan as any).participant,
+    approvedParticipants: (plan as any)._count?.participants ?? 0,
+    activityCount: (plan as any)._count?.activities ?? 0,
+    participants: (plan as any).participants,
     owner: (plan as any).user
   });
 }
@@ -353,7 +353,7 @@ export async function createPlan(
 
   const result = await prisma.$transaction(async (tx) => {
     // Create travel plan
-    const travelPlan = await tx.travel_plan.create({
+    const travelPlan = await tx.travelPlan.create({
       data: {
         name: title,
         user_id: userId,
@@ -474,7 +474,7 @@ export async function updatePlan(
           });
         } else {
           // Get plan owner for user_id
-          const plan = await tx.travel_plan.findUnique({
+          const plan = await tx.travelPlan.findUnique({
             where: { travel_plan_id: planId },
             select: { user_id: true }
           });
@@ -501,7 +501,7 @@ export async function updatePlan(
   );
 
   return formatPlanToDTO(updated, {
-    approvedParticipants: (updated as any)._count?.participant ?? 0
+    approvedParticipants: (updated as any)._count?.participants ?? 0
   });
 }
 
@@ -526,7 +526,7 @@ export async function userHasPlanAccess(userId: number, planId: number): Promise
         travel_plan_id: planId,
         OR: [
           { user_id: userId },
-          { participant: { some: { user_id: userId, status: true } } }
+          { participants: { some: { user_id: userId, status: true } } }
         ]
       },
       select: { travel_plan_id: true }

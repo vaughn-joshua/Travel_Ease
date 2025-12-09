@@ -260,7 +260,8 @@ export async function createNotification(
         type,
         title,
         message,
-        data: data || null
+        // Cast to Prisma's InputJsonValue type for JSON fields
+        data: data as Parameters<typeof prisma.notification.create>[0]['data']['data']
       }
     })
   );

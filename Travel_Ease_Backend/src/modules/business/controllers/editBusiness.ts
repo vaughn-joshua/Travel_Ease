@@ -104,21 +104,25 @@ export async function edit_business(req: Request, res: Response) {
       });
 
       // Handle category updates if provided
+      // Note: business_category uses subcategory_id, not category_name
       if (updateData.category && Array.isArray(updateData.category)) {
         // Delete existing categories (cascade will handle related data)
         await tx.business_category.deleteMany({
           where: { business_id: businessId }
         });
 
-        // Create new categories
+        // Create new categories - categories should be subcategory_ids
         if (updateData.category.length > 0) {
-          for (const cat of updateData.category) {
-            await tx.business_category.create({
-              data: {
-                business_id: businessId,
-                category_name: cat,
-              }
-            });
+          for (const subcategoryId of updateData.category) {
+            const subId = typeof subcategoryId === 'number' ? subcategoryId : parseInt(subcategoryId);
+            if (!isNaN(subId)) {
+              await tx.business_category.create({
+                data: {
+                  business_id: businessId,
+                  subcategory_id: subId,
+                }
+              });
+            }
           }
         }
       }

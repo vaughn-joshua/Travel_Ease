@@ -170,22 +170,22 @@ export async function plan_edit(req: Request, res: Response) {
                 target_date: null
               }
             });
-          } else {
-            // Get plan owner for user_id
-            const plan = await tx.travelPlan.findUnique({
-              where: { travel_plan_id: planId },
-              select: { user_id: true }
-            });
-            await tx.activity.create({
-              data: {
-                travel_plan_id: planId,
-                business_id: accommodation_id,
-                is_accommodation: true,
-                target_date: null,
-                user_id: plan?.user_id ?? null
-              }
-            });
-          }
+        } else {
+          // Get plan owner for user_id
+          const plan = await tx.travel_plan.findUnique({
+            where: { travel_plan_id: planId },
+            select: { user_id: true }
+          });
+          await tx.activity.create({
+            data: {
+              travel_plan_id: planId,
+              business_id: accommodation_id,
+              is_accommodation: true,
+              target_date: null,
+              user_id: plan?.user_id ?? null
+            }
+          });
+        }
         }
       });
     }
