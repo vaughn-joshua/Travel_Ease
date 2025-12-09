@@ -424,12 +424,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Refresh user profile from server
-   * Useful after operations that change user flags (e.g., setPassword)
+   * Useful after operations that change user flags (e.g., setPassword, disconnectGoogle)
+   * NOTE: Does NOT preserve the old source - derives it from backend's auth_provider
    */
   const refreshProfile = async () => {
     try {
       const userData = await authApi.getMe();
-      const profile = mapApiUser(userData, user?.source);
+      // Don't pass source override - let it derive from auth_provider
+      // This ensures changes like disconnect Google are reflected
+      const profile = mapApiUser(userData);
       persistAuth(profile);
     } catch (error) {
       console.error("Failed to refresh profile:", error);

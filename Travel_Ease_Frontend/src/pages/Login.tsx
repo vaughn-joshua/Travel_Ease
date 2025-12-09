@@ -21,7 +21,18 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Handle success message from redirect (e.g., after disconnecting Google)
+  useEffect(() => {
+    const state = location.state as { message?: string; type?: string } | null;
+    if (state?.message && state?.type === "success") {
+      setSuccessMessage(state.message);
+      // Clear the state to prevent showing message on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (user && !loading) {
@@ -123,6 +134,17 @@ export default function Login() {
                 Create account
               </Link>
             </div>
+
+            {successMessage && (
+              <div className="mx-6 mt-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {successMessage}
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="mx-6 mt-4 rounded-lg border border-primary-red/30 bg-primary-red/5 px-4 py-3 text-sm text-primary-red-dark">

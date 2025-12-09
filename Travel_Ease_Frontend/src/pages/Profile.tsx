@@ -213,6 +213,7 @@ export default function Profile() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectPassword, setDisconnectPassword] = useState("");
   const [disconnectError, setDisconnectError] = useState("");
+  const [disconnectPrompt, setDisconnectPrompt] = useState("");
 
   // Password change states
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -241,6 +242,13 @@ export default function Profile() {
       });
     }
   }, [user]);
+
+  // Clear disconnect prompt once user has created a password
+  useEffect(() => {
+    if (hasPassword && disconnectPrompt) {
+      setDisconnectPrompt("");
+    }
+  }, [hasPassword, disconnectPrompt]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -428,12 +436,23 @@ export default function Profile() {
     setSuccessMessage("");
 
     try {
-      const res = await authApi.disconnectGoogle(disconnectPassword);
+      await authApi.disconnectGoogle(disconnectPassword);
       setShowDisconnectGoogle(false);
       setDisconnectPassword("");
-      setSuccessMessage(res.message || "Google account disconnected. Please log in again.");
+      setDisconnectPrompt("");
+      
+      // Sign out the user - they need to log back in with email/password
+      // This ensures a clean session state after removing Google auth
       await signOut();
-      navigate("/login", { replace: true });
+      
+      // Navigate to login with a success message
+      navigate("/login", { 
+        replace: true,
+        state: { 
+          message: "Google account disconnected successfully! Please sign in with your email and password.",
+          type: "success"
+        }
+      });
     } catch (err: unknown) {
       console.error("Disconnect Google error:", err);
       const errorResponse = (err as any)?.response?.data;
@@ -477,6 +496,20 @@ export default function Profile() {
     setPasswordErrors({});
     setShowPasswordForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleShowDisconnectGoogle = () => {
+    setDisconnectError("");
+
+    // Google users without an email/password login need to set one first
+    if (!hasPassword) {
+      setDisconnectPrompt("Set a password to disconnect your Google account. We've opened the password form above.");
+      handleQuickPasswordClick();
+      return;
+    }
+
+    setDisconnectPrompt("");
+    setShowDisconnectGoogle(true);
   };
 
   const handleDeleteAccount = async () => {
@@ -721,6 +754,12 @@ export default function Profile() {
           {/* Password Change Section - Visible for all users when showPasswordForm is true */}
           {showPasswordForm && (
             <div className="border-t border-gray-200 p-6">
+              {/* Show disconnect prompt at the top of password form when triggered from Disconnect button */}
+              {disconnectPrompt && (
+                <div className="mb-4 p-3 border border-amber-200 bg-amber-50 rounded-lg text-amber-800">
+                  <p className="font-medium">⚠️ {disconnectPrompt}</p>
+                </div>
+              )}
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 {hasPassword ? "Change Password" : "Set Password"}
               </h3>
@@ -951,20 +990,20 @@ export default function Profile() {
               {/* Disconnect Google - only show for Google-connected users */}
               {user?.source === "google" && (
                 <div className="flex items-center justify-between p-4 border border-amber-200 bg-amber-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-amber-800">Disconnect Google Account</p>
-                    <p className="text-sm text-amber-600">
-                      Remove Google sign-in from your account. You'll need to set a password to continue logging in.
-                    </p>
+                    <div>
+                      <p className="font-medium text-amber-800">Disconnect Google Account</p>
+                      <p className="text-sm text-amber-600">
+                        Remove Google sign-in from your account. You'll need to set a password to continue logging in.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleShowDisconnectGoogle}
+                      className="py-2 px-4 border border-amber-500 text-amber-700 font-medium rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap"
+                    >
+                      Disconnect
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowDisconnectGoogle(true)}
-                    className="py-2 px-4 border border-amber-500 text-amber-700 font-medium rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap"
-                  >
-                    Disconnect
-                  </button>
-                </div>
               )}
 
               {/* Delete Account */}
@@ -1046,8 +1085,32 @@ export default function Profile() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Disconnect Google Account?</h3>
-              <p className="text-gray-600 mb-4 text-center">
-                Enter your password to disconnect your Google account. You'll be able to log in with your email and password after disconnecting.
+              
+              {/* Overview of what will happen */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-amber-800 mb-2">What will happen:</h4>
+                <ul className="text-sm text-amber-700 space-y-1.5">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5">•</span>
+                    <span>Google Sign-In will be <strong>removed</strong> from your account</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5">•</span>
+                    <span>You will be <strong>signed out</strong> automatically</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5">•</span>
+                    <span>Sign in again using your <strong>email and password</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5">•</span>
+                    <span>Your account data and businesses will <strong>remain safe</strong></span>
+                  </li>
+                </ul>
+              </div>
+              
+              <p className="text-gray-600 mb-4 text-center text-sm">
+                Enter your password to confirm this action.
               </p>
 
               <form

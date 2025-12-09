@@ -71,6 +71,31 @@ const AUTH_ERROR_CODES = [
   "refresh_token",
 ];
 
+// Error codes that are user-initiated action errors (NOT auth session errors)
+// These should NOT trigger auth recovery - they need to be shown to the user
+const USER_ACTION_ERROR_CODES = [
+  "INVALID_PASSWORD",       // Wrong password for disconnect Google / change password
+  "NO_EMAIL_IDENTITY",      // User needs to set password before disconnecting Google
+  "PASSWORD_REQUIRED",      // Missing password field
+  "NOT_GOOGLE_ACCOUNT",     // User trying to disconnect Google on non-Google account
+  "PASSWORD_TOO_SHORT",     // Password policy failure when setting password
+  "SET_PASSWORD_FAILED",    // Admin password set failed
+  "NOT_GOOGLE_USER",        // Set-password called by non-Google user
+  "ACCOUNT_NOT_REGISTERED", // OAuth user not yet in our DB
+  "OAUTH_EMAIL_MISSING",    // OAuth flow missing email
+  "VALIDATION_ERROR",       // Form validation errors
+  "DUPLICATE_EMAIL",        // Email already exists
+  "WEAK_PASSWORD",          // Password doesn't meet requirements
+];
+
+// User-action messages (no reload) to avoid auth recovery on disconnect/password flows
+const USER_ACTION_MESSAGE_KEYWORDS = [
+  "disconnect your google",
+  "disconnecting google",
+  "set a password before disconnecting google",
+  "incorrect password",
+];
+
 // Error messages that indicate auth issues
 const AUTH_ERROR_MESSAGES = [
   "unauthorized",
@@ -86,7 +111,31 @@ const AUTH_ERROR_MESSAGES = [
 ];
 
 /**
+ * Check if an error code indicates a user-initiated action error
+ * These should NOT trigger auth recovery - they need to be displayed to the user
+ */
+function isUserActionError(code: unknown): boolean {
+  if (typeof code !== "string") return false;
+  return USER_ACTION_ERROR_CODES.includes(code);
+}
+
+/**
+ * Check if an error message indicates a user-action (disconnect/password) flow
+ * These should NOT trigger auth recovery even without explicit error codes
+ */
+function isUserActionMessage(message: unknown): boolean {
+  if (typeof message !== "string") return false;
+  const normalized = message.toLowerCase();
+  return USER_ACTION_MESSAGE_KEYWORDS.some((keyword) =>
+    normalized.includes(keyword)
+  );
+}
+
+/**
  * Detect if an error is auth-related (401, 403, 419, or auth-specific messages)
+ * 
+ * Important: User action errors (wrong password, etc.) are NOT treated as auth errors
+ * even if they return 401. These need to be shown to the user, not cause a reload.
  */
 export function isAuthError(error: unknown): boolean {
   if (!error) return false;
@@ -96,10 +145,26 @@ export function isAuthError(error: unknown): boolean {
   // 1) Axios-style errors (error.response.status)
   const axiosResponse = err?.response as Record<string, unknown> | undefined;
   const axiosStatus = axiosResponse?.status;
+  const axiosData = axiosResponse?.data as Record<string, unknown> | undefined;
+  const axiosCode = axiosData?.code;
+  const axiosMessage =
+    typeof axiosData?.error === "string"
+      ? axiosData.error
+      : typeof axiosData?.message === "string"
+      ? axiosData.message
+      : undefined;
+  
+  // Skip user action errors - these need to be shown to the user
+  if (isUserActionError(axiosCode)) {
+    return false;
+  }
+  if (isUserActionMessage(axiosMessage)) {
+    return false;
+  }
+  
   if (typeof axiosStatus === "number" && AUTH_ERROR_STATUSES.includes(axiosStatus)) {
     // Skip DB_UNAVAILABLE - that's not an auth error
-    const code = (axiosResponse?.data as Record<string, unknown>)?.code;
-    if (code !== "DB_UNAVAILABLE") {
+    if (axiosCode !== "DB_UNAVAILABLE") {
       return true;
     }
   }
@@ -115,6 +180,10 @@ export function isAuthError(error: unknown): boolean {
   const supaStatus = supaError?.status;
   const supaCode = supaError?.code;
   const supaMessage = supaError?.message ?? "";
+
+  if (isUserActionMessage(supaMessage)) {
+    return false;
+  }
 
   if (typeof supaStatus === "number" && AUTH_ERROR_STATUSES.includes(supaStatus)) {
     return true;
@@ -138,6 +207,9 @@ export function isAuthError(error: unknown): boolean {
 
   // 4) Generic error.message string
   const message = err?.message;
+  if (isUserActionMessage(message)) {
+    return false;
+  }
   if (typeof message === "string") {
     const msgLower = message.toLowerCase();
     if (AUTH_ERROR_MESSAGES.some((m) => msgLower.includes(m))) {
