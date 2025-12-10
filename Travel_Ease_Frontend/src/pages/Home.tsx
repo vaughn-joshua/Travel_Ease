@@ -268,7 +268,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-cta-soft text-white relative overflow-hidden">
+      <section className="py-20 bg-primary-red text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-white/15 rounded-full blur-3xl pointer-events-none" />
 
