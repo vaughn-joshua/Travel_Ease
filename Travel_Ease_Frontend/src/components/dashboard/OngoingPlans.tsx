@@ -5,6 +5,7 @@ import { useOngoingPlans, useTravelPlanActivities } from "../../features/travelP
 import LandingPage, { type MapMarker } from "../../pages/LandingPage";
 import type { Activity } from "../../types/travelPlan";
 import type { RouteInfo } from "../map/RoutingMachine";
+import { formatPlanDateRange } from "../../utils/date";
 
 // Tagaytay center coordinates
 const TAGAYTAY_CENTER: [number, number] = [14.1154, 120.962];
@@ -29,6 +30,8 @@ export default function OngoingPlans(): React.ReactElement {
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedActivity, setSelectedActivity] = useState<[number, number] | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [focusedPosition, setFocusedPosition] = useState<[number, number] | null>(null);
+  const [highlightedMarkerId, setHighlightedMarkerId] = useState<string | null>(null);
 
   // Callback for when route is found
   const handleRouteFound = useCallback((info: RouteInfo) => {
@@ -44,11 +47,14 @@ export default function OngoingPlans(): React.ReactElement {
 
   // Use TanStack Query hook for fetching ongoing plans
   const {
-    data: plans = [],
+    data,
     isError,
     error,
     refetch,
   } = useOngoingPlans(!authLoading && Boolean(token));
+
+  const plans = data?.plans ?? [];
+  const dbUnavailable = data?.dbUnavailable ?? false;
 
   // Auto-select first plan when there's only one plan
   useEffect(() => {
@@ -105,9 +111,11 @@ export default function OngoingPlans(): React.ReactElement {
     activitiesForDay.forEach((activity) => {
       if (activity.lat && activity.lng) {
         markers.push({
+          id: activity.activity_id ? `activity-${activity.activity_id}` : undefined,
           position: [activity.lat, activity.lng],
-          type: activity.is_priority ? 'priority' : 'activity',
+          type: activity.is_priority ? "priority" : "activity",
           name: activity.name || activity.location || undefined,
+          description: [activity.brgy, activity.city].filter(Boolean).join(", ") || undefined,
         });
       }
     });
@@ -115,9 +123,11 @@ export default function OngoingPlans(): React.ReactElement {
     // Add accommodation marker if available and has coordinates
     if (selectedPlan?.accommodation?.lat && selectedPlan?.accommodation?.lng) {
       markers.push({
+        id: `accommodation-${selectedPlan.accommodation.business_id ?? selectedPlan.id}`,
         position: [selectedPlan.accommodation.lat, selectedPlan.accommodation.lng],
-        type: 'accommodation',
+        type: "accommodation",
         name: selectedPlan.accommodation.name,
+        description: selectedPlan.accommodation.city ?? undefined,
       });
     }
 
@@ -128,6 +138,22 @@ export default function OngoingPlans(): React.ReactElement {
   const handleActivityClick = (activity: Activity) => {
     if (activity.lat && activity.lng) {
       setSelectedActivity([activity.lat, activity.lng]);
+      setFocusedPosition([activity.lat, activity.lng]);
+      if (activity.activity_id) {
+        setHighlightedMarkerId(`activity-${activity.activity_id}`);
+      } else {
+        setHighlightedMarkerId(null);
+      }
+    }
+  };
+
+  const handleFocusAccommodation = () => {
+    const accommodation = selectedPlan?.accommodation;
+    if (accommodation?.lat && accommodation?.lng) {
+      setSelectedActivity(null);
+      setRouteInfo(null);
+      setFocusedPosition([accommodation.lat, accommodation.lng]);
+      setHighlightedMarkerId(`accommodation-${accommodation.business_id ?? selectedPlan?.id ?? "primary"}`);
     }
   };
 
@@ -143,6 +169,9 @@ export default function OngoingPlans(): React.ReactElement {
     setSelectedPlanId(planId);
     setSelectedDay(1);
     setSelectedActivity(null);
+    setRouteInfo(null);
+    setFocusedPosition(null);
+    setHighlightedMarkerId(null);
     setViewMode("detail");
   };
 
@@ -152,7 +181,29 @@ export default function OngoingPlans(): React.ReactElement {
     setSelectedPlanId(null);
     setSelectedDay(1);
     setSelectedActivity(null);
+    setRouteInfo(null);
+    setFocusedPosition(null);
+    setHighlightedMarkerId(null);
   };
+
+  useEffect(() => {
+    if (!selectedPlan) {
+      setFocusedPosition(null);
+      setHighlightedMarkerId(null);
+      return;
+    }
+
+    if (selectedPlan.accommodation?.lat && selectedPlan.accommodation?.lng) {
+      setFocusedPosition([selectedPlan.accommodation.lat, selectedPlan.accommodation.lng]);
+      setHighlightedMarkerId(`accommodation-${selectedPlan.accommodation.business_id ?? selectedPlan.id}`);
+    } else {
+      setFocusedPosition(null);
+      setHighlightedMarkerId(null);
+    }
+
+    setSelectedActivity(null);
+    setRouteInfo(null);
+  }, [selectedPlan?.id]);
 
   // Show error state with retry option
   if (isError) {
@@ -180,8 +231,20 @@ export default function OngoingPlans(): React.ReactElement {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
           </svg>
         </div>
-        <p className="text-gray-600 font-medium">No ongoing plans</p>
-        <p className="text-sm text-gray-400 mt-1">Create a new plan to get started!</p>
+        <p className="text-gray-600 font-medium">
+          {dbUnavailable ? "We’re having trouble loading your ongoing plans right now." : "No ongoing plans"}
+        </p>
+        <p className="text-sm text-gray-400 mt-1">
+          {dbUnavailable ? "Please refresh or try again in a few moments." : "Create a new plan to get started!"}
+        </p>
+        {dbUnavailable && (
+          <button
+            onClick={() => refetch()}
+            className="mt-4 text-sm font-medium text-red-500 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 rounded"
+          >
+            Retry loading plans
+          </button>
+        )}
       </div>
     );
   }
@@ -190,6 +253,11 @@ export default function OngoingPlans(): React.ReactElement {
   if (plans.length > 1 && viewMode === "cards") {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5">
+        {dbUnavailable && (
+          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Some plans may be missing while we reconnect. Showing cached data.
+          </div>
+        )}
         <h3 className="font-semibold text-gray-900 mb-4">Ongoing Plans ({plans.length})</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {plans.map((plan) => (
@@ -209,7 +277,7 @@ export default function OngoingPlans(): React.ReactElement {
               <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">{plan.title}</h4>
               <p className="text-sm text-gray-500 mb-2 line-clamp-1">📍 {plan.location}</p>
               <p className="text-xs text-gray-400">
-                📅 {plan.start_date} - {plan.end_date}
+                📅 {formatPlanDateRange(plan.start_date, plan.end_date)}
               </p>
               {plan.accommodation && (
                 <p className="text-xs text-gray-600 mt-1.5 flex items-center gap-1 line-clamp-1">
@@ -235,26 +303,27 @@ export default function OngoingPlans(): React.ReactElement {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="flex flex-col lg:flex-row h-[450px]">
-        {/* Map Section - 2/3 width */}
-        <div className="lg:w-2/3 h-full relative">
-          <div className="w-full h-full z-0">
-            <LandingPage
-              className="w-full h-full"
-              start={TAGAYTAY_CENTER}
-              end={selectedActivity}
-              markers={mapMarkers}
-              onRouteFound={handleRouteFound}
-            />
-          </div>
-          {/* Plan title overlay - outside map container */}
-          <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-lg z-[1000] pointer-events-none">
+      {dbUnavailable && (
+        <div className="px-5 py-3 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
+          Some information may be out of date while we reconnect to the server.
+        </div>
+      )}
+      <div className="grid min-h-[480px] grid-rows-[auto_auto] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:grid-rows-none">
+        <div className="relative h-[320px] sm:h-[360px] lg:h-full">
+          <LandingPage
+            className="w-full h-full"
+            start={TAGAYTAY_CENTER}
+            end={selectedActivity}
+            markers={mapMarkers}
+            onRouteFound={handleRouteFound}
+            focusPosition={focusedPosition}
+          />
+          <div className="absolute top-4 left-4 right-4 sm:right-auto max-w-[85%] sm:max-w-[70%] rounded-lg border border-gray-200 bg-white/95 px-4 py-2 shadow-md pointer-events-none z-[12]">
             <h3 className="font-semibold text-gray-900">{selectedPlan.title}</h3>
             <p className="text-xs text-gray-500">{selectedPlan.location}</p>
           </div>
-          {/* ETA overlay - outside map container to avoid Leaflet re-render issues */}
           {routeInfo && selectedActivity && (
-            <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-lg z-[1000] pointer-events-none">
+            <div className="absolute bottom-4 left-4 right-4 sm:right-auto rounded-lg border border-gray-200 bg-white/95 px-4 py-3 shadow-md pointer-events-none z-[12]">
               <p className="text-xs text-gray-500 mb-1">Estimated Travel</p>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
@@ -275,9 +344,7 @@ export default function OngoingPlans(): React.ReactElement {
           )}
         </div>
 
-        {/* Sidebar - 1/3 width */}
-        <div className="lg:w-1/3 h-full flex flex-col border-l border-gray-100">
-          {/* Back button when multiple plans */}
+        <div className="flex flex-col border-t border-gray-100 lg:border-t-0 lg:border-l">
           {plans.length > 1 && (
             <button
               onClick={handleBackToCards}
@@ -290,7 +357,6 @@ export default function OngoingPlans(): React.ReactElement {
             </button>
           )}
 
-          {/* Plan Details Header */}
           <div className="p-4 border-b border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
@@ -306,23 +372,50 @@ export default function OngoingPlans(): React.ReactElement {
             <h3 className="font-semibold text-gray-900 text-lg mb-1">{selectedPlan.title}</h3>
             <p className="text-sm text-gray-500 mb-2">📍 {selectedPlan.location}</p>
             <p className="text-sm text-gray-600">
-              📅 {selectedPlan.start_date} - {selectedPlan.end_date}
+              📅 {formatPlanDateRange(selectedPlan.start_date, selectedPlan.end_date)}
             </p>
             {selectedPlan.approvedParticipants !== undefined && (
               <p className="text-xs text-gray-400 mt-1">
                 👥 {selectedPlan.approvedParticipants}/{selectedPlan.max_slots} participants
               </p>
             )}
+
+            {selectedPlan.accommodation && (
+              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                  Featured Accommodation
+                </p>
+                <p className="text-sm text-gray-900 font-medium flex items-center gap-2">
+                  <span>🛏️</span> {selectedPlan.accommodation.name}
+                </p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-xs text-gray-500 truncate">
+                    {selectedPlan.accommodation.city || "Tagaytay"}
+                  </p>
+                  {selectedPlan.accommodation.lat && selectedPlan.accommodation.lng && (
+                    <button
+                      type="button"
+                      onClick={handleFocusAccommodation}
+                      className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+                    >
+                      View on map →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Day Tabs */}
           <div className="flex gap-1 p-2 border-b border-gray-100 overflow-x-auto">
             {Array.from({ length: days }, (_, i) => (
               <button
                 key={i}
                 onClick={() => {
                   setSelectedDay(i + 1);
-                  setSelectedActivity(null); // Reset route when changing days
+                  setSelectedActivity(null);
+                  setRouteInfo(null);
+                  setFocusedPosition(null);
+                  setHighlightedMarkerId(null);
                 }}
                 className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
                   selectedDay === i + 1
@@ -335,7 +428,6 @@ export default function OngoingPlans(): React.ReactElement {
             ))}
           </div>
 
-          {/* Activities List */}
           <div className="flex-1 overflow-y-auto p-3">
             {activitiesLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -347,49 +439,62 @@ export default function OngoingPlans(): React.ReactElement {
               </div>
             ) : (
               <div className="space-y-2">
-                {activitiesForDay.map((activity) => (
-                  <div
-                    key={activity.activity_id}
-                    onClick={() => handleActivityClick(activity)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                      selectedActivity &&
-                      selectedActivity[0] === activity.lat &&
-                      selectedActivity[1] === activity.lng
-                        ? "border-red-500 bg-red-50"
-                        : "border-gray-100 bg-gray-50 hover:border-red-200 hover:bg-red-50/50"
-                    }`}
-                  >
-                    {activity.name && (
-                      <h4 className="font-medium text-gray-900 text-sm">{activity.name}</h4>
-                    )}
-                    {activity.location && (
-                      <p className="text-xs text-gray-600 mt-0.5">{activity.location}</p>
-                    )}
-                    {(activity.brgy || activity.city) && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {[activity.brgy, activity.city].filter(Boolean).join(", ")}
-                      </p>
-                    )}
-                    {activity.budget_range && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatBudgetRange(activity.budget_range)}
-                      </p>
-                    )}
-                    {activity.is_priority && (
-                      <span className="inline-block text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded mt-1">
-                        Priority
-                      </span>
-                    )}
-                    {activity.lat && activity.lng && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                        </svg>
-                        Click to show route
-                      </p>
-                    )}
-                  </div>
-                ))}
+                {activitiesForDay.map((activity) => {
+                  const markerId = activity.activity_id ? `activity-${activity.activity_id}` : null;
+                  const isSelected =
+                    selectedActivity &&
+                    activity.lat &&
+                    activity.lng &&
+                    selectedActivity[0] === activity.lat &&
+                    selectedActivity[1] === activity.lng;
+                  const isHighlighted = markerId && highlightedMarkerId === markerId;
+
+                  return (
+                    <div
+                      key={activity.activity_id}
+                      onClick={() => handleActivityClick(activity)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                        isSelected || isHighlighted
+                          ? "border-red-500 bg-red-50"
+                          : "border-gray-100 bg-gray-50 hover:border-red-200 hover:bg-red-50/50"
+                      }`}
+                    >
+                      {activity.name && (
+                        <h4 className="font-medium text-gray-900 text-sm">{activity.name}</h4>
+                      )}
+                      {activity.location && (
+                        <p className="text-xs text-gray-600 mt-0.5">{activity.location}</p>
+                      )}
+                      {(activity.brgy || activity.city) && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {[activity.brgy, activity.city].filter(Boolean).join(", ")}
+                        </p>
+                      )}
+                      {activity.budget_range && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatBudgetRange(activity.budget_range)}
+                        </p>
+                      )}
+                      {activity.is_priority && (
+                        <span className="inline-block text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded mt-1">
+                          Priority
+                        </span>
+                      )}
+                      {activity.lat && activity.lng && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              fillRule="evenodd"
+                              d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Click to show route
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

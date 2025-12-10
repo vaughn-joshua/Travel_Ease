@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { usePublicPlans } from "../../features/travelPlans/queries";
 import type { TravelPlan } from "../../types/travelPlan";
+import { formatPlanDateRange } from "../../utils/date";
 
 // Helper to get badge color based on role
 const getRoleBadgeStyle = (role: string | null | undefined): string => {
@@ -96,7 +97,7 @@ export default function PublicPlans(): React.ReactElement {
             <h4 className="font-semibold text-gray-900 line-clamp-1">{plan.title}</h4>
             <p className="text-sm text-gray-500 mt-1 line-clamp-1">📍 {plan.location}</p>
             <p className="text-xs text-gray-400 mt-1">
-              📅 {plan.start_date} - {plan.end_date}
+              📅 {formatPlanDateRange(plan.start_date, plan.end_date)}
             </p>
             {plan.accommodation && (
               <p className="text-xs text-gray-500 mt-1 flex items-center gap-1 line-clamp-1">

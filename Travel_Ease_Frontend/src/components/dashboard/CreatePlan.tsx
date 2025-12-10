@@ -321,8 +321,8 @@ export default function Create_Plan({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div className="fixed inset-0 z-[1500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
           <h2 className="text-white text-lg font-semibold text-center">
@@ -332,10 +332,9 @@ export default function Create_Plan({
           </h2>
         </div>
 
-        <div className="p-6">
-          <StepIndicator />
-
-          <form onSubmit={handleSubmit(on_submit)} className="space-y-5">
+        <form onSubmit={handleSubmit(on_submit)} className="flex h-full flex-col">
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            <StepIndicator />
             {/* Step 1: Basic Info */}
             {counter === 0 && (
               <div className="space-y-4">
@@ -692,72 +691,71 @@ export default function Create_Plan({
                 </p>
               </div>
             )}
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={on_close}
+              disabled={createPlanMutation.isPending}
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            {counter > 0 && (
               <button
                 type="button"
-                onClick={on_close}
+                onClick={handle_back}
                 disabled={createPlanMutation.isPending}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
               >
-                Cancel
+                Back
               </button>
+            )}
 
-              {counter > 0 && (
-                <button
-                  type="button"
-                  onClick={handle_back}
-                  disabled={createPlanMutation.isPending}
-                  className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-                >
-                  Back
-                </button>
-              )}
-
-              {counter < 2 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={createPlanMutation.isPending}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={createPlanMutation.isPending}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {createPlanMutation.isPending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Creating...
-                    </span>
-                  ) : (
-                    "Create Plan"
-                  )}
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
+            {counter < 2 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={createPlanMutation.isPending}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={createPlanMutation.isPending}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {createPlanMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Creating...
+                  </span>
+                ) : (
+                  "Create Plan"
+                )}
+              </button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

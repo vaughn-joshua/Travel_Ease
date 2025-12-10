@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { 
-  Menu, 
-  X, 
-  Map as MapIcon, 
-  BookOpen, 
-  Compass, 
-  Calendar, 
-  LogIn, 
+import {
+  Menu,
+  X,
+  Map as MapIcon,
+  BookOpen,
+  Compass,
+  Calendar,
+  LogIn,
   UserPlus,
-  Briefcase
-} from 'lucide-react';
+  Briefcase,
+  Home,
+} from "lucide-react";
 import Button from "../ui/Button";
 
 interface NavItem {
@@ -20,23 +21,56 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-// Nav items for guests (not logged in)
+// Nav items for guests (not logged in) – only Home and Travel Spots
 const guestNavItems: NavItem[] = [
-  { label: "Blogs", path: "/blogs", icon: <BookOpen className="w-4 h-4" /> },
-  { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="w-4 h-4" /> },
+  { label: "Home", path: "/", icon: <Home className="h-4 w-4" /> },
+  { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="h-4 w-4" /> },
 ];
 
-// Nav items for authenticated users - order: Travel Plans, Map, Travel Spots, Blogs
+// Nav items for authenticated users – order: Travel Plans, Map, Travel Spots, Blogs
 const authNavItems: NavItem[] = [
-  { label: "Travel Plans", path: "/plans", icon: <Calendar className="w-4 h-4" /> },
-  { label: "Map", path: "/map", icon: <MapIcon className="w-4 h-4" /> },
-  { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="w-4 h-4" /> },
-  { label: "Blogs", path: "/blogs", icon: <BookOpen className="w-4 h-4" /> },
+  { label: "Travel Plans", path: "/plans", icon: <Calendar className="h-4 w-4" /> },
+  { label: "Map", path: "/map", icon: <MapIcon className="h-4 w-4" /> },
+  { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="h-4 w-4" /> },
+  { label: "Blogs", path: "/blogs", icon: <BookOpen className="h-4 w-4" /> },
 ];
 
 const isEditorEnabled = () => {
   return import.meta.env.VITE_ENABLE_EDITOR === "true";
 };
+
+// ---------------------------------------------------------------------------
+// Logo component – inline SVG for crisp rendering, fixed dimensions (no CLS)
+// ---------------------------------------------------------------------------
+function Logo() {
+  return (
+    <svg
+      width="36"
+      height="36"
+      viewBox="0 0 36 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      {/* Background rounded square */}
+      <rect width="36" height="36" rx="10" fill="currentColor" className="text-primary-red" />
+      {/* "TE" text */}
+      <text
+        x="50%"
+        y="54%"
+        dominantBaseline="middle"
+        textAnchor="middle"
+        fill="white"
+        fontSize="14"
+        fontWeight="700"
+        fontFamily="system-ui, -apple-system, sans-serif"
+      >
+        TE
+      </text>
+    </svg>
+  );
+}
 
 const Navbar: React.FC = () => {
   const location = useLocation();
@@ -58,12 +92,23 @@ const Navbar: React.FC = () => {
   }, []);
 
   const isActive = (path: string) => {
+    // Home route – exact match only for guests
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    // Blogs – exact /blogs or any /blogs/* subpath
     if (path === "/blogs") {
       return location.pathname === "/blogs" || location.pathname.startsWith("/blogs/");
     }
+    // Plans – includes / for authenticated users, /plans, and /planner/*
     if (path === "/plans") {
-      return location.pathname === "/" || location.pathname === "/plans" || location.pathname.startsWith("/planner/");
+      return (
+        location.pathname === "/" ||
+        location.pathname === "/plans" ||
+        location.pathname.startsWith("/planner/")
+      );
     }
+    // Default: exact match or starts with path/
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
@@ -75,15 +120,14 @@ const Navbar: React.FC = () => {
         className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
         aria-label="Primary navigation"
       >
-        {/* Logo */}
+        {/* Logo – fixed size, links to home */}
         <Link
           to="/"
           className="flex shrink-0 items-center gap-2 text-lg font-bold text-gray-900 transition-opacity hover:opacity-80"
+          aria-label="TravelEase home"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-red text-sm font-bold text-white shadow-sm">
-            TE
-          </span>
-          <span className="hidden sm:inline font-semibold tracking-tight">TravelEase</span>
+          <Logo />
+          <span className="hidden font-semibold tracking-tight sm:inline">TravelEase</span>
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -96,13 +140,14 @@ const Navbar: React.FC = () => {
                 to={item.path}
                 className={`group relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   active
-                    ? "text-primary-red bg-primary-red/5"
+                    ? "bg-primary-red/5 text-primary-red"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                {/* Clone icon to apply specific classes if needed, or use as is */}
-                <span className={active ? "text-primary-red" : "text-gray-400 group-hover:text-gray-600"}>
+                <span
+                  className={active ? "text-primary-red" : "text-gray-400 group-hover:text-gray-600"}
+                >
                   {item.icon}
                 </span>
                 {item.label}
@@ -117,12 +162,12 @@ const Navbar: React.FC = () => {
           {!user && !loading && (
             <>
               <Link to="/login">
-                <Button variant="ghost" size="sm" leftIcon={<LogIn className="w-4 h-4" />}>
+                <Button variant="ghost" size="sm" leftIcon={<LogIn className="h-4 w-4" />}>
                   Log in
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button variant="primary" size="sm" leftIcon={<UserPlus className="w-4 h-4" />}>
+                <Button variant="primary" size="sm" leftIcon={<UserPlus className="h-4 w-4" />}>
                   Sign up
                 </Button>
               </Link>
@@ -130,9 +175,7 @@ const Navbar: React.FC = () => {
           )}
 
           {/* Loading State */}
-          {loading && (
-            <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200" />
-          )}
+          {loading && <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200" />}
 
           {/* Authenticated Actions */}
           {user && !loading && (
@@ -140,7 +183,7 @@ const Navbar: React.FC = () => {
               {/* Publish (for Google users with editor enabled) */}
               {isEditorEnabled() && isGoogleAuth && (
                 <Link to="/blogs/new">
-                  <Button variant="outline" size="sm" leftIcon={<Briefcase className="w-4 h-4" />}>
+                  <Button variant="outline" size="sm" leftIcon={<Briefcase className="h-4 w-4" />}>
                     Publish
                   </Button>
                 </Link>
@@ -149,7 +192,7 @@ const Navbar: React.FC = () => {
               {/* Profile Avatar */}
               <Link
                 to="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-red text-sm font-semibold text-white ring-2 ring-white transition-shadow hover:ring-primary-red/30 shadow-sm"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-red text-sm font-semibold text-white shadow-sm ring-2 ring-white transition-shadow hover:ring-primary-red/30"
                 title="View Profile"
               >
                 {(user.firstName || user.email)?.charAt(0).toUpperCase() || "U"}
@@ -167,11 +210,7 @@ const Navbar: React.FC = () => {
           aria-controls="mobile-menu"
           aria-label={isMenuOpen ? "Close menu" : "Open menu"}
         >
-          {isMenuOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
+          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </nav>
 
@@ -189,15 +228,11 @@ const Navbar: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors ${
-                  active
-                    ? "bg-primary-red/5 text-primary-red"
-                    : "text-gray-700 hover:bg-gray-50"
+                  active ? "bg-primary-red/5 text-primary-red" : "text-gray-700 hover:bg-gray-50"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                <span className={active ? "text-primary-red" : "text-gray-400"}>
-                  {item.icon}
-                </span>
+                <span className={active ? "text-primary-red" : "text-gray-400"}>{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             );
@@ -210,12 +245,20 @@ const Navbar: React.FC = () => {
           {!user && !loading && (
             <div className="mt-4 flex flex-col gap-3">
               <Link to="/login" className="w-full">
-                <Button variant="outline" className="w-full justify-center" leftIcon={<LogIn className="w-4 h-4" />}>
+                <Button
+                  variant="outline"
+                  className="w-full justify-center"
+                  leftIcon={<LogIn className="h-4 w-4" />}
+                >
                   Log in
                 </Button>
               </Link>
               <Link to="/signup" className="w-full">
-                <Button variant="primary" className="w-full justify-center" leftIcon={<UserPlus className="w-4 h-4" />}>
+                <Button
+                  variant="primary"
+                  className="w-full justify-center"
+                  leftIcon={<UserPlus className="h-4 w-4" />}
+                >
                   Sign up
                 </Button>
               </Link>
@@ -241,8 +284,12 @@ const Navbar: React.FC = () => {
               </Link>
 
               {isEditorEnabled() && isGoogleAuth && (
-                <Link to="/blogs/new" className="block mt-2">
-                  <Button variant="outline" className="w-full justify-center" leftIcon={<Briefcase className="w-4 h-4" />}>
+                <Link to="/blogs/new" className="mt-2 block">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-center"
+                    leftIcon={<Briefcase className="h-4 w-4" />}
+                  >
                     Publish a Blog
                   </Button>
                 </Link>

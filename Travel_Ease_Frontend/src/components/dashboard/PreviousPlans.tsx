@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { usePreviousPlans } from "../../features/travelPlans/queries";
+import { formatPlanDateRange } from "../../utils/date";
 
 export default function Previous_Plans(): React.ReactElement {
   const navigate = useNavigate();
@@ -12,11 +13,14 @@ export default function Previous_Plans(): React.ReactElement {
 
   // Use TanStack Query hook for fetching previous plans
   const {
-    data: plans = [],
+    data,
     isError,
     error,
     refetch,
   } = usePreviousPlans(!authLoading && Boolean(token));
+
+  const plans = data?.plans ?? [];
+  const dbUnavailable = data?.dbUnavailable ?? false;
 
   return (
     <section>
@@ -42,7 +46,17 @@ export default function Previous_Plans(): React.ReactElement {
       {/* Empty state */}
       {!isError && plans.length === 0 && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 text-center">
-          <p className="text-sm text-gray-500">No previous plans</p>
+          <p className="text-sm text-gray-600 font-medium">
+            {dbUnavailable ? "Unable to load previous plans" : "No previous plans"}
+          </p>
+          {dbUnavailable && (
+            <button
+              onClick={() => refetch()}
+              className="mt-3 text-sm font-medium text-red-500 hover:text-red-600"
+            >
+              Try again
+            </button>
+          )}
         </div>
       )}
 
@@ -68,7 +82,7 @@ export default function Previous_Plans(): React.ReactElement {
                 </p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                📅 {plan.start_date} - {plan.end_date}
+                📅 {formatPlanDateRange(plan.start_date, plan.end_date)}
               </p>
             </div>
           ))}

@@ -129,7 +129,7 @@ export default function MainMapPage(): React.ReactElement {
           city: business.city,
           brgy: business.brgy,
           street: business.street,
-          description: business.description,
+          description: business.description ?? undefined,
         };
       });
 

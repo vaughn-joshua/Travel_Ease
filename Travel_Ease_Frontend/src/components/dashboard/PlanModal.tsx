@@ -3,18 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useRequestJoin } from "../../features/travelPlans/mutations";
 import { useAuth } from "../../context/AuthContext";
 import type { TravelPlan } from "../../types/travelPlan";
+import { formatPlanDateRange } from "../../utils/date";
 
 interface PlanModalProps {
   results: TravelPlan[];
   on_close: () => void;
-}
-
-// Format date for display
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "TBD";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "TBD";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function Plan_Modal({ results, on_close }: PlanModalProps): React.ReactElement {
@@ -140,7 +133,7 @@ export default function Plan_Modal({ results, on_close }: PlanModalProps): React
                           <span>📍</span> {plan.location || "Location TBD"}
                         </p>
                         <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <span>📅</span> {formatDate(plan.start_date)} - {formatDate(plan.end_date)}
+                          <span>📅</span> {formatPlanDateRange(plan.start_date, plan.end_date)}
                         </p>
                         {plan.accommodation && (
                           <p className="text-sm text-gray-600 flex items-center gap-1">

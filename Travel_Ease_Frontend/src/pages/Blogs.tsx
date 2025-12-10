@@ -6,6 +6,7 @@ import { useBlogOverview } from "../features/blogs/queries";
 import { useAuth } from "../context/AuthContext";
 import Button from "../components/ui/Button";
 import { ArrowRight, Map as MapIcon, PenTool, Loader2 } from "lucide-react";
+import MapPreview from "../components/blog/MapPreview";
 
 export default function Blogs() {
   const { user } = useAuth();
@@ -240,17 +241,15 @@ export default function Blogs() {
         />
       )}
 
-      {/* Map Embed Section */}
+      {/* Map Preview Section */}
       <section className="py-24 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="order-2 lg:order-1 relative rounded-2xl overflow-hidden shadow-2xl border border-gray-100 h-[500px]">
-              <iframe
-                src="/embed/business-map"
-                title="Local Businesses Map"
-                className="w-full h-full border-0"
-                loading="lazy"
-              />
+            <div className="order-2 lg:order-1 space-y-4">
+              <MapPreview />
+              <p className="text-xs text-gray-500">
+                Explore the latest accommodations, restaurants, and attractions around Tagaytay. Pins update as new businesses join TravelEase.
+              </p>
             </div>
             
             <div className="order-1 lg:order-2 space-y-8">

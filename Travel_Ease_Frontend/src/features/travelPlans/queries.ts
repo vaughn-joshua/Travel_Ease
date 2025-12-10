@@ -19,13 +19,13 @@ import { travelPlanKeys } from "../../lib/queryKeys";
 import { travelPlanApi } from "../../services/travelPlanApi";
 import { useAuth } from "../../context/AuthContext";
 import { fetch_ongoing_plans } from "../../utils/travel_plan/fetch_ongoing_plans";
-import { fetch_previous_plans, fetch_previous_plans_with_meta, type PreviousPlansResult } from "../../utils/travel_plan/fetch_previous_plans";
+import { fetch_previous_plans, fetch_previous_plans_with_meta } from "../../utils/travel_plan/fetch_previous_plans";
 import { fetch_public_plans, fetch_public_plans_with_meta, type PublicPlansResult } from "../../utils/travel_plan/fetch_public_plans";
 import { fetch_plans } from "../../utils/travel_plan/fetch_plans";
 import { fetch_plan_id } from "../../utils/travel_plan/fetch_plan_id";
 import { fetch_activities } from "../../utils/travel_plan/fetch_activities";
 import { fetch_participants } from "../../utils/travel_plan/fetch_participants";
-import type { TravelPlan, Activity } from "../../types/travelPlan";
+import type { TravelPlan, Activity, PlansQueryResult } from "../../types/travelPlan";
 import type { Participant } from "../../utils/travel_plan/fetch_participants";
 
 // User role response type
@@ -33,6 +33,21 @@ interface UserRoleResponse {
   isOwner: boolean;
   role: "Admin" | "Editor" | "Viewer" | null;
   isParticipant: boolean;
+}
+
+function getDefaultPlansResult(): PlansQueryResult {
+  return {
+    plans: [],
+    pagination: {
+      page: 1,
+      pageSize: 0,
+      total: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false,
+    },
+    dbUnavailable: false,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,11 +61,12 @@ export function useOngoingPlans(enabled = true) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
   
-  return useQuery<TravelPlan[], Error>({
+  return useQuery<PlansQueryResult, Error>({
     queryKey: travelPlanKeys.ongoing(),
     queryFn: fetch_ongoing_plans,
     enabled: enabled && isAuthenticated,
     // Ongoing plans can change frequently; keep default staleTime
+    initialData: getDefaultPlansResult,
   });
 }
 
@@ -63,11 +79,12 @@ export function usePreviousPlans(enabled = true) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
   
-  return useQuery<TravelPlan[], Error>({
+  return useQuery<PlansQueryResult, Error>({
     queryKey: travelPlanKeys.previous(),
     queryFn: fetch_previous_plans,
     enabled: enabled && isAuthenticated,
     staleTime: 1000 * 60, // Previous plans don't change often
+    initialData: getDefaultPlansResult,
   });
 }
 
@@ -81,11 +98,12 @@ export function usePreviousPlansWithMeta(enabled = true) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
   
-  return useQuery<PreviousPlansResult, Error>({
+  return useQuery<PlansQueryResult, Error>({
     queryKey: [...travelPlanKeys.previous(), 'meta'],
     queryFn: fetch_previous_plans_with_meta,
     enabled: enabled && isAuthenticated,
     staleTime: 1000 * 60,
+    initialData: getDefaultPlansResult,
   });
 }
 
@@ -98,10 +116,11 @@ export function useUpcomingPlans(enabled = true) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
   
-  return useQuery<TravelPlan[], Error>({
+  return useQuery<PlansQueryResult, Error>({
     queryKey: travelPlanKeys.list({ status: "upcoming" }),
     queryFn: fetch_plans,
     enabled: enabled && isAuthenticated,
+    initialData: getDefaultPlansResult,
   });
 }
 

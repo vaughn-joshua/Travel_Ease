@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useOngoingPlans, useUpcomingPlans } from "../../features/travelPlans/queries";
 import type { SearchResult } from "../../types/map";
 import type { TravelPlan } from "../../types/travelPlan";
+import { formatPlanDateRange } from "../../utils/date";
 
 interface SelectPlanModalProps {
   searchResult: SearchResult;
@@ -16,8 +17,13 @@ export default function SelectPlanModal({
   const navigate = useNavigate();
   
   // Fetch user's travel plans
-  const { data: ongoingPlans = [], isLoading: ongoingLoading } = useOngoingPlans();
-  const { data: upcomingPlans = [], isLoading: upcomingLoading } = useUpcomingPlans();
+  const { data: ongoingData, isLoading: ongoingLoading } = useOngoingPlans();
+  const { data: upcomingData, isLoading: upcomingLoading } = useUpcomingPlans();
+
+  const ongoingPlans = ongoingData?.plans ?? [];
+  const upcomingPlans = upcomingData?.plans ?? [];
+  const dbUnavailable =
+    Boolean(ongoingData?.dbUnavailable || upcomingData?.dbUnavailable);
   
   const isLoading = ongoingLoading || upcomingLoading;
   
@@ -54,15 +60,6 @@ export default function SelectPlanModal({
     );
   };
 
-  const formatDate = (dateStr: string): string => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[10000]">
       <div className="modal_body max-w-lg">
@@ -95,7 +92,14 @@ export default function SelectPlanModal({
             <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p className="text-gray-500 mb-4">No travel plans found</p>
+            <p className="text-gray-500 mb-2">
+              {dbUnavailable ? "We couldn’t load your travel plans." : "No travel plans found"}
+            </p>
+            {dbUnavailable && (
+              <p className="text-xs text-gray-400 mb-2">
+                Please refresh or try again later.
+              </p>
+            )}
             <button
               onClick={() => {
                 navigate("/plans");
@@ -119,10 +123,13 @@ export default function SelectPlanModal({
                     <h3 className="font-medium text-gray-900 group-hover:text-red-600 transition-colors truncate">
                       {plan.title}
                     </h3>
-                    <p className="text-sm text-gray-500 truncate">{plan.location}</p>
+                    <p className="text-sm text-gray-500 flex items-center gap-2 truncate">
+                      <span className="text-xs text-gray-400">📍</span>
+                      <span className="truncate">{plan.location}</span>
+                    </p>
                     {plan.start_date && plan.end_date && (
                       <p className="text-xs text-gray-400 mt-1">
-                        {formatDate(plan.start_date)} - {formatDate(plan.end_date)}
+                        {formatPlanDateRange(plan.start_date, plan.end_date)}
                       </p>
                     )}
                   </div>

@@ -51,12 +51,31 @@ export interface TravelPlan {
     name: string;
     lat?: number | null;
     lng?: number | null;
+    city?: string | null;
+    brgy?: string | null;
+    street?: string | null;
   } | null;
 }
 
 export interface TravelPlanDates {
   start: string;
   end: string;
+}
+
+export interface PlansPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface PlansQueryResult {
+  plans: TravelPlan[];
+  pagination: PlansPagination;
+  /** True when backend responded with degraded/empty data because DB is unavailable */
+  dbUnavailable: boolean;
 }
 
 // Activity DTO - matches backend normalized response
@@ -182,4 +201,3 @@ export const BUDGET_RANGES: BudgetRange[] = [
   "1000-1500",
   "1500+",
 ];
-
