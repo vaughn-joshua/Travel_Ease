@@ -48,7 +48,10 @@ import AuthCallback from "../pages/AuthCallback";
 describe("AuthCallback redirect handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    // Clear localStorage items used in tests
+    localStorage.removeItem("auth_redirect");
+    localStorage.removeItem("BUSINESS_AUTH_EMAIL_KEY");
+    localStorage.removeItem("ORIGINAL_USER_KEY");
     // Default mock for getSession - valid session
     mockGetSession.mockResolvedValue({
       data: {
@@ -61,7 +64,9 @@ describe("AuthCallback redirect handling", () => {
   });
 
   afterEach(() => {
-    localStorage.clear();
+    localStorage.removeItem("auth_redirect");
+    localStorage.removeItem("BUSINESS_AUTH_EMAIL_KEY");
+    localStorage.removeItem("ORIGINAL_USER_KEY");
   });
 
   it("should NOT clear auth_redirect for new users (preserves for onboarding)", async () => {

@@ -133,7 +133,7 @@ cd Travel_Ease_Frontend
 npm test -- src/__tests__/dtoMapper.test.ts
 ```
 
-> **Note:** If you encounter PostCSS config errors, you may need to rename `postcss.config.ts` to `postcss.config.mjs` or adjust your vitest configuration. This is an environment-specific issue related to ESM module loading.
+> **Note:** The PostCSS configuration uses `postcss.config.js` with ESM syntax to ensure compatibility with both Vite and Vitest under the project's `"type": "module"` setting.
 
 ---
 
