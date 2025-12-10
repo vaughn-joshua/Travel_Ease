@@ -170,6 +170,18 @@ router.get(
     req: Request<object, object, object, TravelSpotsQuery>,
     res: Response
   ) => {
+    // #region agent log
+    const _debugStart = Date.now();
+    const _debugRunId = `travel_spots_${Date.now()}`;
+    const fs = await import('fs');
+    const _debugLog = (msg: string, data: Record<string, unknown>) => {
+      try {
+        const entry = JSON.stringify({ location: 'businessRoutes.ts:travel_spots', message: msg, data: { ...data, elapsed: Date.now() - _debugStart }, timestamp: Date.now(), sessionId: 'debug-session', runId: _debugRunId }) + '\n';
+        fs.appendFileSync('/Users/urielpapa/Documents/GitHub/Travel_Ease/.cursor/debug.log', entry);
+      } catch {}
+    };
+    _debugLog('H1/H2: travel_spots request started', { query: req.query });
+    // #endregion
     try {
       const { search, city, category, limit } = req.query;
       const maxLimit = Math.min(parseInt(limit || "50", 10) || 50, 100);
@@ -196,6 +208,10 @@ router.get(
         };
       }
 
+      // #region agent log
+      _debugLog('H1: about to call cacheResult', { hypothesisId: 'H1', maxLimit });
+      const _cacheStart = Date.now();
+      // #endregion
       // Use Redis-backed cache with in-memory fallback
       const {
         data: enriched,
@@ -210,6 +226,10 @@ router.get(
         }),
         ttl: CACHE_TTL.TRAVEL_SPOTS,
         fetchFn: async () => {
+          // #region agent log
+          _debugLog('H1: cache MISS - fetching from DB', { hypothesisId: 'H1', cacheKey: buildCacheKey("business", "travel_spots", { search: search || "", city: city || "", category: category || "", limit: maxLimit }) });
+          const _dbQueryStart = Date.now();
+          // #endregion
           const businesses = await executeWithRetry(() =>
             prisma.business.findMany({
               where,
@@ -235,6 +255,10 @@ router.get(
             })
           );
 
+          // #region agent log
+          _debugLog('H2: businesses query complete', { hypothesisId: 'H2', businessCount: businesses.length, queryMs: Date.now() - _dbQueryStart });
+          const _reviewCountStart = Date.now();
+          // #endregion
           // Fetch review counts in a single query
           const businessIds = businesses.map((b) => b.business_id);
           let reviewCounts: Record<number, number> = {};
@@ -246,6 +270,9 @@ router.get(
                 _count: { review_id: true },
               })
             );
+            // #region agent log
+            _debugLog('H5: review counts query complete', { hypothesisId: 'H5', countResults: counts.length, queryMs: Date.now() - _reviewCountStart });
+            // #endregion
             reviewCounts = counts.reduce((acc, r) => {
               if (r.business_id !== null) {
                 acc[r.business_id] = r._count.review_id;
@@ -266,6 +293,11 @@ router.get(
         },
       });
 
+      // #region agent log
+      _debugLog('H1/H3: cacheResult complete', { hypothesisId: 'H1', fromCache, cacheBackend, cacheMs: Date.now() - _cacheStart, resultCount: enriched.length });
+      const _responseSize = JSON.stringify(enriched).length;
+      _debugLog('H3: response payload size', { hypothesisId: 'H3', payloadBytes: _responseSize, itemCount: enriched.length });
+      // #endregion
       // Set cache header for debugging
       res.set("X-Cache", fromCache ? `HIT:${cacheBackend}` : "MISS");
       res.json({
@@ -273,7 +305,13 @@ router.get(
         data: enriched,
         fromCache,
       });
+      // #region agent log
+      _debugLog('H2: request complete', { totalMs: Date.now() - _debugStart });
+      // #endregion
     } catch (error) {
+      // #region agent log
+      _debugLog('ERROR: travel_spots failed', { error: String(error), totalMs: Date.now() - _debugStart });
+      // #endregion
       businessLogger.error({ err: error }, "Error fetching travel spots");
       return handlePrismaError(error, res, "Fetching travel spots");
     }

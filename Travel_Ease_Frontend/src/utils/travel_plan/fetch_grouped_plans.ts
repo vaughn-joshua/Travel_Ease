@@ -22,6 +22,9 @@ const EMPTY_RESULT: GroupedPlansResult = {
  * This consolidates 3 separate API calls into one for better performance.
  */
 export async function fetch_grouped_plans(): Promise<GroupedPlansResult> {
+  // #region agent log
+  const _debugStart = Date.now();
+  // #endregion
   // Skip API call if not authenticated
   const token = localStorage.getItem("token");
   if (!token) {
@@ -30,6 +33,10 @@ export async function fetch_grouped_plans(): Promise<GroupedPlansResult> {
 
   try {
     const response = await api.get<GroupedPlansResult>("/travel_plan/all");
+    // #region agent log
+    const _totalPlans = (response.data.upcoming?.data?.length || 0) + (response.data.ongoing?.data?.length || 0) + (response.data.previous?.data?.length || 0);
+    fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fetch_grouped_plans.ts',message:'Frontend: grouped plans fetch complete',data:{elapsed:Date.now()-_debugStart,totalPlans:_totalPlans,dbUnavailable:response.data.dbUnavailable},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'FE'})}).catch(()=>{});
+    // #endregion
 
     return {
       upcoming: response.data.upcoming || EMPTY_GROUP,
