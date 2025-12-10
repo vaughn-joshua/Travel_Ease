@@ -268,9 +268,9 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary-red text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none" />
+      <section className="py-20 bg-cta-soft text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-white/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold sm:text-4xl mb-6">
@@ -286,7 +286,7 @@ export default function Home() {
               <Button
                 variant="secondary"
                 size="lg"
-                className="bg-white text-primary-red hover:bg-gray-100 border-none shadow-lg"
+                className="!rounded-md bg-white text-primary-red hover:bg-gray-100 border-none shadow-lg"
                 rightIcon={<ArrowRight className="w-5 h-5" />}
               >
                 {isLoggedIn ? "Go to My Plans" : "Sign Up Free"}
@@ -296,7 +296,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white text-white hover:bg-white hover:text-primary-red"
+                className="!rounded-md border-white text-white hover:bg-white hover:text-primary-red"
               >
                 Explore Businesses
               </Button>
