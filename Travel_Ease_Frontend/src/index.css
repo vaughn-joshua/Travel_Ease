@@ -115,16 +115,10 @@
       opacity: 0.7;
     }
   }
-  
-  /* Spinner */
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
 }
 
 html {
   font-family: "Inter", system-ui, sans-serif;
-  /* Enable smooth scrolling globally */
   scroll-behavior: smooth;
 }
 
@@ -146,14 +140,6 @@ body {
     scroll-behavior: auto !important;
   }
   
-  .animate-spin {
-    animation: none !important;
-  }
-  
-  .animate-pulse {
-    animation: none !important;
-  }
-  
   html {
     scroll-behavior: auto;
   }
@@ -161,11 +147,11 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-red text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-red-dark transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
+    @apply bg-primary-red text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-red-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply bg-white text-primary-red border-2 border-primary-red px-6 py-3 rounded-lg font-medium hover:bg-primary-red hover:text-white transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
+    @apply bg-white text-primary-red border-2 border-primary-red px-6 py-3 rounded-lg font-medium hover:bg-primary-red hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2;
   }
 
   /* Softer red gradient for CTA sections */
@@ -193,73 +179,11 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
-  /* Horizontal scroll container with gradient edge fades */
-  .scroll-fade-x {
-    position: relative;
-    --fade-width: 24px;
-  }
-  
-  .scroll-fade-x::before,
-  .scroll-fade-x::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--fade-width);
-    pointer-events: none;
-    z-index: 10;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-  
-  .scroll-fade-x::before {
-    left: 0;
-    background: linear-gradient(to right, white, transparent);
-  }
-  
-  .scroll-fade-x::after {
-    right: 0;
-    background: linear-gradient(to left, white, transparent);
-  }
-  
-  .scroll-fade-x.fade-left::before {
-    opacity: 1;
-  }
-  
-  .scroll-fade-x.fade-right::after {
-    opacity: 1;
-  }
-  
-  /* Snap scroll for horizontal carousels */
-  .scroll-snap-x {
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .scroll-snap-start {
-    scroll-snap-align: start;
-  }
-  
-  .scroll-snap-center {
-    scroll-snap-align: center;
-  }
-  
-  /* Focus visible ring utility */
-  .focus-ring {
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
-  }
-  
-  /* Interactive chip/button base */
-  .chip-interactive {
-    @apply transition-all duration-200 ease-out;
-    @apply hover:scale-[1.02] active:scale-[0.98];
-    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red/50 focus-visible:ring-offset-1;
-  }
 }
 
 /* ============================================
  * ANIMATION UTILITY CLASSES
+ * (Outside @layer to avoid Tailwind processing issues)
  * ============================================ */
 
 /* Filter button animations - staggered entry */
@@ -305,4 +229,26 @@ body {
 /* Modal content animation */
 .animate-modal {
   animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Interactive chip/button base - hover/active states */
+.chip-interactive {
+  transition: all 0.2s ease-out;
+}
+
+.chip-interactive:hover {
+  transform: scale(1.02);
+}
+
+.chip-interactive:active {
+  transform: scale(0.98);
+}
+
+.chip-interactive:focus {
+  outline: none;
+}
+
+.chip-interactive:focus-visible {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #E10600;
+  border-radius: 8px;
 }

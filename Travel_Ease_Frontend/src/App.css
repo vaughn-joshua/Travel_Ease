@@ -141,8 +141,11 @@
 }
 
 .text_box {
-  @apply w-full border rounded-md px-3 py-2 transition-colors duration-200;
-  @apply focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none;
+  @apply w-full border rounded-md px-3 py-2;
+}
+
+.text_box:focus {
+  @apply ring-2 ring-red-500 border-red-500 outline-none;
 }
 
 .modal {
@@ -150,28 +153,10 @@
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(2px);
   z-index: 9999;
-  animation: fadeIn 0.2s ease-out;
 }
 
 .modal_body {
   @apply bg-white rounded-lg shadow-md p-6;
-  animation: scaleIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .label {
@@ -180,20 +165,40 @@
 
 .soft_btn {
   @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700;
-  @apply hover:bg-gray-100 transition-colors duration-200;
-  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
+}
+
+.soft_btn:hover {
+  @apply bg-gray-100;
+}
+
+.soft_btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #E10600;
 }
 
 .day_btn {
   @apply px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700;
-  @apply hover:bg-gray-100 transition-colors duration-200;
-  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
+}
+
+.day_btn:hover {
+  @apply bg-gray-100;
+}
+
+.day_btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #E10600;
 }
 
 .hard_btn {
   @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md;
-  @apply hover:bg-red-700 transition-colors duration-200;
-  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+}
+
+.hard_btn:hover {
+  @apply bg-red-700;
+}
+
+.hard_btn:focus {
+  @apply outline-none ring-2 ring-red-500 ring-offset-2;
 }
 
 .category {
