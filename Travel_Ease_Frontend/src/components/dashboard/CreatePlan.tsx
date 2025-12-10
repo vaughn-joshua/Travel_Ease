@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 import { useForm, FieldErrors } from "react-hook-form";
 import { useCreatePlan } from "../../features/travelPlans/mutations";
 import type { CreatePlanPayload, CollaboratorPayload } from "../../types/travelPlan";
-import { userApi, businessApi, type UserSearchResult } from "../../services/api";
+import { userApi, type UserSearchResult } from "../../services/api";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import React from "react";
 
@@ -31,11 +31,6 @@ interface SelectedCollaborator {
   email: string;
   first_name: string;
   last_name: string;
-}
-
-interface SelectedAccommodation {
-  business_id: number;
-  name: string;
 }
 
 export default function Create_Plan({
@@ -61,17 +56,8 @@ export default function Create_Plan({
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
-  // Accommodation search state
-  const [accommodationSearch, setAccommodationSearch] = useState<string>("");
-  const [accommodationResults, setAccommodationResults] = useState<Array<{ business_id: number; name: string }>>([]);
-  const [selectedAccommodation, setSelectedAccommodation] = useState<SelectedAccommodation | null>(null);
-  const [isSearchingAccommodation, setIsSearchingAccommodation] = useState<boolean>(false);
-  const [showAccommodationDropdown, setShowAccommodationDropdown] = useState<boolean>(false);
-  const [isAccommodationInputFocused, setIsAccommodationInputFocused] = useState<boolean>(false);
-
   // Debounce the search queries
   const debouncedSearch = useDebouncedValue(emailSearch, 300);
-  const debouncedAccommodationSearch = useDebouncedValue(accommodationSearch, 300);
 
   // Use TanStack Query mutation for creating plans
   const createPlanMutation = useCreatePlan();
@@ -112,64 +98,6 @@ export default function Create_Plan({
     searchUsers();
   }, [debouncedSearch, selectedCollaborators]);
 
-  // Search for accommodation businesses when debounced search changes or input is focused
-  useEffect(() => {
-    const searchAccommodations = async () => {
-      // If input is focused and search is empty, fetch all accommodations
-      if (isAccommodationInputFocused && debouncedAccommodationSearch.length < 2) {
-        setIsSearchingAccommodation(true);
-        try {
-          const response = await businessApi.getTravelSpots({
-            category: "accommodation",
-            limit: 50 // Higher limit when showing all accommodations
-          });
-          const results = response.data.map(b => ({
-            business_id: b.business_id,
-            name: b.name
-          }));
-          setAccommodationResults(results);
-          setShowAccommodationDropdown(results.length > 0);
-        } catch (error) {
-          console.error("Error fetching accommodations:", error);
-          setAccommodationResults([]);
-        } finally {
-          setIsSearchingAccommodation(false);
-        }
-        return;
-      }
-
-      // If search query is less than 2 characters and not focused, clear results
-      if (debouncedAccommodationSearch.length < 2) {
-        setAccommodationResults([]);
-        setShowAccommodationDropdown(false);
-        return;
-      }
-
-      // Perform search when user types
-      setIsSearchingAccommodation(true);
-      try {
-        const response = await businessApi.getTravelSpots({
-          search: debouncedAccommodationSearch,
-          category: "accommodation",
-          limit: 10
-        });
-        const results = response.data.map(b => ({
-          business_id: b.business_id,
-          name: b.name
-        }));
-        setAccommodationResults(results);
-        setShowAccommodationDropdown(results.length > 0);
-      } catch (error) {
-        console.error("Error searching accommodations:", error);
-        setAccommodationResults([]);
-      } finally {
-        setIsSearchingAccommodation(false);
-      }
-    };
-
-    searchAccommodations();
-  }, [debouncedAccommodationSearch, isAccommodationInputFocused]);
-
   // Add a collaborator to the selected list
   const addCollaborator = (user: UserSearchResult) => {
     setSelectedCollaborators((prev) => [...prev, user]);
@@ -181,20 +109,6 @@ export default function Create_Plan({
   // Remove a collaborator from the selected list
   const removeCollaborator = (userId: number) => {
     setSelectedCollaborators((prev) => prev.filter((c) => c.user_id !== userId));
-  };
-
-  // Add an accommodation to the selected list
-  const addAccommodation = (accommodation: { business_id: number; name: string }) => {
-    setSelectedAccommodation(accommodation);
-    setAccommodationSearch("");
-    setAccommodationResults([]);
-    setShowAccommodationDropdown(false);
-  };
-
-  // Remove accommodation
-  const removeAccommodation = () => {
-    setSelectedAccommodation(null);
-    setAccommodationSearch("");
   };
 
   const handle_back = (): void => {
@@ -248,13 +162,11 @@ export default function Create_Plan({
       start_date: d.start_date,
       end_date: d.end_date,
       slots: d.slots ? parseInt(d.slots, 10) : undefined,
-      accommodation_id: selectedAccommodation?.business_id,
       collaborators: collaborators.length > 0 ? collaborators : undefined,
     };
 
     console.log("[CreatePlan] ========== CREATE PLAN ATTEMPT ==========");
     console.log("[CreatePlan] Form data:", d);
-    console.log("[CreatePlan] Selected accommodation:", selectedAccommodation);
     console.log("[CreatePlan] Selected collaborators:", selectedCollaborators);
     console.log("[CreatePlan] Final payload:", JSON.stringify(payload, null, 2));
     console.log("[CreatePlan] Token exists:", !!localStorage.getItem("token"));
@@ -265,7 +177,6 @@ export default function Create_Plan({
         console.log("[CreatePlan] ✅ SUCCESS - Response:", response);
         setCounter(0);
         setSelectedCollaborators([]);
-        setSelectedAccommodation(null);
         on_close();
       },
       onError: (error) => {
@@ -472,82 +383,6 @@ export default function Create_Plan({
                     </p>
                   </div>
                 )}
-
-                {/* Accommodation Search */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Accommodation (Optional)
-                  </label>
-                  
-                  {/* Selected accommodation as chip */}
-                  {selectedAccommodation && (
-                    <div className="flex items-center gap-1 bg-red-100 text-red-800 px-3 py-2 rounded-full text-sm mb-2 w-fit">
-                      <span>🛏️ {selectedAccommodation.name}</span>
-                      <button
-                        type="button"
-                        onClick={removeAccommodation}
-                        className="ml-1 text-red-600 hover:text-red-800 font-bold"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Accommodation search input with dropdown */}
-                  {!selectedAccommodation && (
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        🛏️
-                      </span>
-                      <input
-                        type="text"
-                        value={accommodationSearch}
-                        onChange={(e) => setAccommodationSearch(e.target.value)}
-                        onFocus={() => {
-                          setIsAccommodationInputFocused(true);
-                          if (accommodationResults.length > 0) {
-                            setShowAccommodationDropdown(true);
-                          }
-                        }}
-                        onBlur={() => {
-                          setIsAccommodationInputFocused(false);
-                          setTimeout(() => setShowAccommodationDropdown(false), 200);
-                        }}
-                        placeholder="Search for accommodation..."
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
-                      />
-                      {isSearchingAccommodation && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                        </span>
-                      )}
-
-                      {/* Dropdown with search results */}
-                      {showAccommodationDropdown && accommodationResults.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
-                          {accommodationResults.map((acc) => (
-                            <button
-                              key={acc.business_id}
-                              type="button"
-                              onClick={() => addAccommodation(acc)}
-                              className="w-full px-4 py-2 text-left hover:bg-red-50 transition-colors border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium text-gray-800">
-                                {acc.name}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Search for accommodation businesses to add to your plan
-                  </p>
-                </div>
               </div>
             )}
 

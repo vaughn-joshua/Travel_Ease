@@ -337,7 +337,11 @@ export async function user_id(req: Request, res: Response) {
 export async function oauth_sync(req: Request, res: Response) {
   try {
     // The authenticateToken middleware already verified the token and attached req.user
-    const { id } = req.user!;
+    const { id, email: userEmailFromToken } = req.user!;
+
+    // Get the token from authorization header to verify Google email
+    const authHeader = req.headers["authorization"];
+    const token = authHeader?.split(" ")[1]; // Bearer TOKEN
 
     // Fetch full user profile
     const user = await executeWithRetry(() =>
@@ -362,26 +366,73 @@ export async function oauth_sync(req: Request, res: Response) {
       return res.status(404).json({ error: 'User profile not found' });
     }
 
+    // Email verification: Compare Google email from Supabase with user email from database
+    if (token && isSupabaseConfigured()) {
+      try {
+        const { data: supabaseUserData, error: supabaseError } = await supabaseAdmin!.auth.getUser(token);
+        
+        if (!supabaseError && supabaseUserData?.user?.email) {
+          const googleEmail = supabaseUserData.user.email.toLowerCase();
+          const dbEmail = user.email.toLowerCase();
+          
+          // Verify email matches
+          if (googleEmail !== dbEmail) {
+            return res.status(400).json({
+              error: "Google account email does not match your registered email",
+              code: "EMAIL_MISMATCH",
+            });
+          }
+        }
+      } catch (supabaseError) {
+        // If we can't verify email from Supabase, log but don't block
+        // The authenticateToken middleware already verified the token
+        console.warn('Could not verify Google email from Supabase:', supabaseError);
+      }
+    }
+
+    // Update auth_provider to 'google' if it's not already set
+    let updatedUser = user;
+    if (user.auth_provider !== 'google') {
+      updatedUser = await executeWithRetry(() =>
+        prisma.user.update({
+          where: { user_id: id },
+          data: { auth_provider: 'google' },
+          select: {
+            user_id: true,
+            auth_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+            contact_no: true,
+            created_at: true,
+            auth_provider: true,
+            has_email_identity: true,
+            profile_completed: true,
+          },
+        })
+      );
+    }
+
     // Determine onboarding state based on profile_completed flag
     // A user needs onboarding if profile_completed is false/null
-    const needsOnboarding = !user.profile_completed;
+    const needsOnboarding = !updatedUser.profile_completed;
     
     // isNewUser: profile was just created via OAuth (first sign-in)
     // We treat users without profile_completed as new users
-    const isNewUser = !user.profile_completed;
+    const isNewUser = !updatedUser.profile_completed;
 
     res.json({
       message: needsOnboarding ? 'Welcome! Please complete your profile.' : 'OAuth sync successful',
       user: {
-        user_id: user.user_id,
-        auth_id: user.auth_id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        contact_no: user.contact_no,
-        auth_provider: user.auth_provider ?? 'google',
-        has_email_identity: user.has_email_identity ?? false, // Google OAuth users start without email identity
-        profile_completed: user.profile_completed ?? false,
+        user_id: updatedUser.user_id,
+        auth_id: updatedUser.auth_id,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        email: updatedUser.email,
+        contact_no: updatedUser.contact_no,
+        auth_provider: updatedUser.auth_provider ?? 'google',
+        has_email_identity: updatedUser.has_email_identity ?? false, // Google OAuth users start without email identity
+        profile_completed: updatedUser.profile_completed ?? false,
       },
       isNewUser,
       needsOnboarding,

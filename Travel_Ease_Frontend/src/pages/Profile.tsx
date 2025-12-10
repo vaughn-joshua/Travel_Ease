@@ -834,6 +834,11 @@ export default function Profile() {
                   const handleConnectGoogle = async () => {
                     if (authLoading || redirectingToGoogle || !isConfigured) return;
                     
+                    // Store current user email for verification
+                    if (user?.email) {
+                      localStorage.setItem("profile_google_connect_email", user.email);
+                    }
+                    
                     // Set redirect back to profile after Google auth
                     localStorage.setItem("auth_redirect", "/profile");
                     

@@ -6,6 +6,8 @@ import { handleAuthRecovery, isAuthError } from "../lib/authRecovery";
 
 // Storage key for email verification during business auth flow
 const BUSINESS_AUTH_EMAIL_KEY = "business_auth_email";
+// Storage key for email verification during profile Google connection
+const PROFILE_GOOGLE_CONNECT_EMAIL_KEY = "profile_google_connect_email";
 const TOKEN_STORAGE_KEY = "token";
 const PROFILE_STORAGE_KEY = "travelEaseUser";
 const ORIGINAL_USER_KEY = "travelEaseOriginalUser";
@@ -125,12 +127,12 @@ export default function AuthCallback() {
           window.history.replaceState({}, document.title, window.location.pathname);
 
           // Check for business auth email verification requirement
-          const storedEmail = localStorage.getItem(BUSINESS_AUTH_EMAIL_KEY);
+          const storedBusinessEmail = localStorage.getItem(BUSINESS_AUTH_EMAIL_KEY);
           const googleEmail = session.user?.email;
 
-          if (storedEmail && googleEmail) {
+          if (storedBusinessEmail && googleEmail) {
             // Business creation flow - verify email matches
-            if (storedEmail.toLowerCase() !== googleEmail.toLowerCase()) {
+            if (storedBusinessEmail.toLowerCase() !== googleEmail.toLowerCase()) {
               // Email mismatch - block and show error
               // Sign out the mismatched Google account from Supabase
               await supabase.auth.signOut();
@@ -150,12 +152,44 @@ export default function AuthCallback() {
               
               // Show the mismatch error (don't clear BUSINESS_AUTH_EMAIL_KEY yet,
               // in case user wants to try a different account)
-              setEmailMismatch({ expected: storedEmail, actual: googleEmail });
+              setEmailMismatch({ expected: storedBusinessEmail, actual: googleEmail });
               return;
             }
             // Emails match - clear the stored email and original user backup
             localStorage.removeItem(BUSINESS_AUTH_EMAIL_KEY);
             localStorage.removeItem(ORIGINAL_USER_KEY);
+          }
+
+          // Check for profile Google connection email verification requirement
+          const storedProfileEmail = localStorage.getItem(PROFILE_GOOGLE_CONNECT_EMAIL_KEY);
+          
+          if (storedProfileEmail && googleEmail) {
+            // Profile Google connection flow - verify email matches
+            if (storedProfileEmail.toLowerCase() !== googleEmail.toLowerCase()) {
+              // Email mismatch - block and show error
+              // Sign out the mismatched Google account from Supabase
+              await supabase.auth.signOut();
+              
+              // Restore the original user's token (if they were logged in before)
+              if (originalToken) {
+                localStorage.setItem(TOKEN_STORAGE_KEY, originalToken);
+              } else {
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+              }
+              
+              // Restore the original user profile to localStorage
+              // This ensures the AuthContext will load the correct user on next render
+              if (originalUserJson) {
+                localStorage.setItem(PROFILE_STORAGE_KEY, originalUserJson);
+              }
+              
+              // Show the mismatch error (don't clear PROFILE_GOOGLE_CONNECT_EMAIL_KEY yet,
+              // in case user wants to try a different account)
+              setEmailMismatch({ expected: storedProfileEmail, actual: googleEmail });
+              return;
+            }
+            // Emails match - clear the stored email
+            localStorage.removeItem(PROFILE_GOOGLE_CONNECT_EMAIL_KEY);
           }
           
           // Sync OAuth user with backend to create/retrieve internal profile
@@ -178,6 +212,7 @@ export default function AuthCallback() {
           } catch (syncError) {
             localStorage.removeItem("auth_redirect");
             localStorage.removeItem(BUSINESS_AUTH_EMAIL_KEY);
+            localStorage.removeItem(PROFILE_GOOGLE_CONNECT_EMAIL_KEY);
             localStorage.removeItem(ORIGINAL_USER_KEY);
 
             // Check if this is a DB_UNAVAILABLE error - don't clear token, DB is just down
@@ -238,6 +273,7 @@ export default function AuthCallback() {
     const handleCancel = () => {
       // Clean up business auth flow state
       localStorage.removeItem(BUSINESS_AUTH_EMAIL_KEY);
+      localStorage.removeItem(PROFILE_GOOGLE_CONNECT_EMAIL_KEY);
       localStorage.removeItem("auth_redirect");
       localStorage.removeItem(ORIGINAL_USER_KEY);
       

@@ -373,6 +373,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw err;
         }
 
+        if (status === 400 && code === "EMAIL_MISMATCH") {
+          await clearAuthState();
+          const err = new Error(message);
+          err.name = "EMAIL_MISMATCH";
+          throw err;
+        }
+
         // Token expired - trigger page reload to restore session
         // Don't clear auth state, let Supabase refresh the token
         if (status === 403 && code === "TOKEN_EXPIRED") {
