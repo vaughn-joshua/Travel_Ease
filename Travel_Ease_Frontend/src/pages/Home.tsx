@@ -286,7 +286,7 @@ export default function Home() {
               <Button
                 variant="secondary"
                 size="lg"
-                className="!rounded-md bg-white text-primary-red hover:bg-gray-100 border-none shadow-lg"
+                className="!rounded-md !bg-white !text-primary-red hover:!bg-gray-100 border-none shadow-lg"
                 rightIcon={<ArrowRight className="w-5 h-5" />}
               >
                 {isLoggedIn ? "Go to My Plans" : "Sign Up Free"}
