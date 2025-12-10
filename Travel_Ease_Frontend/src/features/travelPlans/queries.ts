@@ -65,7 +65,10 @@ export function useOngoingPlans(enabled = true) {
     queryKey: travelPlanKeys.ongoing(),
     queryFn: fetch_ongoing_plans,
     enabled: enabled && isAuthenticated,
-    // Ongoing plans can change frequently; keep default staleTime
+    // Match backend cache TTL (30s) to avoid unnecessary refetches
+    staleTime: 1000 * 30,
+    // Keep previous data while refetching for smoother UX
+    placeholderData: (previousData) => previousData,
     initialData: getDefaultPlansResult,
   });
 }
@@ -120,6 +123,10 @@ export function useUpcomingPlans(enabled = true) {
     queryKey: travelPlanKeys.list({ status: "upcoming" }),
     queryFn: fetch_plans,
     enabled: enabled && isAuthenticated,
+    // Match backend cache TTL (30s) to avoid unnecessary refetches
+    staleTime: 1000 * 30,
+    // Keep previous data while refetching for smoother UX
+    placeholderData: (previousData) => previousData,
     initialData: getDefaultPlansResult,
   });
 }
