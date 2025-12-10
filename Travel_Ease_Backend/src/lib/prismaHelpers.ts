@@ -148,7 +148,18 @@ export function handlePrismaError(error: unknown, res: Response, context = 'Data
   console.error(`${context} error:`, error);
 
   const prismaError = error as PrismaError;
-  const code = prismaError.code;
+  // Check both 'code' and 'errorCode' - PrismaClientInitializationError uses 'errorCode'
+  const code = prismaError.code || (error as any)?.errorCode;
+  const errorName = (error as any)?.name || (error as any)?.constructor?.name;
+
+  // Handle PrismaClientInitializationError by name (connection issues during queries)
+  if (errorName === 'PrismaClientInitializationError') {
+    return res.status(503).json({
+      error: 'Service temporarily unavailable',
+      message: 'Database connection failed. Please try again later.',
+      code: code || 'CONNECTION_ERROR'
+    });
+  }
 
   // Connection errors
   if (code === 'P1001' || code === 'P1002' || code === 'P1003' || code === 'P1008' || code === 'P1017') {
@@ -223,13 +234,18 @@ export async function executeWithRetry<T>(queryFn: () => Promise<T>, retries = 2
     } catch (error) {
       lastError = error;
       const prismaError = error as PrismaError;
+      // Check both 'code' and 'errorCode' properties
+      const errCode = prismaError.code || (error as any)?.errorCode;
+      const errorName = (error as any)?.name;
       const isTransient = 
-        prismaError.code === 'P1001' || // Can't reach database
-        prismaError.code === 'P1002' || // Database server timed out
-        prismaError.code === 'P1008' || // Operations timed out
-        prismaError.code === 'P1017' || // Server closed connection
+        errCode === 'P1001' || // Can't reach database
+        errCode === 'P1002' || // Database server timed out
+        errCode === 'P1008' || // Operations timed out
+        errCode === 'P1017' || // Server closed connection
+        errorName === 'PrismaClientInitializationError' || // Connection error during query
         prismaError.message?.includes('ECONNRESET') ||
-        prismaError.message?.includes('ECONNREFUSED');
+        prismaError.message?.includes('ECONNREFUSED') ||
+        prismaError.message?.includes("Can't reach database");
       
       if (!isTransient || attempt >= retries) {
         throw error;
