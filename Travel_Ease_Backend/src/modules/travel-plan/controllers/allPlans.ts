@@ -44,18 +44,6 @@ interface GroupedCounts {
  * DEGRADED MODE: Returns empty groups with dbUnavailable=true when database is unreachable
  */
 export async function all_plans(req: Request, res: Response) {
-  // #region agent log
-  const _debugStart = Date.now();
-  const _debugRunId = `all_plans_${Date.now()}`;
-  const fs = await import('fs');
-  const _debugLog = (msg: string, data: Record<string, unknown>) => {
-    try {
-      const entry = JSON.stringify({ location: 'allPlans.ts:all_plans', message: msg, data: { ...data, elapsed: Date.now() - _debugStart }, timestamp: Date.now(), sessionId: 'debug-session', runId: _debugRunId }) + '\n';
-      fs.appendFileSync('/Users/urielpapa/Documents/GitHub/Travel_Ease/.cursor/debug.log', entry);
-    } catch {}
-  };
-  _debugLog('H2/H4: all_plans request started', { userId: req.user?.id });
-  // #endregion
   // Empty fallback response for degraded mode
   const emptyResponse = {
     upcoming: { data: [], total: 0 },
@@ -77,18 +65,10 @@ export async function all_plans(req: Request, res: Response) {
   const cacheKey = buildCacheKey('travel_plans', 'all', userId, filters);
 
   try {
-    // #region agent log
-    _debugLog('H1: about to call cacheResult', { hypothesisId: 'H1', cacheKey });
-    const _cacheStart = Date.now();
-    // #endregion
     const { data: cachedResult, fromCache, cacheBackend } = await cacheResult({
       key: cacheKey,
       ttl: CACHE_TTL_GROUPED,
       fetchFn: async () => {
-        // #region agent log
-        _debugLog('H1: cache MISS - fetching from DB', { hypothesisId: 'H1' });
-        const _rawSqlStart = Date.now();
-        // #endregion
         // Step 1: Get all plan IDs where user is owner OR approved participant
         const userPlanAccess = await executeWithRetry(() =>
           prisma.$queryRaw<{ travel_plan_id: number }[]>`
@@ -100,9 +80,6 @@ export async function all_plans(req: Request, res: Response) {
             WHERE tp.user_id = ${userId} OR p.participant_id IS NOT NULL
           `,
         1);
-        // #region agent log
-        _debugLog('H4: raw SQL query complete', { hypothesisId: 'H4', planCount: userPlanAccess.length, queryMs: Date.now() - _rawSqlStart });
-        // #endregion
 
         const accessiblePlanIds = userPlanAccess.map(p => p.travel_plan_id);
 
@@ -120,9 +97,6 @@ export async function all_plans(req: Request, res: Response) {
           ...filters,
         };
 
-        // #region agent log
-        const _parallelStart = Date.now();
-        // #endregion
         const [allPlans, participantCounts] = await Promise.all([
           executeWithRetry(() =>
             prisma.travel_plan.findMany({
@@ -154,9 +128,6 @@ export async function all_plans(req: Request, res: Response) {
             }),
           1),
         ]);
-        // #region agent log
-        _debugLog('H2: parallel queries complete (plans + counts)', { hypothesisId: 'H2', planCount: allPlans.length, countResults: participantCounts.length, parallelMs: Date.now() - _parallelStart });
-        // #endregion
 
         // Build participant count map
         const countMap: Record<number, number> = {};
@@ -169,19 +140,10 @@ export async function all_plans(req: Request, res: Response) {
         // Fetch accommodation for all plans
         const planIds = allPlans.map(p => p.travel_plan_id);
         let accommodationMap = new Map<number, any>();
-        // #region agent log
-        const _accommodationStart = Date.now();
-        // #endregion
         if (planIds.length > 0) {
           try {
             accommodationMap = await getAccommodationForPlans(planIds);
-            // #region agent log
-            _debugLog('H2: accommodation fetch complete', { hypothesisId: 'H2', accommodationCount: accommodationMap.size, queryMs: Date.now() - _accommodationStart });
-            // #endregion
           } catch (err) {
-            // #region agent log
-            _debugLog('H2: accommodation fetch failed', { hypothesisId: 'H2', error: String(err), queryMs: Date.now() - _accommodationStart });
-            // #endregion
             logger.warn({ err }, 'Failed to fetch accommodation for grouped plans');
           }
         }
@@ -220,23 +182,11 @@ export async function all_plans(req: Request, res: Response) {
       },
     });
 
-    // #region agent log
-    _debugLog('H1/H3: cacheResult complete', { hypothesisId: 'H1', fromCache, cacheBackend, cacheMs: Date.now() - _cacheStart });
-    const _totalPlans = (cachedResult.upcoming?.data?.length || 0) + (cachedResult.ongoing?.data?.length || 0) + (cachedResult.previous?.data?.length || 0);
-    const _responseSize = JSON.stringify(cachedResult).length;
-    _debugLog('H3: response payload size', { hypothesisId: 'H3', payloadBytes: _responseSize, totalPlans: _totalPlans });
-    // #endregion
     // Set cache headers for debugging
     res.set("X-Cache", fromCache ? `HIT:${cacheBackend}` : 'MISS');
     res.set("X-DB-Status", "connected");
     res.json(cachedResult);
-    // #region agent log
-    _debugLog('H2: request complete', { totalMs: Date.now() - _debugStart });
-    // #endregion
   } catch (error) {
-    // #region agent log
-    _debugLog('ERROR: all_plans failed', { error: String(error), totalMs: Date.now() - _debugStart });
-    // #endregion
     // Check if this is a database connection error
     if (isDbConnectionError(error)) {
       logger.warn({ err: error, userId, endpoint: 'all_plans' }, 'Database unavailable - returning empty grouped plans');

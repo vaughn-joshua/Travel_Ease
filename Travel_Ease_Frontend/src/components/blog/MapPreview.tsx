@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo } from "react";
 import { MapContainer, Marker, TileLayer, Popup } from "react-leaflet";
 import { Icon, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -21,20 +21,7 @@ interface MapPreviewProps {
 }
 
 export default function MapPreview({ className }: MapPreviewProps): React.ReactElement {
-  // #region agent log
-  const _debugStartRef = useRef(Date.now());
-  const _debugLoggedRef = useRef(false);
-  // #endregion
   const { data, isLoading, isError } = useTravelSpots({ limit: 100 });
-  // #region agent log
-  useEffect(() => {
-    if (!isLoading && !_debugLoggedRef.current) {
-      _debugLoggedRef.current = true;
-      const elapsed = Date.now() - _debugStartRef.current;
-      fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MapPreview.tsx',message:'Frontend: useTravelSpots complete',data:{elapsed,itemCount:data?.data?.length || 0,fromCache:data?.fromCache,isError},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'FE'})}).catch(()=>{});
-    }
-  }, [isLoading, data, isError]);
-  // #endregion
 
   const markers = useMemo(() => {
     if (!data?.data) return [];
