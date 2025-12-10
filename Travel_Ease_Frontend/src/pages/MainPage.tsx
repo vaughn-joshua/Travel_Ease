@@ -131,7 +131,7 @@ export default function MainPage(): React.ReactElement {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                {user ? `Welcome back, ${user.first_name}` : "Travel Plans"}
+                {user ? `Welcome back, ${user.firstName || "Traveler"}` : "Travel Plans"}
               </h1>
               <p className="text-gray-500 mt-1">
                 {user ? "Manage your adventures and discover new destinations" : "Discover and join travel plans"}
