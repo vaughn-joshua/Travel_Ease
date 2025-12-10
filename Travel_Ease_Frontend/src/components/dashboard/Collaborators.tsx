@@ -37,7 +37,7 @@ export default function Collaborators({
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
-  const [showCopyLinkModal, setShowCopyLinkModal] = useState<boolean>(false);
+  const [linkCopied, setLinkCopied] = useState<boolean>(false);
 
   const debouncedSearch = useDebouncedValue(emailSearch, 300);
 
@@ -192,6 +192,13 @@ export default function Collaborators({
     }
   };
 
+  const handleCopyInviteLink = async () => {
+    const inviteUrl = `${window.location.origin}/planner/join/${planId}`;
+    await navigator.clipboard.writeText(inviteUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
   const approvedParticipants = participants.filter((p) => p.status);
   const pendingParticipants = participants
     .filter((p) => !p.status)
@@ -283,13 +290,28 @@ export default function Collaborators({
             </div>
 
             <button
-              onClick={() => setShowCopyLinkModal(true)}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-white hover:border-gray-300 transition-colors"
+              onClick={handleCopyInviteLink}
+              className={`mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl transition-colors ${
+                linkCopied
+                  ? "border-green-300 bg-green-50 text-green-700"
+                  : "border-gray-200 text-gray-700 hover:bg-white hover:border-gray-300"
+              }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              Copy Invite Link
+              {linkCopied ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  Copy Invite Link
+                </>
+              )}
             </button>
           </div>
         )}
@@ -474,31 +496,6 @@ export default function Collaborators({
           </button>
         </div>
       </div>
-
-      {/* Copy Link Modal */}
-      {showCopyLinkModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Coming Soon!
-            </h3>
-            <p className="text-gray-600 mb-6">
-              The invite link feature is currently being developed.
-            </p>
-            <button
-              onClick={() => setShowCopyLinkModal(false)}
-              className="w-full py-2.5 bg-primary-red text-white rounded-xl hover:bg-primary-red-dark transition-colors font-medium"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
