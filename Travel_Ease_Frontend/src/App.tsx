@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/blog/Navbar";
 import Footer from "./components/blog/Footer";
-import { RequireAuth, LandingRoute } from "./routes/AuthRoutes";
+import { RequireAuth, RequireSupabaseAuth, LandingRoute } from "./routes/AuthRoutes";
 
 // Blogs is the landing page for guests - keep eager for fast first paint
 import Blogs from "./pages/Blogs";
@@ -33,7 +33,6 @@ const EditBlog = lazy(() => import("./pages/EditBlog"));
 const Businesses = lazy(() => import("./pages/Businesses"));
 const BusinessDetail = lazy(() => import("./pages/BusinessDetail"));
 const BusinessForm = lazy(() => import("./pages/BusinessForm"));
-const BusinessOnboarding = lazy(() => import("./pages/BusinessOnboarding"));
 const MyBusinesses = lazy(() => import("./pages/MyBusinesses"));
 const BusinessPage = lazy(() => import("./pages/BusinessPage"));
 
@@ -151,15 +150,43 @@ export default function App(): React.ReactElement {
             <Route path="/blogs/:slug" element={<BlogDetail />} />
 
             {/* Business directory routes */}
+            {/* Public: browse businesses */}
             <Route path="/businesses" element={<Businesses />} />
+            <Route path="/businesses/:id" element={<BusinessDetail />} />
+            
+            {/* Protected: business management (requires Google OAuth) */}
             <Route
               path="/businesses/onboarding"
-              element={<BusinessOnboarding />}
+              element={
+                <RequireSupabaseAuth fallbackPath="/businesses">
+                  <BusinessForm />
+                </RequireSupabaseAuth>
+              }
             />
-            <Route path="/businesses/new" element={<BusinessOnboarding />} />
-            <Route path="/businesses/my" element={<MyBusinesses />} />
-            <Route path="/businesses/:id" element={<BusinessDetail />} />
-            <Route path="/businesses/:id/edit" element={<BusinessForm />} />
+            <Route
+              path="/businesses/new"
+              element={
+                <RequireSupabaseAuth fallbackPath="/businesses">
+                  <BusinessForm />
+                </RequireSupabaseAuth>
+              }
+            />
+            <Route
+              path="/businesses/my"
+              element={
+                <RequireSupabaseAuth fallbackPath="/businesses">
+                  <MyBusinesses />
+                </RequireSupabaseAuth>
+              }
+            />
+            <Route
+              path="/businesses/:id/edit"
+              element={
+                <RequireSupabaseAuth fallbackPath="/businesses">
+                  <BusinessForm />
+                </RequireSupabaseAuth>
+              }
+            />
 
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />

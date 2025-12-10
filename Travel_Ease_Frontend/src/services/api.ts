@@ -103,8 +103,14 @@ api.interceptors.response.use(
     // For auth errors (401/403/419), trigger page reload to restore session
     // This allows Supabase to refresh tokens automatically
     // SKIP if it's a DB_UNAVAILABLE error (not an auth problem)
-    // SKIP if it's an explicit ACCOUNT_NOT_REGISTERED or OAUTH_EMAIL_MISSING (user flow errors)
-    const isUserFlowError = code === "ACCOUNT_NOT_REGISTERED" || code === "OAUTH_EMAIL_MISSING";
+    // SKIP if it's an explicit user flow error (not a session issue):
+    // - ACCOUNT_NOT_REGISTERED: user needs to register
+    // - OAUTH_EMAIL_MISSING: OAuth provider didn't return email
+    // - GOOGLE_AUTH_REQUIRED: user needs to sign in with Google for this action
+    const isUserFlowError = 
+      code === "ACCOUNT_NOT_REGISTERED" || 
+      code === "OAUTH_EMAIL_MISSING" ||
+      code === "GOOGLE_AUTH_REQUIRED";
     
     if (isAuthError(error) && !isDbUnavailable && !isUserFlowError) {
       // Attempt auth recovery (reload page) - this is one-shot per session
@@ -706,5 +712,59 @@ export const notificationApi = {
     return response.data;
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check if an error is a "Google Auth Required" error.
+ * Returns true if the backend returned a 403 with code GOOGLE_AUTH_REQUIRED.
+ */
+export function isGoogleAuthRequiredError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  return (
+    error.response?.status === 403 &&
+    error.response?.data?.code === "GOOGLE_AUTH_REQUIRED"
+  );
+}
+
+/**
+ * Get a user-friendly error message for API errors.
+ * Provides specific messaging for Google auth requirement.
+ */
+export function getApiErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message : "An unexpected error occurred";
+  }
+
+  const data = error.response?.data;
+  const code = data?.code;
+
+  // Handle specific error codes
+  if (code === "GOOGLE_AUTH_REQUIRED") {
+    return "This feature requires signing in with Google. Please sign out and sign in with your Google account.";
+  }
+
+  if (code === "ACCOUNT_NOT_REGISTERED") {
+    return "No account found with this email. Please register first.";
+  }
+
+  if (code === "OAUTH_EMAIL_MISSING") {
+    return "Could not get your email from Google. Please try again.";
+  }
+
+  // Generic error message from server
+  if (data?.error) {
+    return data.error;
+  }
+
+  // Fallback to HTTP status text
+  if (error.response?.statusText) {
+    return error.response.statusText;
+  }
+
+  return "An unexpected error occurred";
+}
 
 export default api;

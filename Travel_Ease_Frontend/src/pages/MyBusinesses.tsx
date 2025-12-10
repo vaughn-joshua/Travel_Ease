@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useMyBusinesses } from "../features/businesses/queries";
 import { useDeleteBusiness, useUpdateBusiness } from "../features/businesses/mutations";
+import { isGoogleAuthRequiredError, getApiErrorMessage } from "../services/api";
 
 interface Business {
   business_id: number;
@@ -42,7 +43,11 @@ export default function MyBusinesses() {
         },
         onError: (err) => {
           console.error("Error updating business status:", err);
-          setError("Failed to update business status");
+          if (isGoogleAuthRequiredError(err)) {
+            setError("This action requires signing in with Google. Please sign out and sign in with your Google account.");
+          } else {
+            setError(getApiErrorMessage(err));
+          }
         },
       }
     );
@@ -62,7 +67,12 @@ export default function MyBusinesses() {
       },
       onError: (err) => {
         console.error("Error deleting business:", err);
-        setError("Failed to delete business");
+        if (isGoogleAuthRequiredError(err)) {
+          setError("This action requires signing in with Google. Please sign out and sign in with your Google account.");
+        } else {
+          setError(getApiErrorMessage(err));
+        }
+        setDeleteId(null);
       },
     });
   };

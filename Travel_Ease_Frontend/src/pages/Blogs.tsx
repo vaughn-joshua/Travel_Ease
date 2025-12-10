@@ -115,7 +115,7 @@ export default function Blogs() {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2021&q=80"
+            src="https://images.unsplash.com/photo-1604237233847-0cd10a179521?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dGFnYXl0YXl8ZW58MHx8MHx8fDA%3D"
             alt="Scenic travel landscape"
             className="h-full w-full object-cover"
           />

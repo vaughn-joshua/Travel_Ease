@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import api, { businessApi } from "../services/api";
+import api, { businessApi, isGoogleAuthRequiredError, getApiErrorMessage } from "../services/api";
 import RegisterMap from "../components/business/RegisterMap";
 
 interface BusinessHours {
@@ -386,25 +386,28 @@ export default function BusinessForm() {
       setTimeout(() => {
         navigate(`/businesses/${result.business_id || id}`);
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Submit error:", err);
-      // Handle axios error response
-      let errorMessage = "Failed to save business";
-      if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (
-        err.response?.data?.details &&
-        Array.isArray(err.response.data.details)
-      ) {
-        errorMessage = err.response.data.details
-          .map(
-            (d: { field: string; message: string }) =>
-              `${d.field}: ${d.message}`
-          )
-          .join(", ");
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
+      
+      // Handle Google auth required error with specific messaging
+      if (isGoogleAuthRequiredError(err)) {
+        setSubmitError(
+          "Business creation requires signing in with Google. Please sign out and sign in with your Google account to continue."
+        );
+        return;
       }
+      
+      // Handle axios error response
+      let errorMessage = getApiErrorMessage(err);
+      
+      // Check for validation errors
+      const axiosErr = err as { response?: { data?: { details?: Array<{ field: string; message: string }> } } };
+      if (axiosErr.response?.data?.details && Array.isArray(axiosErr.response.data.details)) {
+        errorMessage = axiosErr.response.data.details
+          .map((d) => `${d.field}: ${d.message}`)
+          .join(", ");
+      }
+      
       setSubmitError(errorMessage);
     } finally {
       setSubmitting(false);

@@ -3,6 +3,7 @@ import {
   authenticateToken,
 } from "../middleware/auth.js";
 import { requireBusinessOwnership } from "../middleware/ownership.js";
+import { requireGoogleAuth } from "../middleware/requireGoogleAuth.js";
 import {
   validate,
   createBusinessSchema,
@@ -40,12 +41,13 @@ const CACHE_TTL = {
   CATEGORIES: 300, // 5 minutes for categories (rarely change)
 };
 
-// Create routes (authentication required + validation)
-// Business creation is available to all authenticated users (Google or password)
+// Create routes (authentication required + Google auth + validation)
+// Business creation requires Google OAuth authentication
 // Price range (min_price/max_price) is now stored directly on the business table
 router.post(
   "/create_business",
   authenticateToken,
+  requireGoogleAuth,
   validate(createBusinessSchema),
   create_business
 );
@@ -56,19 +58,21 @@ router.get("/fetch_categories/:id", categories_fetch);
 router.get("/businesses", get_businesses);
 router.get("/categories", getCategories);
 
-// Edit routes (auth + ownership + validation)
+// Edit routes (auth + Google auth + ownership + validation)
 router.put(
   "/edit_business/:id",
   authenticateToken,
+  requireGoogleAuth,
   requireBusinessOwnership,
   validate(editBusinessSchema),
   edit_business
 );
 
-// Get current user's businesses
+// Get current user's businesses (requires Google auth)
 router.get(
   "/my-businesses",
   authenticateToken,
+  requireGoogleAuth,
   async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
@@ -96,11 +100,12 @@ router.get(
   }
 );
 
-// Delete business (auth + ownership required)
+// Delete business (auth + Google auth + ownership required)
 // Price range data is stored directly on business table (no separate table to clean up)
 router.delete(
   "/delete_business/:id",
   authenticateToken,
+  requireGoogleAuth,
   requireBusinessOwnership,
   async (req: Request, res: Response) => {
     const businessId = parseInt(req.params.id);
@@ -134,11 +139,11 @@ router.delete(
   }
 );
 
-// Menu item routes
+// Menu item routes (mutations require Google auth)
 router.get("/:id/menu", getMenuItems);
-router.post("/:id/menu", authenticateToken, createMenuItem);
-router.put("/:id/menu/:itemId", authenticateToken, updateMenuItem);
-router.delete("/:id/menu/:itemId", authenticateToken, deleteMenuItem);
+router.post("/:id/menu", authenticateToken, requireGoogleAuth, createMenuItem);
+router.put("/:id/menu/:itemId", authenticateToken, requireGoogleAuth, updateMenuItem);
+router.delete("/:id/menu/:itemId", authenticateToken, requireGoogleAuth, deleteMenuItem);
 
 interface TravelSpotsQuery {
   search?: string;
