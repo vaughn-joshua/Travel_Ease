@@ -39,7 +39,7 @@ export default function Onboarding() {
         navigate("/login", { replace: true });
       } else if (user.profileCompleted) {
         // Profile is already complete, no need for onboarding
-        const redirectTo = localStorage.getItem("auth_redirect") || "/";
+        const redirectTo = localStorage.getItem("auth_redirect") || "/plans";
         localStorage.removeItem("auth_redirect");
         navigate(redirectTo, { replace: true });
       }
@@ -84,8 +84,8 @@ export default function Onboarding() {
         contact_no: formData.contact_no.trim() || undefined,
       });
 
-      // Redirect to the saved path or home
-      const redirectTo = localStorage.getItem("auth_redirect") || "/";
+      // Redirect to the saved path or plans dashboard
+      const redirectTo = localStorage.getItem("auth_redirect") || "/plans";
       localStorage.removeItem("auth_redirect");
       navigate(redirectTo, { replace: true });
     } catch {
@@ -97,7 +97,7 @@ export default function Onboarding() {
 
   const handleSkip = () => {
     // Allow skipping but still redirect
-    const redirectTo = localStorage.getItem("auth_redirect") || "/";
+    const redirectTo = localStorage.getItem("auth_redirect") || "/plans";
     localStorage.removeItem("auth_redirect");
     navigate(redirectTo, { replace: true });
   };

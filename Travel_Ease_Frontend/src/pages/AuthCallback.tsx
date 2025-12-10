@@ -165,14 +165,15 @@ export default function AuthCallback() {
 
             // Determine redirect destination
             const savedRedirect = localStorage.getItem("auth_redirect");
-            localStorage.removeItem("auth_redirect");
 
             if (isNewUser) {
               // New user - redirect to onboarding
+              // Keep auth_redirect in localStorage so Onboarding can use it after profile completion
               navigate("/onboarding", { replace: true });
             } else {
-              // Existing user - redirect to saved path or home
-              navigate(savedRedirect || "/", { replace: true });
+              // Existing user - clear auth_redirect and redirect to saved path or plans
+              localStorage.removeItem("auth_redirect");
+              navigate(savedRedirect || "/plans", { replace: true });
             }
           } catch (syncError) {
             localStorage.removeItem("auth_redirect");
