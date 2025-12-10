@@ -381,13 +381,13 @@ export function handleAuthRecovery(error?: unknown): boolean {
     // Mark as attempted BEFORE reload (persists in sessionStorage)
     markRecoveryAttempted();
 
-    console.log("[AuthRecovery] Auth error detected, reloading to restore session...");
+  console.log("[AuthRecovery] Auth error detected, reloading to restore session...");
 
-    // IMPORTANT: Do NOT clear tokens or redirect manually
-    // Just reload - Supabase will handle token refresh on page load
-    window.location.reload();
+  // IMPORTANT: Do NOT clear tokens or redirect manually
+  // Just reload - Supabase will handle token refresh on page load
+  window.location.reload();
   }, DEBOUNCE_WINDOW_MS);
-
+  
   return true;
 }
 
