@@ -91,10 +91,7 @@ export function useGroupedPlans(enabled = true) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
 
-  // Debug: Log auth state for grouped plans query
-  console.log('[useGroupedPlans]', { enabled, authLoading, hasUser: !!user, isAuthenticated, finalEnabled: enabled && isAuthenticated });
-
-  const query = useQuery<GroupedPlansResult, Error>({
+  return useQuery<GroupedPlansResult, Error>({
     queryKey: travelPlanKeys.grouped(),
     queryFn: fetch_grouped_plans,
     enabled: enabled && isAuthenticated,
@@ -102,17 +99,6 @@ export function useGroupedPlans(enabled = true) {
     placeholderData: (previousData) => previousData,
     initialData: getDefaultGroupedResult,
   });
-
-  // Debug: Log query result
-  if (query.isFetched) {
-    console.log('[useGroupedPlans] Result:', {
-      ongoing: query.data?.ongoing?.data?.length ?? 0,
-      upcoming: query.data?.upcoming?.data?.length ?? 0,
-      previous: query.data?.previous?.data?.length ?? 0,
-    });
-  }
-
-  return query;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePublicPlans } from "../../features/travelPlans/queries";
 import type { TravelPlan } from "../../types/travelPlan";
 import { formatPlanDateRange } from "../../utils/date";
 import { RoleBadge, SlotsPill } from "../ui/PlanCard";
 
+const PLANS_PER_PAGE = 3;
+
 export default function PublicPlans(): React.ReactElement {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: plans = [], isLoading, isError } = usePublicPlans();
 
@@ -16,6 +20,11 @@ export default function PublicPlans(): React.ReactElement {
       navigate(`/planner/join/${plan.id}`);
     }
   };
+
+  // Calculate pagination
+  const totalPages = Math.ceil(plans.length / PLANS_PER_PAGE);
+  const startIndex = (currentPage - 1) * PLANS_PER_PAGE;
+  const paginatedPlans = plans.slice(startIndex, startIndex + PLANS_PER_PAGE);
 
   // Loading state
   if (isLoading) {
@@ -66,7 +75,7 @@ export default function PublicPlans(): React.ReactElement {
 
   return (
     <div className="space-y-3">
-      {plans.slice(0, 5).map((plan) => {
+      {paginatedPlans.map((plan) => {
         const isJoined = plan.isParticipant || plan.isOwner;
         const slotsAvailable = plan.slots 
           ? plan.slots - (plan.approvedParticipants || 0)
@@ -153,10 +162,52 @@ export default function PublicPlans(): React.ReactElement {
         );
       })}
       
-      {plans.length > 5 && (
-        <button className="w-full py-2 text-sm text-gray-500 hover:text-primary-red transition-colors">
-          View all {plans.length} public plans →
-        </button>
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-6 h-6 rounded-md text-xs font-medium transition-colors ${
+                  currentPage === page
+                    ? "bg-primary-red text-white"
+                    : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+          
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+      
+      {/* Total count */}
+      {plans.length > PLANS_PER_PAGE && (
+        <p className="text-center text-xs text-gray-400">
+          Showing {startIndex + 1}-{Math.min(startIndex + PLANS_PER_PAGE, plans.length)} of {plans.length} plans
+        </p>
       )}
     </div>
   );

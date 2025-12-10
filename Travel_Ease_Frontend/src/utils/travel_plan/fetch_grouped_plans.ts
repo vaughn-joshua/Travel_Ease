@@ -24,22 +24,12 @@ const EMPTY_RESULT: GroupedPlansResult = {
 export async function fetch_grouped_plans(): Promise<GroupedPlansResult> {
   // Skip API call if not authenticated
   const token = localStorage.getItem("token");
-  console.log('[fetch_grouped_plans] Called, hasToken:', !!token);
-  
   if (!token) {
-    console.log('[fetch_grouped_plans] No token, returning empty');
     return { ...EMPTY_RESULT, dbUnavailable: false };
   }
 
   try {
-    console.log('[fetch_grouped_plans] Fetching /travel_plan/all...');
     const response = await api.get<GroupedPlansResult>("/travel_plan/all");
-
-    console.log('[fetch_grouped_plans] Response:', {
-      ongoing: response.data.ongoing?.data?.length ?? 0,
-      upcoming: response.data.upcoming?.data?.length ?? 0,
-      previous: response.data.previous?.data?.length ?? 0,
-    });
 
     return {
       upcoming: response.data.upcoming || EMPTY_GROUP,
