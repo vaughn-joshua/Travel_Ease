@@ -7,13 +7,13 @@ import BusinessDetailModal from "./BusinessDetailModal";
 // Main categories from the database enum
 const CATEGORIES = [
   { id: "food_drinks", label: "Food & Drinks", icon: "🍽️" },
-  { id: "tours_activities", label: "Tours & Activities", icon: "🎯" },
-  { id: "transport_transfers", label: "Transport & Transfers", icon: "🚗" },
-  { id: "travel_services", label: "Travel Services", icon: "✈️" },
-  { id: "shopping_souvenirs", label: "Shopping & Souvenirs", icon: "🛍️" },
-  { id: "wellness_medical", label: "Wellness & Medical", icon: "💆" },
-  { id: "events_experiences", label: "Events & Experiences", icon: "🎪" },
-  { id: "outdoor_gear_rental", label: "Outdoor / Gear Rental", icon: "🎒" },
+  { id: "tours_activities", label: "Tours", icon: "🎯" },
+  { id: "transport_transfers", label: "Transport", icon: "🚗" },
+  { id: "travel_services", label: "Services", icon: "✈️" },
+  { id: "shopping_souvenirs", label: "Shopping", icon: "🛍️" },
+  { id: "wellness_medical", label: "Wellness", icon: "💆" },
+  { id: "events_experiences", label: "Events", icon: "🎪" },
+  { id: "outdoor_gear_rental", label: "Outdoor", icon: "🎒" },
 ];
 
 // Price ranges (UI only for now)
@@ -60,7 +60,6 @@ export default function SuggestedBusinesses({
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showPriceFilter, setShowPriceFilter] = useState(false);
 
-  // Fetch businesses with category filter
   const { data: travelSpotsData, isLoading, isError, refetch } = useTravelSpots({
     category: selectedCategory || undefined,
   });
@@ -72,49 +71,17 @@ export default function SuggestedBusinesses({
   };
 
   const handleBusinessClick = (business: Business) => {
-    console.log("[SuggestedBusinesses] ========== BUSINESS CLICKED ==========");
-    console.log("[SuggestedBusinesses] Business:", business);
-    console.log("[SuggestedBusinesses] Business coordinates:", {
-      latitude: business.latitude,
-      longitude: business.longitude
-    });
-    
     setSelectedBusiness(business);
     
-    // Also show on map - pin the business location
     if (business.latitude && business.longitude) {
-      console.log("[SuggestedBusinesses] Pinning business on map at:", {
-        lat: business.latitude,
-        lng: business.longitude
-      });
       onBusinessSelect({
         lat: business.latitude,
         lng: business.longitude,
       });
-    } else {
-      console.warn("[SuggestedBusinesses] ⚠️ Business has no coordinates, cannot pin on map");
-    }
-  };
-
-  // Handle clicking on business card to add directly (without opening modal)
-  const handleBusinessCardClick = (business: Business, e: React.MouseEvent) => {
-    // If clicking on the card itself (not a button), add to activity
-    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.business-card')) {
-      handleAddToPlan(business);
     }
   };
 
   const handleAddToPlan = (business: Business) => {
-    console.log("[SuggestedBusinesses] ========== ADD BUSINESS TO ACTIVITY ==========");
-    console.log("[SuggestedBusinesses] Business to add:", business);
-    console.log("[SuggestedBusinesses] Business coordinates:", {
-      latitude: business.latitude,
-      longitude: business.longitude
-    });
-
-    // Convert to SearchResult format for CreateActivity
-    // Include business_id - coordinates will be fetched from business in backend if not available
-    // Default to 0 for coordinates when missing (backend uses business_id to fetch actual coords)
     const lat = business.latitude != null && !isNaN(Number(business.latitude)) ? Number(business.latitude) : 0;
     const lng = business.longitude != null && !isNaN(Number(business.longitude)) ? Number(business.longitude) : 0;
     
@@ -127,29 +94,27 @@ export default function SuggestedBusinesses({
       },
       lat,
       lng,
-      business_id: business.business_id, // Pass business_id to link the activity
+      business_id: business.business_id,
     };
     
     onAddToActivity(searchResult);
     setSelectedBusiness(null);
-    
-    console.log("[SuggestedBusinesses] ✅ Business added to activity flow");
   };
 
   return (
     <div className="h-full flex flex-col">
       {/* Category Filter */}
-      <div className="p-4 border-b border-gray-100">
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Categories
+      <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          Browse by Category
         </h4>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <button
             onClick={() => handleCategoryClick(null)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
+            className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
               selectedCategory === null
-                ? "bg-red-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-primary-red text-white shadow-sm"
+                : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
             }`}
           >
             All
@@ -158,10 +123,10 @@ export default function SuggestedBusinesses({
             <button
               key={category.id}
               onClick={() => handleCategoryClick(category.id)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${
+              className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${
                 selectedCategory === category.id
-                  ? "bg-red-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-primary-red text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
               }`}
             >
               <span>{category.icon}</span>
@@ -172,17 +137,17 @@ export default function SuggestedBusinesses({
       </div>
 
       {/* Price Filter (Coming Soon) */}
-      <div className="px-4 py-2 border-b border-gray-100">
+      <div className="px-4 py-3 border-b border-gray-100">
         <button
           onClick={() => setShowPriceFilter(!showPriceFilter)}
-          className="flex items-center justify-between w-full text-sm text-gray-600 hover:text-gray-900"
+          className="flex items-center justify-between w-full text-sm text-gray-600 hover:text-gray-900 transition-colors"
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Price Filter
-            <span className="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded">Coming Soon</span>
+            <span className="font-medium">Price Range</span>
+            <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">Soon</span>
           </span>
           <svg 
             className={`w-4 h-4 transition-transform ${showPriceFilter ? 'rotate-180' : ''}`} 
@@ -194,12 +159,12 @@ export default function SuggestedBusinesses({
           </svg>
         </button>
         {showPriceFilter && (
-          <div className="mt-2 flex gap-2 flex-wrap opacity-50 pointer-events-none">
+          <div className="mt-3 flex gap-2 flex-wrap opacity-50 pointer-events-none">
             {PRICE_RANGES.map((range) => (
               <button
                 key={range.id}
                 disabled
-                className="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-400 cursor-not-allowed"
+                className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
               >
                 {range.label}
               </button>
@@ -210,31 +175,42 @@ export default function SuggestedBusinesses({
 
       {/* Business List */}
       <div className="flex-1 overflow-y-auto p-4">
+        {/* Loading state */}
         {isLoading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red mb-3"></div>
+            <p className="text-sm text-gray-500">Loading businesses...</p>
           </div>
         )}
 
+        {/* Error state */}
         {isError && (
-          <div className="text-center py-8">
-            <p className="text-red-500 mb-2">Failed to load businesses</p>
-            <button onClick={() => refetch()} className="soft_btn text-sm">
-              Retry
+          <div className="text-center py-12">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-gray-600 font-medium mb-2">Failed to load</p>
+            <button onClick={() => refetch()} className="text-sm text-primary-red hover:underline">
+              Try again
             </button>
           </div>
         )}
 
+        {/* Empty state */}
         {!isLoading && !isError && businesses.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <p>No businesses found</p>
+          <div className="text-center py-12">
+            <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <p className="text-gray-600 font-medium">No businesses found</p>
             {selectedCategory && (
               <button
                 onClick={() => setSelectedCategory(null)}
-                className="text-red-600 text-sm mt-2 hover:underline"
+                className="text-sm text-primary-red mt-2 hover:underline"
               >
                 Clear filter
               </button>
@@ -242,25 +218,25 @@ export default function SuggestedBusinesses({
           </div>
         )}
 
+        {/* Business cards */}
         {!isLoading && !isError && businesses.length > 0 && (
           <div className="space-y-3">
             {businesses.map((business: Business) => (
               <div
                 key={business.business_id}
                 onClick={(e) => {
-                  // Double click or click with modifier key to add directly
                   if (e.detail === 2 || e.ctrlKey || e.metaKey) {
                     handleAddToPlan(business);
                   } else {
                     handleBusinessClick(business);
                   }
                 }}
-                className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100 business-card group"
-                title="Click to view details, double-click or Ctrl+Click to add to plan"
+                className="group bg-white rounded-xl p-3 cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-100 hover:border-gray-200"
+                title="Click to view, double-click to add"
               >
                 <div className="flex gap-3">
                   {/* Business Image */}
-                  <div className="w-16 h-16 flex-shrink-0 rounded-lg bg-gray-200 overflow-hidden">
+                  <div className="w-16 h-16 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
                     {business.picture ? (
                       <img
                         src={business.picture}
@@ -268,7 +244,7 @@ export default function SuggestedBusinesses({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <div className="w-full h-full flex items-center justify-center text-gray-300">
                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                         </svg>
@@ -278,43 +254,62 @@ export default function SuggestedBusinesses({
 
                   {/* Business Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold text-gray-900 text-sm truncate">
-                      {business.name}
-                    </h3>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-gray-900 text-sm line-clamp-1 group-hover:text-primary-red transition-colors">
+                        {business.name}
+                      </h3>
                       {canEdit && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAddToPlan(business);
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs font-medium bg-primary-red text-white rounded-lg hover:bg-primary-red-dark"
                           title="Add to plan"
                         >
                           + Add
                         </button>
                       )}
                     </div>
+                    
                     {business.city && (
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-gray-500 truncate mt-0.5">
                         {business.brgy ? `${business.brgy}, ` : ""}{business.city}
                       </p>
                     )}
+                    
+                    {/* Rating */}
                     {business.rating && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <svg className="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        <span className="text-xs text-gray-600">{Number(business.rating).toFixed(1)}</span>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`w-3 h-3 ${
+                                star <= Math.round(Number(business.rating))
+                                  ? "text-amber-400"
+                                  : "text-gray-200"
+                              }`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {Number(business.rating).toFixed(1)}
+                        </span>
                       </div>
                     )}
+                    
                     {/* Category badges */}
                     {business.categories && business.categories.length > 0 && (
-                      <div className="flex gap-1 mt-1 flex-wrap">
+                      <div className="flex gap-1 mt-2 flex-wrap">
                         {business.categories.slice(0, 2).map((cat, idx) => (
                           <span
                             key={idx}
-                            className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded"
+                            className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded"
                           >
                             {cat.category_name}
                           </span>
@@ -341,4 +336,3 @@ export default function SuggestedBusinesses({
     </div>
   );
 }
-

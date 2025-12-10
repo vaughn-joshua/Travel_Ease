@@ -14,12 +14,11 @@ interface FormData {
   end_date: string;
 }
 
-// Helper to format date for display
 function formatDateDisplay(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactElement {
+export default function QuickJoin({ on_close }: QuickJoinProps): React.ReactElement {
   const {
     register,
     handleSubmit,
@@ -32,7 +31,6 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
   const [dateRange, setDateRange] = useState<Date[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   
-  // Use TanStack Query mutation for quick join search
   const quickJoinMutation = useQuickJoinSearch();
 
   const handle_change = (
@@ -57,7 +55,6 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
     if (selectedDates[1]) {
       setValue("end_date", selectedDates[1].toISOString().split("T")[0]);
     } else if (selectedDates.length === 1) {
-      // If only one date selected, use it as both start and end
       setValue("end_date", selectedDates[0].toISOString().split("T")[0]);
     } else {
       setValue("end_date", "");
@@ -65,7 +62,6 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
   };
 
   const on_submit = async (data: FormData): Promise<void> => {
-    // Validate date range is complete
     if (!data.start_date || !data.end_date) {
       setError("start_date", { message: "Please select a complete date range" });
       return;
@@ -82,7 +78,7 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
     quickJoinMutation.mutate(payload, {
       onSuccess: (results) => {
         if (results.length === 0) {
-          setSearchError("No matching plans found. Try different dates or location.");
+          setSearchError("No matching plans found for these dates. Try different dates or create your own plan!");
           return;
         }
         on_close(results);
@@ -95,31 +91,59 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
   };
 
   return (
-    <div className="modal">
-      <div className="modal_body">
-        <h1 className="text-xl font-semibold text-red-600 text-center mb-4">
-          Quick Join
-        </h1>
-        <p className="text-gray-600 text-sm text-center mb-4">
-          Find public travel plans that match your dates and destination
-        </p>
+    <div className="fixed inset-0 z-[1500] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+        {/* Header */}
+        <div className="relative bg-gradient-to-br from-primary-red to-red-600 px-6 py-8 text-white text-center">
+          <button
+            onClick={() => on_close([])}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold mb-1">Quick Join</h1>
+          <p className="text-white/80 text-sm">
+            Find public plans that match your travel dates
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
+        <form onSubmit={handleSubmit(on_submit)} className="p-6 space-y-5">
+          {/* Location field */}
           <div>
-            <label className="label">Location</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Destination
+            </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📍</span>
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                </svg>
+              </div>
               <input
                 type="text"
-                value="Tagaytay Cavite"
-                className="text_box pl-10 bg-gray-50 text-gray-700 cursor-default"
+                value="Tagaytay, Cavite"
+                className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 cursor-not-allowed"
                 readOnly
               />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                Fixed
+              </span>
             </div>
           </div>
 
+          {/* Date range picker */}
           <div>
-            <label className="label">Date Range</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              When are you traveling?
+            </label>
             <Flatpickr
               options={{
                 dateFormat: "Y-m-d",
@@ -128,65 +152,99 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
               }}
               value={dateRange}
               onChange={handle_change}
-              className="text_box"
-              placeholder="Select start and end dates"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-red focus:border-transparent outline-none transition-all cursor-pointer"
+              placeholder="Select your travel dates"
             />
             <input type="hidden" {...register("start_date", { required: true })} />
             <input type="hidden" {...register("end_date", { required: true })} />
             
-            {/* Date range display */}
-            {dateRange.length > 0 ? (
-              <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-100">
-                <p className="text-sm text-gray-700 flex items-center gap-2">
-                  <span className="text-red-500">📅</span>
-                  <span className="font-medium">{formatDateDisplay(dateRange[0])}</span>
-                  {dateRange.length === 2 && dateRange[1] && (
-                    <>
-                      <span className="text-gray-400">→</span>
-                      <span className="font-medium">{formatDateDisplay(dateRange[1])}</span>
-                    </>
-                  )}
-                </p>
-                {dateRange.length === 2 && dateRange[1] && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {Math.ceil((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1} days
-                  </p>
-                )}
+            {/* Selected dates preview */}
+            {dateRange.length > 0 && (
+              <div className="mt-3 p-4 bg-primary-red/5 rounded-xl border border-primary-red/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">
+                      {formatDateDisplay(dateRange[0])}
+                      {dateRange.length === 2 && dateRange[1] && (
+                        <span className="text-gray-400"> → </span>
+                      )}
+                      {dateRange.length === 2 && dateRange[1] && formatDateDisplay(dateRange[1])}
+                    </p>
+                    {dateRange.length === 2 && dateRange[1] && (
+                      <p className="text-sm text-gray-500">
+                        {Math.ceil((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1} days trip
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <p className="text-xs text-gray-400 mt-2">
+            )}
+            
+            {!dateRange.length && (
+              <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 Click above to select your travel dates
               </p>
             )}
             
             {(errors.start_date || errors.end_date) && (
-              <p className="text-red-500 text-sm mt-1">
+              <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
                 {errors.start_date?.message || "Please select a date range"}
               </p>
             )}
           </div>
 
+          {/* Error message */}
           {searchError && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-              <p className="text-yellow-700 text-sm">{searchError}</p>
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-amber-700 text-sm">{searchError}</p>
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-4">
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={() => on_close([])}
               disabled={quickJoinMutation.isPending}
-              className="soft_btn"
+              className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={quickJoinMutation.isPending}
-              className="hard_btn"
+              disabled={quickJoinMutation.isPending || dateRange.length === 0}
+              className="flex-1 px-4 py-3 bg-primary-red text-white rounded-xl hover:bg-primary-red-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {quickJoinMutation.isPending ? "Searching..." : "Find Plans"}
+              {quickJoinMutation.isPending ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Find Plans
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -194,4 +252,3 @@ export default function Quick_Join({ on_close }: QuickJoinProps): React.ReactEle
     </div>
   );
 }
-
