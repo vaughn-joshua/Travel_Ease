@@ -24,12 +24,21 @@ const EMPTY_RESULT: GroupedPlansResult = {
 export async function fetch_grouped_plans(): Promise<GroupedPlansResult> {
   // Skip API call if not authenticated
   const token = localStorage.getItem("token");
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fetch_grouped_plans:entry',message:'fetch_grouped_plans called',data:{hasToken:Boolean(token)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
+  
   if (!token) {
     return { ...EMPTY_RESULT, dbUnavailable: false };
   }
 
   try {
     const response = await api.get<GroupedPlansResult>("/travel_plan/all");
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fetch_grouped_plans:response',message:'API response received',data:{ongoingCount:response.data.ongoing?.data?.length??0,upcomingCount:response.data.upcoming?.data?.length??0,previousCount:response.data.previous?.data?.length??0,dbUnavailable:response.data.dbUnavailable},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
 
     return {
       upcoming: response.data.upcoming || EMPTY_GROUP,
