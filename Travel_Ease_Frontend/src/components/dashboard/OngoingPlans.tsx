@@ -46,10 +46,6 @@ export default function OngoingPlans(): React.ReactElement {
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'OngoingPlans.tsx:55',message:'OngoingPlans enabled check',data:{authLoading,hasToken:Boolean(token),enabled:!authLoading&&Boolean(token)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-
   const {
     data,
     isLoading,

@@ -39,10 +39,6 @@ export default function MainPage(): React.ReactElement {
 
   const isAuthenticated = !authLoading && Boolean(user);
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MainPage.tsx:41',message:'MainPage auth state',data:{authLoading,hasUser:Boolean(user),isAuthenticated},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-
   // Use TanStack Query hooks to track loading states
   const { isLoading: ongoingLoading, isFetched: ongoingFetched } = useOngoingPlans(isAuthenticated);
   const { isLoading: upcomingLoading, isFetched: upcomingFetched } = useUpcomingPlans(isAuthenticated);

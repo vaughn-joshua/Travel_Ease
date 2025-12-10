@@ -91,9 +91,8 @@ export function useGroupedPlans(enabled = true) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:useGroupedPlans',message:'useGroupedPlans enabled check',data:{enabledParam:enabled,authLoading,hasUser:Boolean(user),isAuthenticated,finalEnabled:enabled&&isAuthenticated},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
+  // Debug: Log auth state for grouped plans query
+  console.log('[useGroupedPlans]', { enabled, authLoading, hasUser: !!user, isAuthenticated, finalEnabled: enabled && isAuthenticated });
 
   const query = useQuery<GroupedPlansResult, Error>({
     queryKey: travelPlanKeys.grouped(),
@@ -104,9 +103,14 @@ export function useGroupedPlans(enabled = true) {
     initialData: getDefaultGroupedResult,
   });
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/410e2dac-4389-45cd-a989-70f6c3608015',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'queries.ts:useGroupedPlans:result',message:'useGroupedPlans query result',data:{isFetched:query.isFetched,isLoading:query.isLoading,hasData:Boolean(query.data),ongoingCount:query.data?.ongoing?.data?.length??0,upcomingCount:query.data?.upcoming?.data?.length??0,dbUnavailable:query.data?.dbUnavailable},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D,E'})}).catch(()=>{});
-  // #endregion
+  // Debug: Log query result
+  if (query.isFetched) {
+    console.log('[useGroupedPlans] Result:', {
+      ongoing: query.data?.ongoing?.data?.length ?? 0,
+      upcoming: query.data?.upcoming?.data?.length ?? 0,
+      previous: query.data?.previous?.data?.length ?? 0,
+    });
+  }
 
   return query;
 }
