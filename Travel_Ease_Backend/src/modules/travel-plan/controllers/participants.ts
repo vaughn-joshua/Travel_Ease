@@ -13,6 +13,7 @@ async function invalidatePlanCaches(planId: number, userId?: number): Promise<vo
   
   if (userId) {
     invalidations.push(
+      invalidateCachePattern(`travel_plans:all:${userId}`),
       invalidateCachePattern(`travel_plans:upcoming:${userId}`),
       invalidateCachePattern(`travel_plans:ongoing:${userId}`)
     );

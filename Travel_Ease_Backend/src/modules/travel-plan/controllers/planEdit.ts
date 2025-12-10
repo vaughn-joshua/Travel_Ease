@@ -184,6 +184,7 @@ export async function plan_edit(req: Request, res: Response) {
 
     // Invalidate caches - user's plans and public plans if visibility changed
     const cacheInvalidations = [
+      invalidateCachePattern(`travel_plans:all:${userId}`),
       invalidateCachePattern(`travel_plans:upcoming:${userId}`),
       invalidateCachePattern(`travel_plans:ongoing:${userId}`),
     ];

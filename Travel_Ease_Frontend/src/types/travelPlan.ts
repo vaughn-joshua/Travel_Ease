@@ -78,6 +78,20 @@ export interface PlansQueryResult {
   dbUnavailable: boolean;
 }
 
+/** Group data returned by the grouped plans endpoint */
+export interface PlanGroupData {
+  data: TravelPlan[];
+  total: number;
+}
+
+/** Response from the /api/travel_plan/all endpoint */
+export interface GroupedPlansResult {
+  upcoming: PlanGroupData;
+  ongoing: PlanGroupData;
+  previous: PlanGroupData;
+  dbUnavailable?: boolean;
+}
+
 // Activity DTO - matches backend normalized response
 export interface Activity {
   activity_id: number;

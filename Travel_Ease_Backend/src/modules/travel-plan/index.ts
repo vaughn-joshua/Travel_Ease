@@ -14,6 +14,7 @@ export { fetch_plans } from './controllers/fetchPlans.js';
 export { ongoing_plan } from './controllers/ongoingPlans.js';
 export { previous_plans } from './controllers/previousPlans.js';
 export { public_plans } from './controllers/publicPlans.js';
+export { all_plans, invalidateGroupedPlansCache } from './controllers/allPlans.js';
 export { plans_id } from './controllers/plansId.js';
 export { create_activity } from './controllers/createActivity.js';
 export { fetch_activities } from './controllers/fetchActivities.js';

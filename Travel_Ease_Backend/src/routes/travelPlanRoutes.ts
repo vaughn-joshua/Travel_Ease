@@ -41,6 +41,7 @@ import {
   fetch_plans,
   ongoing_plan,
   previous_plans,
+  all_plans,
   create_activity,
   fetch_activities,
   quick_join,
@@ -69,6 +70,7 @@ router.put('/:id/approve/:participantId', authenticateToken, requirePlanOwnershi
 router.delete('/:id/deny/:participantId', authenticateToken, requirePlanOwnership, deny_join);
 
 // Protected routes (authentication required)
+router.get('/all', authenticateToken, all_plans); // Grouped plans endpoint (single call)
 router.get('/ongoing_plan', authenticateToken, ongoing_plan);
 router.get('/plans', authenticateToken, fetch_plans);
 router.get('/previous_plans', authenticateToken, previous_plans);

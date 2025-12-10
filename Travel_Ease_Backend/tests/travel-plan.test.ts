@@ -864,5 +864,230 @@ describe('Travel Plans', () => {
       expect(response.status).toBe(401);
     });
   });
+
+  describe('GET /api/travel_plan/all (Grouped Plans)', () => {
+    it('should return grouped plans for authenticated user', async () => {
+      // Create plans with different statuses
+      const draftPlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Draft Plan',
+          user_id: user1.user_id,
+          status: 'Draft'
+        }
+      });
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: draftPlan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      const activePlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Active Plan',
+          user_id: user1.user_id,
+          status: 'Active'
+        }
+      });
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: activePlan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      const completedPlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Completed Plan',
+          user_id: user1.user_id,
+          status: 'Completed'
+        }
+      });
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: completedPlan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      
+      // Check structure
+      expect(response.body).toHaveProperty('upcoming');
+      expect(response.body).toHaveProperty('ongoing');
+      expect(response.body).toHaveProperty('previous');
+      
+      // Each group should have data and total
+      expect(response.body.upcoming).toHaveProperty('data');
+      expect(response.body.upcoming).toHaveProperty('total');
+      expect(response.body.ongoing).toHaveProperty('data');
+      expect(response.body.ongoing).toHaveProperty('total');
+      expect(response.body.previous).toHaveProperty('data');
+      expect(response.body.previous).toHaveProperty('total');
+      
+      // Verify correct grouping
+      expect(response.body.upcoming.data.some((p: any) => p.name === 'Draft Plan')).toBe(true);
+      expect(response.body.ongoing.data.some((p: any) => p.name === 'Active Plan')).toBe(true);
+      expect(response.body.previous.data.some((p: any) => p.name === 'Completed Plan')).toBe(true);
+      
+      // Verify totals
+      expect(response.body.upcoming.total).toBeGreaterThanOrEqual(1);
+      expect(response.body.ongoing.total).toBeGreaterThanOrEqual(1);
+      expect(response.body.previous.total).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should return empty groups when no plans', async () => {
+      const response = await request(app)
+        .get('/api/travel_plan/all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.upcoming.data).toEqual([]);
+      expect(response.body.upcoming.total).toBe(0);
+      expect(response.body.ongoing.data).toEqual([]);
+      expect(response.body.ongoing.total).toBe(0);
+      expect(response.body.previous.data).toEqual([]);
+      expect(response.body.previous.total).toBe(0);
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .get('/api/travel_plan/all');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should include plans where user is participant', async () => {
+      // Create a plan owned by user2
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Participant Plan',
+          user_id: user2.user_id,
+          status: 'Draft'
+        }
+      });
+
+      // Add user1 as approved participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: plan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Viewer',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.upcoming.data.some((p: any) => p.name === 'Participant Plan')).toBe(true);
+    });
+
+    it('should not include plans where user is pending participant', async () => {
+      // Create a plan owned by user2
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Pending Participant Plan',
+          user_id: user2.user_id,
+          status: 'Draft'
+        }
+      });
+
+      // Add user1 as pending participant (status: false)
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: plan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Viewer',
+          status: false
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.upcoming.data.some((p: any) => p.name === 'Pending Participant Plan')).toBe(false);
+    });
+
+    it('should group Cancelled plans as previous', async () => {
+      const cancelledPlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Cancelled Plan',
+          user_id: user1.user_id,
+          status: 'Cancelled'
+        }
+      });
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: cancelledPlan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.previous.data.some((p: any) => p.name === 'Cancelled Plan')).toBe(true);
+    });
+
+    it('should include normalized DTO fields in response', async () => {
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'DTO Test Plan',
+          user_id: user1.user_id,
+          status: 'Active',
+          max_slots: 5,
+          visibility: true
+        }
+      });
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: plan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/all')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      
+      const planData = response.body.ongoing.data.find((p: any) => p.name === 'DTO Test Plan');
+      expect(planData).toBeDefined();
+      
+      // Check normalized fields
+      expect(planData).toHaveProperty('id');
+      expect(planData).toHaveProperty('travel_plan_id');
+      expect(planData.id).toBe(planData.travel_plan_id);
+      expect(planData).toHaveProperty('title', 'DTO Test Plan');
+      expect(planData).toHaveProperty('name', 'DTO Test Plan');
+      expect(planData).toHaveProperty('slots', 5);
+      expect(planData).toHaveProperty('max_slots', 5);
+      expect(planData).toHaveProperty('is_public', true);
+      expect(planData).toHaveProperty('visibility', true);
+      expect(planData).toHaveProperty('approvedParticipants');
+    });
+  });
 });
 

@@ -120,6 +120,7 @@ export async function create_plan(req: Request, res: Response) {
 
     // Invalidate caches for this user's plans and public plans
     await Promise.all([
+      invalidateCachePattern(`travel_plans:all:${userId}`),
       invalidateCachePattern(`travel_plans:upcoming:${userId}`),
       invalidateCachePattern(`travel_plans:ongoing:${userId}`),
       invalidateCachePattern('travel_plans:public:'),

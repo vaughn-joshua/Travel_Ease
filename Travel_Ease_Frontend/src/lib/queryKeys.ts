@@ -45,6 +45,7 @@ export const travelPlanKeys = {
   lists: () => [...travelPlanKeys.all, "list"] as const,
   list: (params?: TravelPlanListParams) =>
     [...travelPlanKeys.lists(), params] as const,
+  grouped: () => [...travelPlanKeys.all, "grouped"] as const,
   ongoing: () => [...travelPlanKeys.all, "ongoing"] as const,
   previous: () => [...travelPlanKeys.all, "previous"] as const,
   public: () => [...travelPlanKeys.all, "public"] as const,
