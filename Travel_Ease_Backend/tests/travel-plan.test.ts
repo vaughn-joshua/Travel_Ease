@@ -6,13 +6,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express, { type Express } from 'express';
 import { prisma } from '../src/lib/prisma.js';
-import travel_plan_routes from '../routes/travel_plan_routes.js';
+import travelPlanRoutes from '../src/routes/travelPlanRoutes.js';
 import { createTestUser, cleanupTestData } from './setup.js';
 import type { User } from '@prisma/client';
 
 const app: Express = express();
 app.use(express.json());
-app.use('/api/travel_plan', travel_plan_routes);
+app.use('/api/travel_plan', travelPlanRoutes);
 
 describe('Travel Plans', () => {
   let user1: User, token1: string, user2: User, token2: string;
@@ -210,6 +210,658 @@ describe('Travel Plans', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain('full');
+    });
+  });
+
+  describe('GET /api/travel_plan/ongoing_plan', () => {
+    it('should return only Active plans for authenticated user', async () => {
+      // Create an Active plan
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Active Trip',
+          user_id: user1.user_id,
+          status: 'Active',
+          start_date: new Date(),
+          end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+      });
+
+      // Add user as approved participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: plan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/ongoing_plan')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(response.body.data.every((p: any) => p.status === 'Active')).toBe(true);
+    });
+
+    it('should return empty array when no ongoing plans', async () => {
+      const response = await request(app)
+        .get('/api/travel_plan/ongoing_plan')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.pagination).toBeDefined();
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .get('/api/travel_plan/ongoing_plan');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should respect pagination params', async () => {
+      // Create multiple Active plans
+      for (let i = 0; i < 3; i++) {
+        const plan = await prisma.travel_plan.create({
+          data: {
+            name: `Active Trip ${i}`,
+            user_id: user1.user_id,
+            status: 'Active'
+          }
+        });
+        await prisma.participant.create({
+          data: {
+            travel_plan_id: plan.travel_plan_id,
+            user_id: user1.user_id,
+            role: 'Admin',
+            status: true
+          }
+        });
+      }
+
+      const response = await request(app)
+        .get('/api/travel_plan/ongoing_plan?page=1&pageSize=2')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.length).toBeLessThanOrEqual(2);
+      expect(response.body.pagination.pageSize).toBe(2);
+    });
+  });
+
+  describe('GET /api/travel_plan/previous_plans', () => {
+    it('should return Completed and Cancelled plans', async () => {
+      // Create Completed plan
+      const completedPlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Completed Trip',
+          user_id: user1.user_id,
+          status: 'Completed'
+        }
+      });
+
+      // Create Cancelled plan
+      const cancelledPlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Cancelled Trip',
+          user_id: user1.user_id,
+          status: 'Cancelled'
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/previous_plans')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.data.every((p: any) => 
+        p.status === 'Completed' || p.status === 'Cancelled'
+      )).toBe(true);
+    });
+
+    it('should filter by status param', async () => {
+      // Create one of each
+      await prisma.travel_plan.create({
+        data: { name: 'Completed', user_id: user1.user_id, status: 'Completed' }
+      });
+      await prisma.travel_plan.create({
+        data: { name: 'Cancelled', user_id: user1.user_id, status: 'Cancelled' }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/previous_plans?status=Completed')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.every((p: any) => p.status === 'Completed')).toBe(true);
+    });
+
+    it('should include plans where user is participant', async () => {
+      // Create plan by user2
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Friend Trip',
+          user_id: user2.user_id,
+          status: 'Completed'
+        }
+      });
+
+      // Add user1 as participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: plan.travel_plan_id,
+          user_id: user1.user_id,
+          role: 'Viewer',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/previous_plans')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      const planIds = response.body.data.map((p: any) => p.id || p.travel_plan_id);
+      expect(planIds).toContain(plan.travel_plan_id);
+    });
+  });
+
+  describe('GET /api/travel_plan/public_plans', () => {
+    it('should return only visible Draft/Active plans', async () => {
+      // Create visible Active plan
+      await prisma.travel_plan.create({
+        data: {
+          name: 'Public Active',
+          user_id: user1.user_id,
+          status: 'Active',
+          visibility: true,
+          visibility_timestamp: new Date()
+        }
+      });
+
+      // Create non-visible plan (should not be returned)
+      await prisma.travel_plan.create({
+        data: {
+          name: 'Private Plan',
+          user_id: user1.user_id,
+          status: 'Active',
+          visibility: false
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/public_plans');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.every((p: any) => p.visibility === true || p.is_public === true)).toBe(true);
+    });
+
+    it('should exclude expired visibility_end_date plans', async () => {
+      // Create plan with expired visibility
+      const expiredPlan = await prisma.travel_plan.create({
+        data: {
+          name: 'Expired Visibility',
+          user_id: user1.user_id,
+          status: 'Active',
+          visibility: true,
+          visibility_end_date: new Date(Date.now() - 24 * 60 * 60 * 1000) // Yesterday
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/public_plans');
+
+      expect(response.status).toBe(200);
+      const planIds = response.body.data.map((p: any) => p.id || p.travel_plan_id);
+      expect(planIds).not.toContain(expiredPlan.travel_plan_id);
+    });
+
+    it('should include isOwner and isParticipant for authenticated user', async () => {
+      // Create visible plan by user1
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'My Public Plan',
+          user_id: user1.user_id,
+          status: 'Active',
+          visibility: true,
+          visibility_timestamp: new Date()
+        }
+      });
+
+      const response = await request(app)
+        .get('/api/travel_plan/public_plans')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      const myPlan = response.body.data.find((p: any) => 
+        (p.id || p.travel_plan_id) === plan.travel_plan_id
+      );
+      
+      if (myPlan) {
+        expect(myPlan.isOwner).toBe(true);
+      }
+    });
+
+    it('should respect pagination', async () => {
+      // Create multiple visible plans
+      for (let i = 0; i < 5; i++) {
+        await prisma.travel_plan.create({
+          data: {
+            name: `Public Plan ${i}`,
+            user_id: user1.user_id,
+            status: 'Active',
+            visibility: true,
+            visibility_timestamp: new Date()
+          }
+        });
+      }
+
+      const response = await request(app)
+        .get('/api/travel_plan/public_plans?page=1&pageSize=3');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.length).toBeLessThanOrEqual(3);
+      expect(response.body.pagination).toBeDefined();
+      expect(response.body.pagination.pageSize).toBe(3);
+    });
+  });
+
+  describe('PUT /api/travel_plan/join_plan', () => {
+    let publicPlanId: number;
+
+    beforeEach(async () => {
+      // Create a public, joinable plan by user1
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Open Trip',
+          user_id: user1.user_id,
+          status: 'Active',
+          visibility: true,
+          max_slots: 5,
+          visibility_timestamp: new Date()
+        }
+      });
+      publicPlanId = plan.travel_plan_id;
+
+      // Add owner as participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: publicPlanId,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+    });
+
+    it('should create pending participant (status=false)', async () => {
+      const response = await request(app)
+        .put('/api/travel_plan/join_plan')
+        .set('Authorization', `Bearer ${token2}`)
+        .send({
+          travel_plan_id: publicPlanId,
+          role: 'Viewer'
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toContain('Waiting for approval');
+
+      // Verify participant was created with status=false
+      const participant = await prisma.participant.findFirst({
+        where: {
+          travel_plan_id: publicPlanId,
+          user_id: user2.user_id
+        }
+      });
+
+      expect(participant).not.toBeNull();
+      expect(participant?.status).toBe(false);
+    });
+
+    it('should reject when plan is full', async () => {
+      // Set max_slots to 1 (owner already takes it)
+      await prisma.travel_plan.update({
+        where: { travel_plan_id: publicPlanId },
+        data: { max_slots: 1 }
+      });
+
+      const response = await request(app)
+        .put('/api/travel_plan/join_plan')
+        .set('Authorization', `Bearer ${token2}`)
+        .send({
+          travel_plan_id: publicPlanId
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('full');
+    });
+
+    it('should reject duplicate join requests', async () => {
+      // First join request
+      await request(app)
+        .put('/api/travel_plan/join_plan')
+        .set('Authorization', `Bearer ${token2}`)
+        .send({ travel_plan_id: publicPlanId });
+
+      // Second join request (duplicate)
+      const response = await request(app)
+        .put('/api/travel_plan/join_plan')
+        .set('Authorization', `Bearer ${token2}`)
+        .send({ travel_plan_id: publicPlanId });
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toContain('already');
+    });
+
+    it('should reject joining private plans', async () => {
+      // Make plan private
+      await prisma.travel_plan.update({
+        where: { travel_plan_id: publicPlanId },
+        data: { visibility: false }
+      });
+
+      const response = await request(app)
+        .put('/api/travel_plan/join_plan')
+        .set('Authorization', `Bearer ${token2}`)
+        .send({ travel_plan_id: publicPlanId });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('not open');
+    });
+  });
+
+  describe('Approval Flow', () => {
+    let publicPlanId: number;
+    let pendingParticipantId: number;
+
+    beforeEach(async () => {
+      // Create a public plan
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Approval Test Plan',
+          user_id: user1.user_id,
+          status: 'Active',
+          visibility: true,
+          max_slots: 5
+        }
+      });
+      publicPlanId = plan.travel_plan_id;
+
+      // Add owner as approved participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: publicPlanId,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      // Add user2 as pending participant
+      const pending = await prisma.participant.create({
+        data: {
+          travel_plan_id: publicPlanId,
+          user_id: user2.user_id,
+          role: 'Viewer',
+          status: false
+        }
+      });
+      pendingParticipantId = pending.participant_id;
+    });
+
+    it('should approve pending request (status=true)', async () => {
+      const response = await request(app)
+        .put(`/api/travel_plan/${publicPlanId}/approve/${pendingParticipantId}`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toContain('approved');
+
+      // Verify participant status is now true
+      const participant = await prisma.participant.findUnique({
+        where: { participant_id: pendingParticipantId }
+      });
+      expect(participant?.status).toBe(true);
+    });
+
+    it('should reject non-owner approval', async () => {
+      // Create a third user to attempt approval
+      const result3 = await createTestUser({ email: `user3_${Date.now()}@example.com` });
+      const token3 = result3.token;
+
+      const response = await request(app)
+        .put(`/api/travel_plan/${publicPlanId}/approve/${pendingParticipantId}`)
+        .set('Authorization', `Bearer ${token3}`);
+
+      expect(response.status).toBe(403);
+    });
+
+    it('should deny pending request', async () => {
+      const response = await request(app)
+        .delete(`/api/travel_plan/${publicPlanId}/deny/${pendingParticipantId}`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+
+      // Verify participant was removed
+      const participant = await prisma.participant.findUnique({
+        where: { participant_id: pendingParticipantId }
+      });
+      expect(participant).toBeNull();
+    });
+  });
+
+  describe('GET /api/travel_plan/activities/:id', () => {
+    let planId: number;
+
+    beforeEach(async () => {
+      // Create a plan
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Activity Test Plan',
+          user_id: user1.user_id,
+          status: 'Active'
+        }
+      });
+      planId = plan.travel_plan_id;
+
+      // Add owner as participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      // Create some activities
+      await prisma.activity.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: user1.user_id,
+          name: 'Visit Beach',
+          location: 'Boracay Beach',
+          target_date: new Date('2025-07-15'),
+          is_accommodation: false
+        }
+      });
+    });
+
+    it('should return activities for owned plan', async () => {
+      const response = await request(app)
+        .get(`/api/travel_plan/activities/${planId}`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.data.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should return activities for participant', async () => {
+      // Add user2 as participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: user2.user_id,
+          role: 'Viewer',
+          status: true
+        }
+      });
+
+      const response = await request(app)
+        .get(`/api/travel_plan/activities/${planId}`)
+        .set('Authorization', `Bearer ${token2}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeDefined();
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .get(`/api/travel_plan/activities/${planId}`);
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('POST /api/travel_plan/create_activity', () => {
+    let planId: number;
+
+    beforeEach(async () => {
+      // Create a plan
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Activity Creation Plan',
+          user_id: user1.user_id,
+          status: 'Active'
+        }
+      });
+      planId = plan.travel_plan_id;
+
+      // Add owner as participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+    });
+
+    it('should create activity with valid data', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_activity')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          travel_plan_id: planId,
+          name: 'Dinner at Restaurant',
+          location: 'Downtown Tagaytay',
+          target_date: '2025-07-15',
+          lat: 14.1153,
+          lng: 120.9621
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toContain('successfully');
+      expect(response.body).toHaveProperty('activity_id');
+    });
+
+    it('should validate required fields', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_activity')
+        .set('Authorization', `Bearer ${token1}`)
+        .send({
+          // Missing travel_plan_id
+          name: 'Test Activity'
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .post('/api/travel_plan/create_activity')
+        .send({
+          travel_plan_id: planId,
+          name: 'Test Activity'
+        });
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /api/travel_plan/delete_activity/:id', () => {
+    let planId: number;
+    let activityId: number;
+
+    beforeEach(async () => {
+      // Create a plan
+      const plan = await prisma.travel_plan.create({
+        data: {
+          name: 'Activity Deletion Plan',
+          user_id: user1.user_id,
+          status: 'Active'
+        }
+      });
+      planId = plan.travel_plan_id;
+
+      // Add owner as participant
+      await prisma.participant.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: user1.user_id,
+          role: 'Admin',
+          status: true
+        }
+      });
+
+      // Create an activity
+      const activity = await prisma.activity.create({
+        data: {
+          travel_plan_id: planId,
+          user_id: user1.user_id,
+          name: 'Activity to Delete',
+          is_accommodation: false
+        }
+      });
+      activityId = activity.activity_id;
+    });
+
+    it('should delete activity owned by user', async () => {
+      const response = await request(app)
+        .delete(`/api/travel_plan/delete_activity/${activityId}`)
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toContain('deleted');
+
+      // Verify activity was deleted
+      const activity = await prisma.activity.findUnique({
+        where: { activity_id: activityId }
+      });
+      expect(activity).toBeNull();
+    });
+
+    it('should return 404 for non-existent activity', async () => {
+      const response = await request(app)
+        .delete('/api/travel_plan/delete_activity/999999')
+        .set('Authorization', `Bearer ${token1}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .delete(`/api/travel_plan/delete_activity/${activityId}`);
+
+      expect(response.status).toBe(401);
     });
   });
 });

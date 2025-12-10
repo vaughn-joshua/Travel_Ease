@@ -1,6 +1,7 @@
 import {
   prisma,
   executeWithRetry,
+  isDbConnectionError,
 } from "../../../lib/prismaHelpers.js";
 import {
   parsePagination,
@@ -15,27 +16,6 @@ import { Request, Response } from "express";
 
 // Cache TTL (in seconds)
 const PUBLIC_PLANS_CACHE_TTL = 30; // 30 seconds - plans change frequently with joins
-
-/**
- * Check if error is a database connection error
- */
-function isDbConnectionError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const message = error.message || '';
-    const prismaError = error as { code?: string };
-    return (
-      prismaError.code === 'P1001' || // Can't reach database
-      prismaError.code === 'P1002' || // Database server timed out
-      prismaError.code === 'P1008' || // Operations timed out
-      prismaError.code === 'P1017' || // Server closed connection
-      message.includes("Can't reach database") ||
-      message.includes('Connection refused') ||
-      message.includes('ECONNREFUSED') ||
-      message.includes('ECONNRESET')
-    );
-  }
-  return false;
-}
 
 /**
  * Fetch public plans (visibility=true, not expired)

@@ -4,8 +4,8 @@ import Navbar from "./components/blog/Navbar";
 import Footer from "./components/blog/Footer";
 import { RequireAuth, RequireSupabaseAuth, LandingRoute } from "./routes/AuthRoutes";
 
-// Blogs is the landing page for guests - keep eager for fast first paint
-import Blogs from "./pages/Blogs";
+// Home is the landing page for guests - keep eager for fast first paint
+import Home from "./pages/Home";
 
 import "./App.css";
 
@@ -24,7 +24,8 @@ function PageLoader() {
 // Lazy-loaded pages – only fetched when the route is visited
 // ---------------------------------------------------------------------------
 
-// Blog pages (detail/edit are less common visits)
+// Blog pages
+const Blogs = lazy(() => import("./pages/Blogs"));
 const BlogDetail = lazy(() => import("./pages/BlogDetail"));
 const NewBlog = lazy(() => import("./pages/NewBlog"));
 const EditBlog = lazy(() => import("./pages/EditBlog"));
@@ -110,10 +111,10 @@ export default function App(): React.ReactElement {
       <main className="flex-grow">
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Landing route: blogs for visitors, travel plans for authenticated */}
+            {/* Landing route: home for visitors, travel plans for authenticated */}
             <Route
               path="/"
-              element={<LandingRoute publicComponent={<Blogs />} />}
+              element={<LandingRoute publicComponent={<Home />} />}
             />
 
             {/* Plans dashboard – requires auth */}

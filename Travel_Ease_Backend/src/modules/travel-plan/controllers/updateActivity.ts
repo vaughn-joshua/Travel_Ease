@@ -1,4 +1,5 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
+import { invalidateCachePattern } from "../../../lib/cache.js";
 import { Request, Response } from "express";
 
 /**
@@ -89,13 +90,15 @@ export async function update_activity(req: Request, res: Response) {
       })
     );
 
+    // Invalidate activities cache for this plan
+    await invalidateCachePattern(`activities:plan:${planId}`);
+
     res.status(200).json({
       message: "Activities updated successfully",
       updated: activitiesWithDates.length,
       offset_applied_ms: shiftMs
     });
   } catch (error) {
-    console.error("Error updating activities:", error);
     return handlePrismaError(error, res, 'Updating activities');
   }
 }

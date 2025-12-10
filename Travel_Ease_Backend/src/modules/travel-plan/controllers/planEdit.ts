@@ -1,4 +1,5 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
+import { invalidateCachePattern } from "../../../lib/cache.js";
 import { Request, Response } from "express";
 
 // Valid status transitions: current status -> allowed next statuses
@@ -20,11 +21,6 @@ function isValidTransition(currentStatus: string | null, newStatus: string | nul
 }
 
 export async function plan_edit(req: Request, res: Response) {
-  console.log('[plan_edit] ========== EDIT PLAN REQUEST ==========');
-  console.log('[plan_edit] Plan ID from params:', req.params.id);
-  console.log('[plan_edit] Request body:', JSON.stringify(req.body, null, 2));
-  console.log('[plan_edit] User from request:', req.user);
-  
   const { id } = req.params;
   const {
     description,
@@ -40,19 +36,7 @@ export async function plan_edit(req: Request, res: Response) {
   } = req.body;
 
   const planId = parseInt(id);
-  console.log('[plan_edit] Parsed plan ID:', planId);
-  console.log('[plan_edit] Extracted values:', {
-    description,
-    name,
-    title,
-    location,
-    max_slots,
-    start_date,
-    end_date,
-    visibility,
-    status,
-    accommodation_id
-  });
+  const userId = req.user?.id;
 
   try {
     // Fetch current plan state with approved participant count
@@ -190,8 +174,6 @@ export async function plan_edit(req: Request, res: Response) {
       });
     }
 
-    console.log('[plan_edit] Update data to apply:', JSON.stringify(updateData, null, 2));
-
     // Perform update
     const updatedPlan = await executeWithRetry(() =>
       prisma.travel_plan.update({
@@ -200,7 +182,19 @@ export async function plan_edit(req: Request, res: Response) {
       })
     );
 
-    console.log('[plan_edit] ✅ SUCCESS - Plan updated:', updatedPlan.travel_plan_id);
+    // Invalidate caches - user's plans and public plans if visibility changed
+    const cacheInvalidations = [
+      invalidateCachePattern(`travel_plans:upcoming:${userId}`),
+      invalidateCachePattern(`travel_plans:ongoing:${userId}`),
+    ];
+    
+    // If visibility or status changed, also invalidate public plans cache
+    if (visibility !== undefined || status !== undefined) {
+      cacheInvalidations.push(invalidateCachePattern('travel_plans:public:'));
+    }
+    
+    await Promise.all(cacheInvalidations);
+
     const response = {
       message: "Travel plan updated successfully",
       plan: {
@@ -213,12 +207,9 @@ export async function plan_edit(req: Request, res: Response) {
         end_date: updatedPlan.end_date
       }
     };
-    console.log('[plan_edit] Response:', JSON.stringify(response, null, 2));
     
     res.status(200).json(response);
   } catch (error) {
-    console.error('[plan_edit] ❌ ERROR - Full error:', error);
-    console.error('[plan_edit] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return handlePrismaError(error, res, 'Editing plan');
   }
 }

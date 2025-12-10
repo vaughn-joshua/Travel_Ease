@@ -258,6 +258,29 @@ export async function executeWithTimeout<T>(
   ]);
 }
 
+/**
+ * Check if an error is a database connection error
+ * Used for graceful degradation when DB is unreachable
+ */
+export function isDbConnectionError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message || '';
+    const prismaError = error as PrismaError;
+    return (
+      prismaError.code === 'P1001' || // Can't reach database
+      prismaError.code === 'P1002' || // Database server timed out
+      prismaError.code === 'P1008' || // Operations timed out
+      prismaError.code === 'P1017' || // Server closed connection
+      message.includes("Can't reach database") ||
+      message.includes('Connection refused') ||
+      message.includes('ECONNREFUSED') ||
+      message.includes('ECONNRESET') ||
+      message.includes('terminating connection')
+    );
+  }
+  return false;
+}
+
 export { prisma };
 
 export default {
@@ -274,6 +297,7 @@ export default {
   asyncHandler,
   executeWithRetry,
   executeWithTimeout,
+  isDbConnectionError,
   DEFAULT_PAGE,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE

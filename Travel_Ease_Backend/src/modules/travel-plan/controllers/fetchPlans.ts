@@ -1,4 +1,4 @@
-import { prisma, executeWithRetry } from "../../../lib/prismaHelpers.js";
+import { prisma, executeWithRetry, isDbConnectionError } from "../../../lib/prismaHelpers.js";
 import { parsePagination, buildPlanFilters, paginatedResponse } from "../utils/pagination.js";
 import { formatPlan } from "../utils/formatPlan.js";
 import { getAccommodationForPlans } from "../utils/getAccommodation.js";
@@ -8,28 +8,6 @@ import { Request, Response } from "express";
 
 // Cache TTL for upcoming/draft plans (30 seconds)
 const CACHE_TTL_UPCOMING = 30;
-
-/**
- * Check if error is a database connection error
- */
-function isDbConnectionError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const message = error.message || '';
-    const prismaError = error as { code?: string };
-    return (
-      prismaError.code === 'P1001' || // Can't reach database
-      prismaError.code === 'P1002' || // Database server timed out
-      prismaError.code === 'P1008' || // Operations timed out
-      prismaError.code === 'P1017' || // Server closed connection
-      message.includes("Can't reach database") ||
-      message.includes('Connection refused') ||
-      message.includes('ECONNREFUSED') ||
-      message.includes('ECONNRESET') ||
-      message.includes('terminating connection')
-    );
-  }
-  return false;
-}
 
 /**
  * Fetch UPCOMING plans for the authenticated user:

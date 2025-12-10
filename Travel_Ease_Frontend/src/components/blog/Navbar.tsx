@@ -21,9 +21,10 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-// Nav items for guests (not logged in) – only Home and Travel Spots
+// Nav items for guests (not logged in) – Home, Blogs, and Travel Spots
 const guestNavItems: NavItem[] = [
   { label: "Home", path: "/", icon: <Home className="h-4 w-4" /> },
+  { label: "Blogs", path: "/blogs", icon: <BookOpen className="h-4 w-4" /> },
   { label: "Travel Spots", path: "/travel_spots_page", icon: <Compass className="h-4 w-4" /> },
 ];
 

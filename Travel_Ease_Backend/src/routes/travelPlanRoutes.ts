@@ -34,12 +34,10 @@ import {
   toggle_activity_priority,
   collaborators_edit,
   create_plan,
-  finished_plan,
   join_plan,
   plan_edit,
   plans_id,
   public_plans,
-  specific_plans,
   fetch_plans,
   ongoing_plan,
   previous_plans,
@@ -102,9 +100,6 @@ router.get('/:id/participants', authenticateToken, get_participants);
 router.post('/:id/participants', authenticateToken, requirePlanOwnership, validate(addParticipantSchema), add_participant);
 router.put('/:id/participants/:userId', authenticateToken, requirePlanOwnership, validate(updateParticipantSchema), update_participant);
 router.delete('/:id/participants/:userId', authenticateToken, requirePlanOwnership, remove_participant);
-
-// Legacy/specific routes
-router.get('/specific_plans', specific_plans); //is this redudant?
 
 export default router;
 

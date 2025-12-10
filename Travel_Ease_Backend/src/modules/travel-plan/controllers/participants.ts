@@ -1,6 +1,25 @@
 import { prisma, executeWithRetry, handlePrismaError } from "../../../lib/prismaHelpers.js";
+import { invalidateCachePattern } from "../../../lib/cache.js";
 import { Request, Response } from "express";
 import { createNotification } from "../../notification/index.js";
+
+/**
+ * Helper to invalidate plan-related caches
+ */
+async function invalidatePlanCaches(planId: number, userId?: number): Promise<void> {
+  const invalidations = [
+    invalidateCachePattern('travel_plans:public:'),
+  ];
+  
+  if (userId) {
+    invalidations.push(
+      invalidateCachePattern(`travel_plans:upcoming:${userId}`),
+      invalidateCachePattern(`travel_plans:ongoing:${userId}`)
+    );
+  }
+  
+  await Promise.all(invalidations);
+}
 
 /**
  * Get the current user's role for a specific plan
@@ -44,7 +63,6 @@ export async function get_user_role(req: Request, res: Response) {
       isParticipant: !!participant
     });
   } catch (error) {
-    console.error("Error getting user role:", error);
     return handlePrismaError(error, res, 'Getting user role');
   }
 }
@@ -78,7 +96,6 @@ export async function get_participants(req: Request, res: Response) {
       data: participants
     });
   } catch (error) {
-    console.error("Error fetching participants:", error);
     return handlePrismaError(error, res, 'Fetching participants');
   }
 }
@@ -182,12 +199,14 @@ export async function add_participant(req: Request, res: Response) {
       })
     );
 
+    // Invalidate caches for both users
+    await invalidatePlanCaches(planId, user_id);
+
     res.status(201).json({
       message: "Invitation sent successfully",
       participant: participantWithUser
     });
   } catch (error: any) {
-    console.error("Error adding participant:", error);
     if (error.code === 'P2002') {
       return res.status(409).json({ error: "User is already a participant" });
     }
@@ -275,12 +294,14 @@ export async function update_participant(req: Request, res: Response) {
       })
     );
 
+    // Invalidate caches
+    await invalidatePlanCaches(planId, userIdInt);
+
     res.json({
       message: "Participant updated successfully",
       participant: updated
     });
   } catch (error) {
-    console.error("Error updating participant:", error);
     return handlePrismaError(error, res, 'Updating participant');
   }
 }
@@ -326,11 +347,13 @@ export async function remove_participant(req: Request, res: Response) {
       })
     );
 
+    // Invalidate caches
+    await invalidatePlanCaches(planId, userIdInt);
+
     res.json({
       message: "Participant removed successfully"
     });
   } catch (error) {
-    console.error("Error removing participant:", error);
     return handlePrismaError(error, res, 'Removing participant');
   }
 }
@@ -438,12 +461,19 @@ export async function collaborators_edit(req: Request, res: Response) {
       }
     });
 
+    // Invalidate caches for all affected users
+    const allUserIds = collaborators.map((c: any) => c.user_id);
+    await Promise.all([
+      invalidateCachePattern('travel_plans:public:'),
+      ...allUserIds.map((uid: number) => invalidateCachePattern(`travel_plans:upcoming:${uid}`)),
+      ...allUserIds.map((uid: number) => invalidateCachePattern(`travel_plans:ongoing:${uid}`)),
+    ]);
+
     res.json({
       message: "Collaborators updated successfully",
       count
     });
   } catch (error) {
-    console.error("Error updating collaborators:", error);
     return handlePrismaError(error, res, 'Updating collaborators');
   }
 }
