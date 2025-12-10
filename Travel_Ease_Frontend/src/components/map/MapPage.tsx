@@ -13,7 +13,7 @@ interface MapPageProps {
   start?: [number, number] | null;
   end?: [number, number] | null;
   businessMarkers?: MapMarker[];
-  mapCenter?: [number, number] | null; // For centering map without showing search result
+  mapCenter?: [number, number] | null;
   onMapClear?: () => void;
   onRouteFound?: (routeInfo: RouteInfo) => void;
   onMarkerClick?: (marker: MapMarker) => void;
@@ -34,10 +34,7 @@ function ScrollWheelZoom() {
   const map = useMap();
   
   React.useEffect(() => {
-    // Enable scroll wheel zoom
     map.scrollWheelZoom.enable();
-    
-    // Disable default scroll behavior on the map container
     const container = map.getContainer();
     container.style.outline = 'none';
     
@@ -75,7 +72,6 @@ export default function Map_Page({
 
   const position = getPosition();
 
-  // Handle route found callback
   const handleRouteFound = (routeInfo: RouteInfo) => {
     if (onRouteFound) {
       onRouteFound(routeInfo);
@@ -102,67 +98,133 @@ export default function Map_Page({
           bottom: 0,
         }}
       >
-      <TileLayer
-        attribution="&copy; OpenStreetMap contributors"
-        url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-      />
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+        />
 
-      {/* Enable scroll wheel zoom */}
-      <ScrollWheelZoom />
+        <ScrollWheelZoom />
+        <ZoomControl position="topright" />
 
-      {/* Zoom controls at top right */}
-      <ZoomControl position="topright" />
-
-      {/* Start marker (person icon) */}
-      {start && (
-        <Marker position={start as LatLngExpression} icon={custom_icon_person} />
-      )}
-
-      {/* End marker (pin icon) */}
-      {end && <Marker position={end as LatLngExpression} icon={custom_icon} />}
-
-      {/* Search result marker (if no route is active) */}
-      {position && !start && !end && <Marker position={position} icon={custom_icon} />}
-
-      {/* Center map on search result or mapCenter */}
-      {(position || mapCenter) && <MapMover position={position || mapCenter || null} />}
-
-      {/* Render business markers */}
-      {businessMarkers.map((marker, index) => (
-        <Marker
-          key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
-          position={marker.position as LatLngExpression}
-          icon={custom_icon}
-          eventHandlers={{
-            click: () => {
-              if (onMarkerClick) {
-                onMarkerClick(marker);
-              }
-            },
-          }}
-        >
-          {marker.name && (
-            <Popup>
-              <div className="text-sm font-medium">{marker.name}</div>
-              {onMarkerClick && (
-                <button
-                  className="mt-2 text-xs text-primary-red hover:underline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkerClick(marker);
-                  }}
-                >
-                  Add to Travel Plan
-                </button>
-              )}
+        {/* Start marker (person icon) */}
+        {start && (
+          <Marker position={start as LatLngExpression} icon={custom_icon_person}>
+            <Popup className="custom-popup">
+              <div className="p-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-green-100 flex items-center justify-center">
+                    <span className="text-green-600 text-xs">A</span>
+                  </div>
+                  <span className="font-semibold text-gray-900 text-sm">Start Point</span>
+                </div>
+              </div>
             </Popup>
-          )}
-        </Marker>
-      ))}
+          </Marker>
+        )}
 
-      {start && end && (
-        <RoutingMachine start={start} end={end} onRouteFound={handleRouteFound} />
-      )}
+        {/* End marker (pin icon) */}
+        {end && (
+          <Marker position={end as LatLngExpression} icon={custom_icon}>
+            <Popup className="custom-popup">
+              <div className="p-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-red-100 flex items-center justify-center">
+                    <span className="text-red-600 text-xs">B</span>
+                  </div>
+                  <span className="font-semibold text-gray-900 text-sm">Destination</span>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Search result marker (if no route is active) */}
+        {position && !start && !end && (
+          <Marker position={position} icon={custom_icon}>
+            <Popup className="custom-popup">
+              <div className="p-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-primary-red/10 flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-gray-900 text-sm">Selected Location</span>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Center map on search result or mapCenter */}
+        {(position || mapCenter) && <MapMover position={position || mapCenter || null} />}
+
+        {/* Render business markers */}
+        {businessMarkers.map((marker, index) => (
+          <Marker
+            key={`business-${index}-${marker.position[0]}-${marker.position[1]}`}
+            position={marker.position as LatLngExpression}
+            icon={custom_icon}
+            eventHandlers={{
+              click: () => {
+                if (onMarkerClick) {
+                  onMarkerClick(marker);
+                }
+              },
+            }}
+          >
+            {marker.name && (
+              <Popup className="custom-popup">
+                <div className="min-w-[180px] max-w-[220px]">
+                  {/* Header */}
+                  <div className="flex items-start gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary-red/10 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight">
+                        {marker.name}
+                      </h4>
+                      <span className="text-[10px] text-primary-red font-medium uppercase tracking-wide">
+                        Local Business
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Action */}
+                  {onMarkerClick && (
+                    <button
+                      className="
+                        w-full mt-2 py-2 px-3 
+                        bg-primary-red text-white 
+                        text-xs font-semibold 
+                        rounded-lg
+                        hover:bg-primary-red-dark 
+                        transition-colors
+                        flex items-center justify-center gap-1.5
+                      "
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkerClick(marker);
+                      }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Add to Travel Plan
+                    </button>
+                  )}
+                </div>
+              </Popup>
+            )}
+          </Marker>
+        ))}
+
+        {start && end && (
+          <RoutingMachine start={start} end={end} onRouteFound={handleRouteFound} />
+        )}
       </MapContainer>
     </div>
   );

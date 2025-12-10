@@ -44,18 +44,33 @@ export default function SelectPlanModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+    <div 
+      className="fixed inset-0 z-[10000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100">
+        <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50/50 to-transparent">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Add to Plan</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Select a travel plan</p>
+              <h2 id="modal-title" className="text-lg font-bold text-gray-900">Add to Plan</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Choose a travel plan</p>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              className="
+                w-9 h-9 rounded-xl 
+                bg-gray-100 hover:bg-gray-200 
+                flex items-center justify-center 
+                transition-colors
+                focus:outline-none focus:ring-2 focus:ring-primary-red/30
+              "
+              aria-label="Close modal"
             >
               <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -65,15 +80,15 @@ export default function SelectPlanModal({
         </div>
 
         {/* Location info */}
-        <div className="mx-4 mt-4 p-4 bg-primary-red/5 rounded-xl border border-primary-red/20">
+        <div className="mx-4 mt-4 p-4 bg-primary-red/5 rounded-xl border border-primary-red/10">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-primary-red/10 rounded-lg flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 bg-primary-red/10 rounded-xl flex items-center justify-center shrink-0">
               <svg className="w-5 h-5 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Adding</p>
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Adding Location</p>
               <p className="font-semibold text-gray-900 mt-0.5 line-clamp-1">{searchResult.name}</p>
               {searchResult.label && searchResult.label !== searchResult.name && (
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{searchResult.label}</p>
@@ -87,7 +102,12 @@ export default function SelectPlanModal({
           {/* Loading state */}
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red mb-3"></div>
+              <div className="w-10 h-10 rounded-xl bg-primary-red/10 flex items-center justify-center mb-3">
+                <svg className="w-5 h-5 text-primary-red animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
               <p className="text-sm text-gray-500">Loading your plans...</p>
             </div>
           )}
@@ -95,24 +115,36 @@ export default function SelectPlanModal({
           {/* Empty state */}
           {!isLoading && allPlans.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
-              <p className="text-gray-600 font-medium mb-1">
-                {dbUnavailable ? "Couldn't load plans" : "No travel plans"}
+              <p className="text-gray-700 font-semibold mb-1">
+                {dbUnavailable ? "Couldn't load plans" : "No travel plans yet"}
               </p>
-              <p className="text-sm text-gray-400 mb-4">
-                {dbUnavailable ? "Please try again later" : "Create a plan first to add locations"}
+              <p className="text-sm text-gray-400 mb-5">
+                {dbUnavailable ? "Please try again later" : "Create your first plan to start adding locations"}
               </p>
               <button
                 onClick={() => {
                   navigate("/plans");
                   onClose();
                 }}
-                className="px-4 py-2 bg-primary-red text-white rounded-xl text-sm font-medium hover:bg-primary-red-dark transition-colors"
+                className="
+                  inline-flex items-center gap-2
+                  px-5 py-2.5 
+                  bg-primary-red text-white 
+                  rounded-xl text-sm font-semibold 
+                  hover:bg-primary-red-dark 
+                  transition-colors
+                  shadow-lg shadow-primary-red/20
+                  focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2
+                "
               >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
                 Create a Plan
               </button>
             </div>
@@ -121,27 +153,41 @@ export default function SelectPlanModal({
           {/* Plans list */}
           {!isLoading && allPlans.length > 0 && (
             <div className="space-y-2">
+              <p className="text-xs text-gray-500 font-medium mb-3 px-1">
+                {allPlans.length} plan{allPlans.length !== 1 ? 's' : ''} available
+              </p>
               {allPlans.map((plan) => (
                 <button
                   key={plan.travel_plan_id}
                   onClick={() => handlePlanSelect(plan)}
-                  className="w-full text-left p-4 rounded-xl border border-gray-100 hover:border-primary-red/30 hover:bg-primary-red/5 transition-all group"
+                  className="
+                    w-full text-left p-4 rounded-xl 
+                    border border-gray-100 
+                    bg-white
+                    hover:border-primary-red/30 hover:bg-primary-red/5 
+                    transition-all duration-200 
+                    group
+                    focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:border-primary-red/30
+                  "
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 group-hover:text-primary-red transition-colors line-clamp-1">
                         {plan.title}
                       </h3>
-                      <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
-                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-1.5">
+                        <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         </svg>
                         <span className="truncate">{plan.location}</span>
                       </div>
                       {plan.start_date && plan.end_date && (
-                        <p className="text-xs text-gray-400 mt-1.5">
-                          {formatPlanDateRange(plan.start_date, plan.end_date)}
-                        </p>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-1.5">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span>{formatPlanDateRange(plan.start_date, plan.end_date)}</span>
+                        </div>
                       )}
                     </div>
                     <div className="shrink-0 flex items-center gap-2">
@@ -149,14 +195,21 @@ export default function SelectPlanModal({
                         status={plan.status === "Active" ? "Active" : plan.status === "Draft" ? "Draft" : "Completed"} 
                         size="sm" 
                       />
-                      <svg 
-                        className="w-4 h-4 text-gray-300 group-hover:text-primary-red group-hover:translate-x-0.5 transition-all" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                      <div className="
+                        w-7 h-7 rounded-lg 
+                        bg-gray-100 group-hover:bg-primary-red/10
+                        flex items-center justify-center
+                        transition-colors
+                      ">
+                        <svg 
+                          className="w-4 h-4 text-gray-400 group-hover:text-primary-red group-hover:translate-x-0.5 transition-all" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -169,7 +222,16 @@ export default function SelectPlanModal({
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
           <button 
             onClick={onClose} 
-            className="w-full py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-white transition-colors font-medium"
+            className="
+              w-full py-2.5 
+              border border-gray-200 
+              text-gray-700 
+              rounded-xl 
+              hover:bg-white hover:border-gray-300
+              transition-colors 
+              font-medium
+              focus:outline-none focus:ring-2 focus:ring-gray-300
+            "
           >
             Cancel
           </button>
