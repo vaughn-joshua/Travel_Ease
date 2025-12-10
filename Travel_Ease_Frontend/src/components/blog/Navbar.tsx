@@ -76,7 +76,7 @@ function Logo() {
 const Navbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, loading, isGoogleAuth } = useAuth();
+  const { user, loading } = useAuth();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -181,8 +181,8 @@ const Navbar: React.FC = () => {
           {/* Authenticated Actions */}
           {user && !loading && (
             <div className="flex items-center gap-3">
-              {/* Publish (for Google users with editor enabled) */}
-              {isEditorEnabled() && isGoogleAuth && (
+              {/* Publish (for authenticated users with editor enabled) */}
+              {isEditorEnabled() && user && (
                 <Link to="/blogs/new">
                   <Button variant="outline" size="sm" leftIcon={<Briefcase className="h-4 w-4" />}>
                     Publish
@@ -284,7 +284,7 @@ const Navbar: React.FC = () => {
                 </div>
               </Link>
 
-              {isEditorEnabled() && isGoogleAuth && (
+              {isEditorEnabled() && user && (
                 <Link to="/blogs/new" className="mt-2 block">
                   <Button
                     variant="outline"

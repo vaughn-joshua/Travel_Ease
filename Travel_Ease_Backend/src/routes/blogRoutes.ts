@@ -15,12 +15,12 @@ const CACHE_TTL = {
 };
 
 /**
- * Middleware to require Google OAuth authentication for blog operations
- * Only users who signed in with Google can create/edit/delete blogs
+ * Middleware for blog operations
+ * All authenticated users (Google or email/password) can create/edit/delete blogs
  */
 const requireGoogleAuth = (req: Request, res: Response, next: NextFunction) => {
-  // For now, allow all authenticated users to create/edit blogs
-  // In production, you may want to check auth_provider
+  // Allow all authenticated users to create/edit blogs
+  // Authentication is already verified by authenticateToken middleware
   next();
 };
 
