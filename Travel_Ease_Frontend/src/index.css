@@ -13,77 +13,159 @@
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
   
-  /* Custom animations */
-  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  /* ============================================
+   * MOTION SYSTEM - Unified timing & easing
+   * ============================================
+   * Durations:
+   *   - instant: 100ms (micro-interactions)
+   *   - fast: 200ms (hover states, chips)
+   *   - normal: 300ms (panels, modals)
+   *   - slow: 500ms (page transitions)
+   *
+   * Easing:
+   *   - ease-out: decelerate (entering elements)
+   *   - ease-in-out: smooth (state changes)
+   *   - spring: cubic-bezier(0.34, 1.56, 0.64, 1) (bouncy)
+   * ============================================ */
+  
+  /* Standard animations with unified timing */
+  --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-slide-in: slideIn 0.3s ease-out;
-  --animate-slide-in-right: slideInFromRight 0.4s ease-out forwards;
-  --animate-bounce-in: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  --animate-slide-in-right: slideInFromRight 0.3s ease-out forwards;
+  --animate-slide-up: slideUp 0.3s ease-out forwards;
+  --animate-scale-in: scaleIn 0.2s ease-out forwards;
+  --animate-bounce-in: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   
+  /* Fade In - simple opacity */
   @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   
+  /* Slide In from left */
   @keyframes slideIn {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(0); }
+    from { 
+      opacity: 0;
+      transform: translateX(-16px); 
+    }
+    to { 
+      opacity: 1;
+      transform: translateX(0); 
+    }
   }
   
+  /* Slide In from right (for staggered items) */
   @keyframes slideInFromRight {
-    0% { 
+    from { 
       opacity: 0; 
-      transform: translateX(20px) scale(0.95);
+      transform: translateX(12px);
     }
-    100% { 
+    to { 
       opacity: 1; 
-      transform: translateX(0) scale(1);
+      transform: translateX(0);
     }
   }
   
-  @keyframes bounceIn {
-    0% { 
-      opacity: 0; 
-      transform: scale(0.3);
+  /* Slide Up (for panels, toasts) */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
     }
-    50% { 
-      transform: scale(1.05);
-    }
-    70% { 
-      transform: scale(0.9);
-    }
-    100% { 
-      opacity: 1; 
-      transform: scale(1);
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
-  @keyframes pulse-soft {
-    0%, 100% { 
+  /* Scale In (for modals, popovers) */
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
       opacity: 1;
       transform: scale(1);
     }
-    50% { 
-      opacity: 0.8;
-      transform: scale(1.02);
+  }
+  
+  /* Bounce In (for attention-grabbing elements) */
+  @keyframes bounceIn {
+    0% { 
+      opacity: 0; 
+      transform: scale(0.9);
     }
+    60% { 
+      opacity: 1;
+      transform: scale(1.03);
+    }
+    100% { 
+      opacity: 1; 
+      transform: scale(1);
+    }
+  }
+  
+  /* Soft pulse (for active/loading states) */
+  @keyframes pulse-soft {
+    0%, 100% { 
+      opacity: 1;
+    }
+    50% { 
+      opacity: 0.7;
+    }
+  }
+  
+  /* Spinner */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 }
 
 html {
   font-family: "Inter", system-ui, sans-serif;
+  /* Enable smooth scrolling globally */
+  scroll-behavior: smooth;
 }
 
 body {
   @apply bg-white text-gray-900;
 }
 
+/* ============================================
+ * REDUCED MOTION - Accessibility
+ * Respects user's motion preferences
+ * ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-spin {
+    animation: none !important;
+  }
+  
+  .animate-pulse {
+    animation: none !important;
+  }
+  
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 @layer components {
   .btn-primary {
-    @apply bg-primary-red text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-red-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2;
+    @apply bg-primary-red text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-red-dark transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply bg-white text-primary-red border-2 border-primary-red px-6 py-3 rounded-lg font-medium hover:bg-primary-red hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2;
+    @apply bg-white text-primary-red border-2 border-primary-red px-6 py-3 rounded-lg font-medium hover:bg-primary-red hover:text-white transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
   }
 
   /* Softer red gradient for CTA sections */
@@ -108,44 +190,119 @@ body {
   
   /* Hide scrollbar for IE, Edge and Firefox */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Horizontal scroll container with gradient edge fades */
+  .scroll-fade-x {
+    position: relative;
+    --fade-width: 24px;
+  }
+  
+  .scroll-fade-x::before,
+  .scroll-fade-x::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--fade-width);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  .scroll-fade-x::before {
+    left: 0;
+    background: linear-gradient(to right, white, transparent);
+  }
+  
+  .scroll-fade-x::after {
+    right: 0;
+    background: linear-gradient(to left, white, transparent);
+  }
+  
+  .scroll-fade-x.fade-left::before {
+    opacity: 1;
+  }
+  
+  .scroll-fade-x.fade-right::after {
+    opacity: 1;
+  }
+  
+  /* Snap scroll for horizontal carousels */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .scroll-snap-start {
+    scroll-snap-align: start;
+  }
+  
+  .scroll-snap-center {
+    scroll-snap-align: center;
+  }
+  
+  /* Focus visible ring utility */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
+  }
+  
+  /* Interactive chip/button base */
+  .chip-interactive {
+    @apply transition-all duration-200 ease-out;
+    @apply hover:scale-[1.02] active:scale-[0.98];
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red/50 focus-visible:ring-offset-1;
   }
 }
 
-/* Filter button animations */
+/* ============================================
+ * ANIMATION UTILITY CLASSES
+ * ============================================ */
+
+/* Filter button animations - staggered entry */
 .filter-btn {
-  animation: slideInFromRight 0.4s ease-out both;
+  animation: slideInFromRight 0.3s ease-out both;
 }
 
 .clear-btn {
-  animation: fadeIn 0.3s ease-out both;
+  animation: fadeIn 0.2s ease-out both;
 }
 
 /* Filter panel button animations */
 .filter-panel-btn {
-  animation: scaleIn 0.3s ease-out both;
+  animation: scaleIn 0.2s ease-out both;
 }
 
-@keyframes scaleIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* Generic animate-in class */
+.animate-in {
+  animation: slideUp 0.3s ease-out forwards;
 }
 
-/* Smooth slide up animation for panel content */
-@keyframes slideUp {
-  0% {
+/* Animate slide down (for dropdowns) */
+.animate-slide-down {
+  animation: slideDown 0.2s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(-8px);
   }
-  100% {
+  to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Modal backdrop animation */
+.animate-backdrop {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Modal content animation */
+.animate-modal {
+  animation: scaleIn 0.3s ease-out forwards;
 }

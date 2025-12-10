@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTravelPlanDetail, useUserPlanRole } from "../features/travelPlans/queries";
@@ -44,6 +44,19 @@ export default function Planner(): React.ReactElement {
   const { user, loading: authLoading, session } = useAuth();
   
   const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("activities");
+  const [dayScrollFade, setDayScrollFade] = useState({ left: false, right: true });
+  const dayScrollRef = useRef<HTMLDivElement>(null);
+
+  // Handle day selector scroll for gradient fades
+  const handleDayScroll = useCallback(() => {
+    const el = dayScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setDayScrollFade({
+      left: scrollLeft > 4,
+      right: scrollLeft < scrollWidth - clientWidth - 4,
+    });
+  }, []);
   
   const locationState = location.state as LocationState | null;
   const [prefillActivity, setPrefillActivity] = useState<SearchResult | null>(
@@ -578,20 +591,38 @@ export default function Planner(): React.ReactElement {
               <div className="p-4">
                 {/* Day Selector */}
                 <div className="flex items-center justify-between gap-3 mb-4">
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                    {Array.from({ length: days }, (_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => click_day(i + 1)}
-                        className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
-                          daySelected === i + 1
-                            ? "bg-primary-red text-white shadow-sm"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        Day {i + 1}
-                      </button>
-                    ))}
+                  <div className="relative flex-1 min-w-0">
+                    {/* Left fade */}
+                    <div 
+                      className={`absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+                        dayScrollFade.left ? 'opacity-100' : 'opacity-0'
+                      }`} 
+                    />
+                    {/* Right fade */}
+                    <div 
+                      className={`absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+                        dayScrollFade.right ? 'opacity-100' : 'opacity-0'
+                      }`} 
+                    />
+                    <div 
+                      ref={dayScrollRef}
+                      onScroll={handleDayScroll}
+                      className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth"
+                    >
+                      {Array.from({ length: days }, (_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => click_day(i + 1)}
+                          className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
+                            daySelected === i + 1
+                              ? "bg-primary-red text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          Day {i + 1}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   {showAddActivity && (
                     <button

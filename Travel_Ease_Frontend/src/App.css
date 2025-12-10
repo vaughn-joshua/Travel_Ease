@@ -1,10 +1,18 @@
 @import "tailwindcss";
 
-/* Map fullscreen animations */
-@keyframes fade-in {
+/* ============================================
+ * MAP EXPERIENCE ANIMATIONS
+ * ============================================ */
+
+/* Map overlay fade-in with subtle lift */
+.animate-fade-in {
+  animation: map-fade-in 0.3s ease-out forwards;
+}
+
+@keyframes map-fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -12,16 +20,15 @@
   }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
-}
-
-/* Hide scrollbar for map page */
+/* Map fullscreen mode */
 .map-fullscreen {
   overflow: hidden;
 }
 
-/* Leaflet map customizations */
+/* ============================================
+ * LEAFLET MAP CUSTOMIZATIONS
+ * ============================================ */
+
 .leaflet-container {
   font-family: inherit;
 }
@@ -45,6 +52,7 @@
   z-index: 10 !important;
 }
 
+/* Zoom control styling */
 .leaflet-control-zoom {
   border: none !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -66,7 +74,12 @@
 
 .leaflet-control-zoom a:hover {
   background: #fff !important;
-  color: #dc2626 !important;
+  color: #E10600 !important;
+}
+
+.leaflet-control-zoom a:focus-visible {
+  outline: 2px solid #E10600 !important;
+  outline-offset: -2px;
 }
 
 .leaflet-control-zoom-in {
@@ -77,7 +90,7 @@
   border-radius: 0 0 12px 12px !important;
 }
 
-/* Custom Leaflet popup styling */
+/* Popup styling */
 .leaflet-popup-content-wrapper {
   background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: blur(12px);
@@ -85,6 +98,7 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
   border: 1px solid rgba(255, 255, 255, 0.6);
   padding: 0 !important;
+  animation: map-fade-in 0.2s ease-out;
 }
 
 .leaflet-popup-content {
@@ -112,21 +126,52 @@
   color: #E10600 !important;
 }
 
+.leaflet-popup-close-button:focus-visible {
+  outline: 2px solid #E10600;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================
+ * FORM & UI COMPONENTS
+ * ============================================ */
+
 .card {
   @apply bg-white rounded drop-shadow p-4;
 }
 
 .text_box {
-  @apply w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-red-500 focus:outline-none;
+  @apply w-full border rounded-md px-3 py-2 transition-colors duration-200;
+  @apply focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none;
 }
 
 .modal {
-  @apply fixed inset-0 flex items-center justify-center bg-black/40;
+  @apply fixed inset-0 flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
   z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal_body {
   @apply bg-white rounded-lg shadow-md p-6;
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .label {
@@ -134,163 +179,35 @@
 }
 
 .soft_btn {
-  @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition;
+  @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700;
+  @apply hover:bg-gray-100 transition-colors duration-200;
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
 }
 
 .day_btn {
-  @apply px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition;
+  @apply px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700;
+  @apply hover:bg-gray-100 transition-colors duration-200;
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red focus-visible:ring-offset-2;
 }
 
 .hard_btn {
-  @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition;
+  @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md;
+  @apply hover:bg-red-700 transition-colors duration-200;
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
 }
 
 .category {
   @apply border px-4 py-1 rounded-2xl border-gray-100 bg-gray-300 text-xs;
 }
 
-/* #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.modal {
-  @apply fixed inset-0 flex items-center justify-center bg-black/40;
-}
-
-.modal_body {
-  @apply bg-white rounded-lg shadow-md w-full max-w-md p-6;
-}
-
-.label {
-  @apply block text-sm font-medium text-gray-700 mb-1;
-}
-
-.soft_btn {
-  @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition;
-}
-
-.hard_btn {
-  @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition;
-}
-
-body {
-  padding: 0;
-  margin: 0;
-}
-
-.container {
-  display: flex;
-}
-
-.map_controls {
-  width: 20%;
-  padding: 0.7em;
-  background-color: rgb(245, 245, 245);
-}
-
-.map {
-  width: 80%;
-}
-
-.map-container {
-  width: 100%;
-  height: 100vh;
-}
-
-.route_details {
-  margin: 0.3em 0;
-  padding: 0.5em;
-  background-color: rgb(225, 225, 225);
-}
-
-.search_options {
-  margin: 0;
-  border-style: solid;
-  border-width: 1px;
-  border-color: rgba(0, 0, 0, 0.364);
-  padding: 0.2em;
-  background-color: rgb(227, 227, 227);
-}
-
-.search_options:hover {
-  background-color: rgb(188, 188, 188);
-}
-.modala {
-  position: fixed;
-  top: 20%;
-  right: 25%;
-  padding: 2em;
-  width: 50vw;
-  min-height: 30vh;
-  border-radius: 10%;
-  background-color: rgb(167, 167, 167);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  opacity: 90%;
-}
-
-/* planner */
+/* ============================================
+ * LAYOUT HELPERS (Planner page)
+ * ============================================ */
 
 .planner_top {
   display: flex;
   gap: 1em;
 }
-
-/* .map_containers {
-  background-color: rgb(206, 206, 206);
-  width: 70vw;
-  height: 60vh;
-  border-radius: 20px;
-} */
-
-.activity_container {
-  display: flex;
-  gap: 1em;
-}
-
-.travel_plan_days {
-  display: flex;
-  gap: 1em;
-}
-
-.read-the-docs {
-  color: #888;
-} */
-
-.modala {
-  position: fixed;
-  top: 20%;
-  right: 25%;
-  padding: 2em;
-  width: 50vw;
-  min-height: 30vh;
-  border-radius: 10%;
-  background-color: rgb(167, 167, 167);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  opacity: 90%;
-}
-
-/* planner */
-
-.planner_top {
-  display: flex;
-  gap: 1em;
-}
-
-/* .map_containers {
-  background-color: rgb(206, 206, 206);
-  width: 70vw;
-  height: 60vh;
-  border-radius: 20px;
-} */
 
 .activity_container {
   display: flex;

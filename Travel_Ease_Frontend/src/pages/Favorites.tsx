@@ -24,8 +24,13 @@ export default function Favorites(): React.ReactElement {
   const businessFavorites = data?.business_favorites ?? [];
   const planFavorites = data?.travel_plan_favorites ?? [];
 
+  // Smooth scroll to top on mount (respects reduced-motion)
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion ? 'auto' : 'smooth'
+    });
   }, []);
 
   useEffect(() => {

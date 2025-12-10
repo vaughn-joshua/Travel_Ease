@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useTravelSpots } from "../../features/businesses/queries";
 import type { SearchResult } from "../../types/map";
 import type { TravelPlanDates } from "../../types/travelPlan";
@@ -59,6 +59,20 @@ export default function SuggestedBusinesses({
   const [selectedPriceRange, setSelectedPriceRange] = useState<string | null>(null);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showPriceFilter, setShowPriceFilter] = useState(false);
+  const [scrollFade, setScrollFade] = useState({ left: false, right: true });
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Handle scroll position to show/hide gradient fades
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setScrollFade({
+      left: scrollLeft > 8,
+      right: scrollLeft < scrollWidth - clientWidth - 8,
+    });
+  }, []);
 
   const { data: travelSpotsData, isLoading, isError, refetch } = useTravelSpots({
     category: selectedCategory || undefined,
@@ -108,31 +122,49 @@ export default function SuggestedBusinesses({
         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
           Browse by Category
         </h4>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <button
-            onClick={() => handleCategoryClick(null)}
-            className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
-              selectedCategory === null
-                ? "bg-primary-red text-white shadow-sm"
-                : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
-            }`}
+        <div className="relative">
+          {/* Left fade gradient */}
+          <div 
+            className={`absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+              scrollFade.left ? 'opacity-100' : 'opacity-0'
+            }`} 
+          />
+          {/* Right fade gradient */}
+          <div 
+            className={`absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+              scrollFade.right ? 'opacity-100' : 'opacity-0'
+            }`} 
+          />
+          <div 
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide scroll-smooth"
           >
-            All
-          </button>
-          {CATEGORIES.map((category) => (
             <button
-              key={category.id}
-              onClick={() => handleCategoryClick(category.id)}
-              className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                selectedCategory === category.id
+              onClick={() => handleCategoryClick(null)}
+              className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
+                selectedCategory === null
                   ? "bg-primary-red text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
-              <span>{category.icon}</span>
-              <span>{category.label}</span>
+              All
             </button>
-          ))}
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategoryClick(category.id)}
+                className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive flex items-center gap-1.5 ${
+                  selectedCategory === category.id
+                    ? "bg-primary-red text-white shadow-sm"
+                    : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <span>{category.icon}</span>
+                <span>{category.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
