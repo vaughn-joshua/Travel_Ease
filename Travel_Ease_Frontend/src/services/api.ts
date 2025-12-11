@@ -650,6 +650,40 @@ export const reviewApi = {
     );
     return response.data;
   },
+
+  // Update a business review
+  updateBusinessReview: async (
+    reviewId: number,
+    data: CreateReviewPayload
+  ): Promise<{ message: string; review: BusinessReview }> => {
+    const response = await api.put(`/reviews/business/${reviewId}`, data);
+    return response.data;
+  },
+
+  // Delete a business review
+  deleteBusinessReview: async (
+    reviewId: number
+  ): Promise<{ message: string }> => {
+    const response = await api.delete(`/reviews/business/${reviewId}`);
+    return response.data;
+  },
+
+  // Update a travel plan review
+  updateTravelPlanReview: async (
+    reviewId: number,
+    data: CreateReviewPayload
+  ): Promise<{ message: string; review: TravelPlanReview }> => {
+    const response = await api.put(`/reviews/travel_plan/${reviewId}`, data);
+    return response.data;
+  },
+
+  // Delete a travel plan review
+  deleteTravelPlanReview: async (
+    reviewId: number
+  ): Promise<{ message: string }> => {
+    const response = await api.delete(`/reviews/travel_plan/${reviewId}`);
+    return response.data;
+  },
 };
 
 // Notification types
