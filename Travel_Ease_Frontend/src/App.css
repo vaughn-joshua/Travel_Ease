@@ -153,10 +153,28 @@
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(2px);
   z-index: 9999;
+  animation: modal-fade-in 0.2s ease-out;
 }
 
 .modal_body {
   @apply bg-white rounded-lg shadow-md p-6;
+  animation: modal-scale-in 0.3s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .label {
@@ -164,7 +182,7 @@
 }
 
 .soft_btn {
-  @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700;
+  @apply px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 transition-colors duration-200;
 }
 
 .soft_btn:hover {
@@ -177,7 +195,7 @@
 }
 
 .day_btn {
-  @apply px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700;
+  @apply px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 transition-colors duration-200;
 }
 
 .day_btn:hover {
@@ -190,7 +208,7 @@
 }
 
 .hard_btn {
-  @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md;
+  @apply px-5 py-2 text-sm bg-red-600 text-white rounded-md transition-colors duration-200;
 }
 
 .hard_btn:hover {
