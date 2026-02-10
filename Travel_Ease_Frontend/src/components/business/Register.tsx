@@ -148,7 +148,7 @@ function Register({ on_close }: RegisterProps) {
           `/api/map/suggestions?query=${encodeURIComponent(value)}`,
           {
             method: "GET",
-          }
+          },
         );
 
         await response.json();
@@ -209,7 +209,10 @@ function Register({ on_close }: RegisterProps) {
       <div className="modal_body w-[70vw] h-[60vh]">
         <div className="flex gap-6 h-full">
           {/* Map Section */}
-          <div className="map-side w-[70%] map-container-embedded" style={{ height: "400px" }}>
+          <div
+            className="map-side w-[70%] map-container-embedded"
+            style={{ height: "400px" }}
+          >
             <RegisterMap pins={pin} onPinMove={handlePinMove} />
           </div>
 
