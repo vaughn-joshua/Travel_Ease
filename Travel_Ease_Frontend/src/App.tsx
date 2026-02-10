@@ -7,6 +7,7 @@ import { RequireAuth, RequireSupabaseAuth, LandingRoute } from "./routes/AuthRou
 // Home is the landing page for guests - keep eager for fast first paint
 import Home from "./pages/Home";
 
+
 import "./App.css";
 
 // ---------------------------------------------------------------------------
