@@ -2,6 +2,7 @@
   "name": "travel-ease",
   "version": "1.0.0",
   "private": true,
+  
   "workspaces": ["Travel_Ease_Backend", "Travel_Ease_Frontend"],
   "scripts": {
     "dev": "npm run dev --workspace=Travel_Ease_Backend",
@@ -11,3 +12,4 @@
     "test": "npm run test --workspaces --if-present"
   }
 }
+

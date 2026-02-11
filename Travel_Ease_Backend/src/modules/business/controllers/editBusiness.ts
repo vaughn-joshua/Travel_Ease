@@ -75,7 +75,7 @@ export async function edit_business(req: Request, res: Response) {
         businessUpdateData.longitude = typeof longitude === 'string' ? parseFloat(longitude) : longitude;
       }
 
-      // Picture - accept both naming conventions
+      // Picture - accept both naming conventions, store as-is
       const picture = updateData.secure_url ?? updateData.picture;
       if (picture !== undefined) {
         businessUpdateData.picture = picture;

@@ -166,14 +166,6 @@ export default function App(): React.ReactElement {
               }
             />
             <Route
-              path="/businesses/new"
-              element={
-                <RequireSupabaseAuth fallbackPath="/businesses">
-                  <BusinessForm />
-                </RequireSupabaseAuth>
-              }
-            />
-            <Route
               path="/businesses/my"
               element={
                 <RequireSupabaseAuth fallbackPath="/businesses">

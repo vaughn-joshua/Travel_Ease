@@ -51,7 +51,12 @@ export async function create_business(req: Request, res: Response) {
           latitude: lat,
           longtitude: lng, // Note: DB column has typo
           description,
-          picture: secure_url,
+          // Store picture as canonical JSON wrapper when provided
+          picture: secure_url
+            ? typeof secure_url === "string"
+              ? secure_url
+              : JSON.stringify(secure_url)
+            : null,
           // Price range stored directly on business (not in separate table)
           min_price: min_price ?? null,
           max_price: max_price ?? null,

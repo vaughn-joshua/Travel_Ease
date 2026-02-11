@@ -1,8 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import api, { businessApi, isGoogleAuthRequiredError, getApiErrorMessage } from "../services/api";
+import api, {
+  businessApi,
+  isGoogleAuthRequiredError,
+  getApiErrorMessage,
+} from "../services/api";
 import RegisterMap from "../components/business/RegisterMap";
+import {
+  upload_images,
+  UploadResponse,
+} from "../utils/business/upload_images";
 
 interface BusinessHours {
   day: string;
@@ -92,6 +100,7 @@ export default function BusinessForm() {
   const [submitError, setSubmitError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState("");
   
   // Map-related state
   const [locationSearch, setLocationSearch] = useState("");
@@ -179,8 +188,17 @@ export default function BusinessForm() {
   ) => {
     if (!files.length) return;
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      const message = "Please log in to upload images.";
+      setSubmitError(message);
+      setImageError(message);
+      return;
+    }
+
     setUploading(true);
     setSubmitError("");
+    setImageError("");
     
     const formDataUpload = new FormData();
 
@@ -191,24 +209,66 @@ export default function BusinessForm() {
     });
 
     try {
-      const response = await api.post("/utils/upload_images", formDataUpload, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      const data = response.data;
+      const data: UploadResponse | null = await upload_images(formDataUpload);
 
-      if (type === "cover" && data.secure_url?.[0]) {
-        setFormData((prev) => ({ ...prev, coverImage: data.secure_url[0] }));
-      } else if (type === "gallery" && data.secure_url?.length) {
+      if (!data) {
+        const message = "Failed to upload image. Please try again.";
+        setSubmitError(message);
+        setImageError(message);
+        return;
+      }
+
+      const urls = Array.isArray(data.secure_url)
+        ? data.secure_url
+        : Array.isArray(data.urls)
+        ? data.urls
+        : undefined;
+
+      if (!urls || urls.length === 0) {
+        const message =
+          typeof data.error === "string" && data.error.length > 0
+            ? data.error
+            : "Image upload failed: invalid response from server.";
+        setSubmitError(message);
+        setImageError(message);
+        return;
+      }
+
+      if (type === "cover") {
+        setFormData((prev) => ({ ...prev, coverImage: urls[0] }));
+      } else {
         setFormData((prev) => ({
           ...prev,
-          gallery: [...prev.gallery, ...data.secure_url],
+          gallery: [...prev.gallery, ...urls],
         }));
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Upload error:", err);
-      setSubmitError("Failed to upload image. Please try again.");
+
+      const axiosErr = err as {
+        response?: {
+          status?: number;
+          data?: { code?: string; error?: string };
+        };
+      };
+
+      const status = axiosErr.response?.status;
+      const code = axiosErr.response?.data?.code;
+
+      let message = "Failed to upload image. Please try again.";
+
+      if (status === 401 || status === 403) {
+        message =
+          "Your session has expired or you are not authorized. Please sign in again to upload images.";
+      } else if (status === 503 || code === "STORAGE_UNAVAILABLE") {
+        message =
+          "Image storage is temporarily unavailable. Please try again later.";
+      } else if (axiosErr.response?.data?.error) {
+        message = axiosErr.response.data.error;
+      }
+
+      setSubmitError(message);
+      setImageError(message);
     } finally {
       setUploading(false);
     }
@@ -329,6 +389,9 @@ export default function BusinessForm() {
     if (formData.categories.length === 0)
       newErrors.categories = "Select at least one category";
     if (!formData.city.trim()) newErrors.city = "City is required";
+    if (!formData.coverImage) {
+      newErrors.coverImage = "Cover image is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -748,6 +811,12 @@ export default function BusinessForm() {
                       )}
                     </label>
                   </div>
+                )}
+                {errors.coverImage && (
+                  <p className="mt-2 text-sm text-red-600">{errors.coverImage}</p>
+                )}
+                {imageError && (
+                  <p className="mt-1 text-sm text-red-600">{imageError}</p>
                 )}
               </div>
 

@@ -128,6 +128,16 @@ describe('Business', () => {
     });
   });
 
+  // Basic sanity check for utils upload endpoint error handling
+  it('should return 400 when calling /api/utils/upload_images without files', async () => {
+    const res = await request(app)
+      .post('/api/utils/upload_images')
+      .set('Authorization', `Bearer ${token1}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'No files uploaded');
+  });
+
   describe('PUT /api/business/edit_business/:id', () => {
     let businessId: number;
 
