@@ -10,9 +10,13 @@
     "build:check": "tsc --noEmit",
     "db:seed": "tsx scripts/seed.ts",
     "db:seed-subcategories": "tsx scripts/seedSubcategories.ts",
+    "seed:lgu": "tsx scripts/seedLguBusinesses.ts",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
+    "diagnose:sequence": "node diagnose_business_seq.mjs",
+    "fix:sequence": "node fix_business_sequence.mjs",
+    "fix:all-sequences": "node fix_all_sequences.mjs",
     "test": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vitest run",
     "test:watch": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vitest",
     "test:coverage": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 vitest run --coverage"

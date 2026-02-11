@@ -108,9 +108,9 @@ export const editActivitySchema = z.object({
 export const createBusinessSchema = z.object({
   name: z.string().min(1, 'Business name is required').max(200),
   house_no: z.string().optional(),
-  street: z.string().optional(),
+  street: z.string().optional(), // Optional but used for deduplication if provided
   brgy: z.string().optional(),
-  city: z.string().optional(),
+  city: z.string().min(1, 'City is required'), // City is required for deduplication
   description: z.string().optional(),
   lat: z.number().or(z.string()).nullable().optional(),
   lng: z.number().or(z.string()).nullable().optional(),

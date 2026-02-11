@@ -69,6 +69,7 @@ router.put(
 );
 
 // Get current user's businesses (requires Google auth)
+// Returns both created and claimed businesses
 router.get(
   "/my-businesses",
   authenticateToken,
@@ -77,9 +78,15 @@ router.get(
     try {
       const userId = req.user!.id;
 
+      // Get both created businesses and claimed LGU businesses
       const businesses = await executeWithRetry(() =>
         prisma.business.findMany({
-          where: { user_id: userId },
+          where: {
+            OR: [
+              { user_id: userId },           // Businesses created by user
+              { claimed_by_user_id: userId } // Businesses claimed by user
+            ]
+          },
           include: {
             business_category: true,
             business_hours: true,

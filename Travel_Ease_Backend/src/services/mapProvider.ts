@@ -6,6 +6,7 @@
 import axios from 'axios';
 import mapConfig from '../config/map.js';
 import { createCacheKey, getCache } from './mapCache.js';
+import { mapLogger } from '../lib/logger.js';
 
 const { nominatim, osrm, mapbox, cache: cacheConfig } = mapConfig;
 
@@ -208,12 +209,26 @@ export async function searchPlaces(query: string, options: SearchOptions = {}): 
         params.append('countrycodes', region);
       }
       
-      const response = await axios.get<NominatimResult[]>(
-        `${nominatim.baseUrl}/search?${params}`,
-        { headers: { 'User-Agent': nominatim.userAgent } }
-      );
+      const url = `${nominatim.baseUrl}/search?${params}`;
+      const startTime = Date.now();
       
-      results = response.data.map(r => normalizePlace(r, 'nominatim'));
+      try {
+        const response = await axios.get<NominatimResult[]>(
+          url,
+          { headers: { 'User-Agent': nominatim.userAgent } }
+        );
+        
+        const duration = Date.now() - startTime;
+        mapLogger.debug(
+          { provider: 'nominatim', query, limit, region, duration, resultCount: response.data.length },
+          `Nominatim search succeeded`
+        );
+        
+        results = response.data.map(r => normalizePlace(r, 'nominatim'));
+      } catch (axiosError) {
+        const duration = Date.now() - startTime;
+        throw mapProviderError(axiosError, { provider: 'nominatim', query, duration, url });
+      }
     } else {
       const params = new URLSearchParams({
         access_token: mapbox.accessToken,
@@ -224,17 +239,29 @@ export async function searchPlaces(query: string, options: SearchOptions = {}): 
         params.append('country', region);
       }
       
-      const response = await axios.get<{ features: MapboxFeature[] }>(
-        `${mapbox.baseUrl}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params}`
-      );
+      const url = `${mapbox.baseUrl}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params}`;
+      const startTime = Date.now();
       
-      results = response.data.features.map(r => normalizePlace(r, 'mapbox'));
+      try {
+        const response = await axios.get<{ features: MapboxFeature[] }>(url);
+        
+        const duration = Date.now() - startTime;
+        mapLogger.debug(
+          { provider: 'mapbox', query, limit, region, duration, resultCount: response.data.features.length },
+          `Mapbox search succeeded`
+        );
+        
+        results = response.data.features.map(r => normalizePlace(r, 'mapbox'));
+      } catch (axiosError) {
+        const duration = Date.now() - startTime;
+        throw mapProviderError(axiosError, { provider: 'mapbox', query, duration, url });
+      }
     }
     
     cache.set(key, results, ttl);
     return { data: results, fromCache: false };
   } catch (error) {
-    throw mapProviderError(error);
+    throw error;
   }
 }
 
@@ -398,30 +425,58 @@ interface MapError extends Error {
 /**
  * Transform provider errors to standardized format
  */
-function mapProviderError(error: unknown): MapError {
+function mapProviderError(error: unknown, context?: Record<string, unknown>): MapError {
   const axiosError = error as MapError;
   const status = axiosError.response?.status;
-  const message = axiosError.response?.data?.message || axiosError.message;
+  const responseData = axiosError.response?.data;
+  const message = axiosError.response?.data?.message || axiosError.message || 'Unknown error';
   
-  const err: MapError = new Error(message);
+  // Log full error details for debugging
+  const logContext = {
+    provider: context?.provider,
+    query: context?.query,
+    url: context?.url,
+    duration: context?.duration,
+    status,
+    errorMessage: message,
+    responseData: responseData && typeof responseData === 'object' ? JSON.stringify(responseData).slice(0, 500) : responseData,
+    requestConfig: {
+      method: axiosError.config?.method,
+      url: axiosError.config?.url,
+    },
+  };
   
   if (status === 429) {
+    mapLogger.warn(logContext, 'Map provider rate limit exceeded');
+    const err: MapError = new Error('Map provider rate limit exceeded. Please try again later.');
     err.statusCode = 429;
     err.code = 'RATE_LIMITED';
-    err.message = 'Map provider rate limit exceeded. Please try again later.';
+    return err;
   } else if (status && status >= 500) {
+    mapLogger.error(logContext, `Map provider server error (${status})`);
+    const err: MapError = new Error('Map provider is temporarily unavailable.');
     err.statusCode = 502;
     err.code = 'PROVIDER_ERROR';
-    err.message = 'Map provider is temporarily unavailable.';
+    return err;
   } else if (status === 400) {
+    mapLogger.warn(logContext, 'Invalid map provider request');
+    const err: MapError = new Error(`Invalid search query: ${message}`);
     err.statusCode = 400;
     err.code = 'INVALID_REQUEST';
+    return err;
+  } else if (!status && axiosError.code === 'ECONNREFUSED') {
+    mapLogger.error(logContext, 'Map provider connection refused');
+    const err: MapError = new Error('Unable to connect to map provider. Please try again later.');
+    err.statusCode = 503;
+    err.code = 'PROVIDER_UNAVAILABLE';
+    return err;
   } else {
+    mapLogger.error(logContext, `Map provider error: ${message}`);
+    const err: MapError = new Error(message);
     err.statusCode = status || 500;
     err.code = 'MAP_ERROR';
+    return err;
   }
-  
-  return err;
 }
 
 export default {

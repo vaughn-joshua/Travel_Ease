@@ -51,6 +51,13 @@ enum blog_status {
   Archived
 }
 
+enum BusinessStatus {
+  LGU_REGISTERED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // User and Authentication - Keep lowercase model name from dev
 model user {
   user_id              Int                    @id @default(autoincrement())
@@ -67,7 +74,9 @@ model user {
   has_email_identity   Boolean                @default(false)
   Blog                 Blog[]
   activity             activity[]
-  business             business[]
+  created_businesses   business[]             @relation("created_by")
+  claimed_businesses   business[]             @relation("claimed_by")
+  approved_businesses  business[]             @relation("approved_by")
   business_favorite    business_favorite[]
   business_review      business_review[]
   notification         notification[]
@@ -135,37 +144,49 @@ model activity {
 // Add subcategory relation from hotfix
 /// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
 model business {
-  business_id          Int                 @id @default(autoincrement())
-  user_id              Int?
-  name                 String              @db.VarChar(200)
-  house_number         String?             @db.VarChar(300)
-  street               String?             @db.VarChar(300)
-  brgy                 String?             @db.VarChar(300)
-  city                 String?             @db.VarChar(300)
-  latitude             Float?
-  longtitude           Float?
-  description          String?
-  rating               Decimal?            @db.Decimal(3, 1)
-  google_authenticator String?             @db.VarChar(100)
-  status               Boolean?            @default(false)
-  picture              String?
-  min_price            Int?
-  max_price            Int?
-  activity             activity[]
-  user                 user?               @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  business_category    business_category[]
-  business_favorite    business_favorite[]
-  business_hours       business_hours[]
-  business_review      business_review[]
-  menu_item            menu_item[]
+  business_id         Int             @id @default(autoincrement())
+  user_id             Int?
+  claimed_by_user_id  Int?
+  claimed_at          DateTime?
+  approved_by_user_id Int?
+  approved_at         DateTime?
+  rejection_reason    String?
+  
+  name                String          @db.VarChar(200)
+  house_number        String?         @db.VarChar(300)
+  street              String?         @db.VarChar(300)
+  brgy                String?         @db.VarChar(300)
+  city                String?         @db.VarChar(300)
+  latitude            Float?
+  longtitude          Float?
+  description         String?
+  
+  rating              Decimal?        @db.Decimal(3, 1)
+  google_authenticator String?        @db.VarChar(100)
+  status              BusinessStatus  @default(PENDING)
+  picture             String?
+  min_price           Int?
+  max_price           Int?
+  
+  user                user?           @relation("created_by", fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  claimed_by          user?           @relation("claimed_by", fields: [claimed_by_user_id], references: [user_id], onDelete: SetNull, onUpdate: NoAction)
+  approved_by         user?           @relation("approved_by", fields: [approved_by_user_id], references: [user_id], onDelete: SetNull, onUpdate: NoAction)
+  
+  activity            activity[]
+  business_category   business_category[]
+  business_favorite   business_favorite[]
+  business_hours      business_hours[]
+  business_review     business_review[]
+  menu_item           menu_item[]
 
   @@index([city], map: "idx_business_city")
   @@index([max_price], map: "idx_business_max_price")
   @@index([min_price], map: "idx_business_min_price")
   @@index([rating(sort: Desc)], map: "idx_business_rating")
   @@index([status], map: "idx_business_status")
-  @@index([status, rating(sort: Desc)], map: "idx_business_status_rating")
   @@index([user_id], map: "idx_business_user_id")
+  @@index([claimed_by_user_id], map: "idx_business_claimed_by_user_id")
+  @@index([approved_by_user_id], map: "idx_business_approved_by_user_id")
 }
 
 // Subcategory - From hotfix, but keep lowercase model name

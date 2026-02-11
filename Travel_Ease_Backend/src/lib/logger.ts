@@ -92,6 +92,12 @@ export const httpLogger = logger.child({ module: 'http' });
  */
 export const businessLogger = logger.child({ module: 'business' });
 
+/**
+ * Map provider logger
+ * Use for geocoding, search, and routing operations
+ */
+export const mapLogger = logger.child({ module: 'map' });
+
 // ============================================================================
 // Helper Functions
 // ============================================================================

@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import mapProvider from '../services/mapProvider.js';
 import { mapRateLimiter } from '../middleware/rateLimiter.js';
+import { mapLogger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -46,9 +47,15 @@ router.use(mapRateLimiter);
  * Body: { query, limit?, region? }
  */
 router.post('/search', async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
   try {
     const parsed = searchSchema.safeParse(req.body);
     if (!parsed.success) {
+      mapLogger.debug(
+        { body: req.body, errors: parsed.error.flatten().fieldErrors },
+        'Invalid POST /search request'
+      );
       return res.status(400).json({
         error: 'Invalid request',
         details: parsed.error.flatten().fieldErrors,
@@ -56,11 +63,28 @@ router.post('/search', async (req: Request, res: Response) => {
     }
 
     const { query, limit, region } = parsed.data;
+    
+    mapLogger.debug(
+      { query, limit, region },
+      `POST /search request: searching for places`
+    );
+    
     const result = await mapProvider.searchPlaces(query, { limit, region });
+    const duration = Date.now() - startTime;
 
+    mapLogger.info(
+      { query, limit, region, resultCount: result.data.length, fromCache: result.fromCache, duration },
+      `POST /search completed successfully`
+    );
+    
     res.set('X-Cache', result.fromCache ? 'HIT' : 'MISS');
     res.json({ places: result.data });
   } catch (error) {
+    const duration = Date.now() - startTime;
+    mapLogger.error(
+      { error: error instanceof Error ? error.message : String(error), duration, body: req.body },
+      'POST /search failed'
+    );
     handleMapError(error, res);
   }
 });
@@ -256,13 +280,19 @@ interface MapError extends Error {
  */
 function handleMapError(error: unknown, res: Response) {
   const mapError = error as MapError;
-  console.error('Map API error:', mapError.message);
   
   const statusCode = mapError.statusCode || 500;
   const code = mapError.code || 'MAP_ERROR';
+  const message = mapError.message || 'Map service error';
+  
+  // Detailed error logging already happened in mapProvider.ts, just log the response here
+  mapLogger.debug(
+    { statusCode, code, message },
+    'Sending error response to client'
+  );
   
   res.status(statusCode).json({
-    error: mapError.message || 'Map service error',
+    error: message,
     code,
   });
 }
