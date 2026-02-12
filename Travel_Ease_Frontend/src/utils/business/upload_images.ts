@@ -1,6 +1,6 @@
 import api from "../../services/api";
 
-interface UploadResponse {
+export interface UploadResponse {
   urls?: string[];
   secure_url?: string[];
   error?: string;

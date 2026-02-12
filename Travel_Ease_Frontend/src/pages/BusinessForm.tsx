@@ -7,6 +7,7 @@ import api, {
   getApiErrorMessage,
 } from "../services/api";
 import RegisterMap from "../components/business/RegisterMap";
+import BusinessMatchModal from "../components/business/BusinessMatchModal";
 import {
   upload_images,
   UploadResponse,
@@ -101,6 +102,12 @@ export default function BusinessForm() {
   const [successMessage, setSuccessMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState("");
+  
+  // Business match modal state
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [searchingMatches, setSearchingMatches] = useState(false);
+  const [claimedBusinessId, setClaimedBusinessId] = useState<number | null>(null);
   
   // Map-related state
   const [locationSearch, setLocationSearch] = useState("");
@@ -397,15 +404,79 @@ export default function BusinessForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError("");
-    setSuccessMessage("");
+  /**
+   * Search for matching businesses by name
+   * Shows a modal if matches are found for user to confirm
+   */
+  const searchForMatches = async (): Promise<boolean> => {
+    setSearchingMatches(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setSubmitError("Please log in to continue");
+        return false;
+      }
 
-    if (!validate()) return;
+      // Call the search endpoint
+      const response = await api.post(
+        "/business/search-matches",
+        {
+          name: formData.name.trim(),
+          city: formData.city.trim(),
+          brgy: formData.brgy.trim(),
+          street: formData.street.trim(),
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
+      const foundMatches = response.data.matches || [];
+      
+      if (foundMatches.length > 0) {
+        // Show modal for user to confirm match
+        setMatches(foundMatches);
+        setShowMatchModal(true);
+        return false; // Don't proceed with submission yet
+      }
+      
+      // No matches found - proceed with Case A
+      return true;
+    } catch (error) {
+      console.error("Search error:", error);
+      const errorMsg = getApiErrorMessage(error);
+      setSubmitError(`Error searching for matching businesses: ${errorMsg}`);
+      return false;
+    } finally {
+      setSearchingMatches(false);
+    }
+  };
+
+  /**
+   * Handle modal confirmation - user selected a business to claim
+   */
+  const handleMatchConfirm = (business: any) => {
+    setClaimedBusinessId(business.business_id);
+    setShowMatchModal(false);
+    // Proceed with submission using claimed_business_id
+    setTimeout(() => proceedWithSubmit(business.business_id), 100);
+  };
+
+  /**
+   * Handle modal denial - user says this is a different business
+   */
+  const handleMatchDeny = () => {
+    setShowMatchModal(false);
+    setClaimedBusinessId(null);
+    // Proceed with submission as Case A (new business)
+    setTimeout(() => proceedWithSubmit(null), 100);
+  };
+
+  /**
+   * Proceed with the actual business creation/claim after modal interaction
+   */
+  const proceedWithSubmit = async (claimedId: number | null) => {
     setSubmitting(true);
-
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -435,6 +506,7 @@ export default function BusinessForm() {
           .map((h) => ({ day: h.day, start: h.start, end: h.end })),
         min_price: formData.priceMin ? parseInt(formData.priceMin) : 0,
         max_price: formData.priceMax ? parseInt(formData.priceMax) : 0,
+        ...(claimedId && { claimed_business_id: claimedId }), // Add if claiming
       };
 
       let result;
@@ -444,7 +516,12 @@ export default function BusinessForm() {
         result = await businessApi.createBusiness(payload);
       }
 
-      setSuccessMessage(isEdit ? "Business updated!" : "Business created!");
+      const isClaim = result.isClaim || false;
+      setSuccessMessage(
+        isClaim 
+          ? "Business claimed successfully! Awaiting admin approval." 
+          : "Business registered successfully! Awaiting admin approval."
+      );
 
       setTimeout(() => {
         navigate(`/businesses/${result.business_id || id}`);
@@ -452,15 +529,15 @@ export default function BusinessForm() {
     } catch (err: unknown) {
       console.error("Submit error:", err);
       
-      // Handle Google auth required error with specific messaging
+      // Handle Google auth required error
       if (isGoogleAuthRequiredError(err)) {
         setSubmitError(
-          "Business creation requires signing in with Google. Please sign out and sign in with your Google account to continue."
+          "Business registration requires signing in with Google. Please sign out and sign in with your Google account to continue."
         );
+        setSubmitting(false);
         return;
       }
       
-      // Handle axios error response
       let errorMessage = getApiErrorMessage(err);
       
       // Check for validation errors
@@ -475,6 +552,24 @@ export default function BusinessForm() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError("");
+    setSuccessMessage("");
+
+    if (!validate()) return;
+
+    if (isEdit) {
+      // For edit mode, skip search and go direct to submission
+      proceedWithSubmit(null);
+      return;
+    }
+
+    // Step 1: Search for matching businesses (only for new registrations)
+    await searchForMatches();
+    // Modal will handle the rest - either user confirms a match or denies it
   };
 
   const formatCategoryName = (name: string) => {
@@ -495,6 +590,15 @@ export default function BusinessForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      {/* Business Match Modal */}
+      <BusinessMatchModal
+        isOpen={showMatchModal}
+        matches={matches}
+        onConfirm={handleMatchConfirm}
+        onDeny={handleMatchDeny}
+        isLoading={searchingMatches}
+      />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -1219,6 +1323,15 @@ export default function BusinessForm() {
             </div>
           </div>
         </form>
+
+        {/* Business Match Modal */}
+        <BusinessMatchModal
+          isOpen={showMatchModal}
+          matches={matches}
+          onConfirm={handleMatchConfirm}
+          onDeny={handleMatchDeny}
+          isLoading={searchingMatches}
+        />
       </div>
     </div>
   );

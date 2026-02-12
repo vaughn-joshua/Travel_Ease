@@ -6,6 +6,7 @@
  */
 
 import businessRoutes from './businessRoutes.js';
+import businessSearchRoutes from './businessSearchRoutes.js';
 import travelPlanRoutes from './travelPlanRoutes.js';
 import userRoutes from './userRoutes.js';
 import mapRoutes from './mapRoutes.js';
@@ -28,6 +29,7 @@ export const notification_routes = notificationRoutes;
 // New exports with camelCase naming
 export {
   businessRoutes,
+  businessSearchRoutes,
   travelPlanRoutes,
   userRoutes,
   mapRoutes,

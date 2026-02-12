@@ -163,22 +163,94 @@ export async function create_business(req: Request, res: Response) {
     category,
     min_price,
     max_price,
+    claimed_business_id, // Optional: passed when user explicitly claimed a business from the modal
   } = req.body;
 
   const userId = req.user!.id;
 
   try {
-    // Step 2: Check for matching business
+    // Case B: User explicitly selected a business to claim from the modal
+    if (claimed_business_id) {
+      businessLogger.debug(
+        { userId, name, claimed_business_id },
+        'Explicit claim request received'
+      );
+
+      // Fetch the business to verify it exists and is LGU-owned
+      const businessToClaim = await prisma.business.findUnique({
+        where: { business_id: claimed_business_id },
+        select: {
+          business_id: true,
+          name: true,
+          user_id: true,
+          claimed_by_user_id: true,
+          status: true
+        }
+      });
+
+      if (!businessToClaim) {
+        businessLogger.warn(
+          { userId, claimed_business_id },
+          'Attempted to claim non-existent business'
+        );
+        return res.status(404).json({
+          error: "Business not found",
+          code: "BUSINESS_NOT_FOUND"
+        });
+      }
+
+      // Verify it's LGU-owned
+      if (businessToClaim.user_id !== LGU_ADMIN_ID) {
+        businessLogger.warn(
+          { userId, claimed_business_id, owner: businessToClaim.user_id },
+          'Attempted to claim non-LGU business'
+        );
+        return res.status(409).json({
+          error: "This business cannot be claimed (not LGU-owned)",
+          code: "NOT_LGU_BUSINESS"
+        });
+      }
+
+      // Check if already claimed by someone else (Case D - higher priority check)
+      if (businessToClaim.claimed_by_user_id !== null && businessToClaim.claimed_by_user_id !== userId) {
+        businessLogger.warn(
+          { userId, claimed_business_id, claimed_by: businessToClaim.claimed_by_user_id },
+          'Attempted to claim already-claimed business'
+        );
+        return res.status(409).json({
+          error: "This business has already been claimed by another user",
+          code: "BUSINESS_ALREADY_CLAIMED"
+        });
+      }
+
+      // Perform the claim
+      const claimed = await prisma.$transaction(async (tx) => {
+        return claimLguBusiness(claimed_business_id, userId, tx);
+      });
+
+      businessLogger.info(
+        { business_id: claimed_business_id, user_id: userId, name: businessToClaim.name },
+        'Business claimed successfully by user'
+      );
+
+      return res.status(201).json({
+        message: "Business claimed successfully. Awaiting admin approval.",
+        business_id: claimed.business_id,
+        status: claimed.status,
+        isClaim: true
+      });
+    }
+
+    // Case A: User is registering a new business (or denying a modal match)
     const matchingBusiness = await findMatchingBusiness(name, city, street);
 
     businessLogger.debug(
-      { userId, name, city, matchingBusiness: matchingBusiness ? { business_id: matchingBusiness.business_id, user_id: matchingBusiness.user_id } : null },
+      { userId, name, city, claimed_business_id: null, matchingBusiness: matchingBusiness ? { business_id: matchingBusiness.business_id, user_id: matchingBusiness.user_id } : null },
       'Deduplication check result'
     );
 
-    // Step 3: Decision tree
     if (!matchingBusiness) {
-      // Case A: No existing match - Create new business
+      // No match found - Create new business
       const result = await prisma.$transaction(async (tx) => {
         return createNewBusiness({
           name,
@@ -198,6 +270,11 @@ export async function create_business(req: Request, res: Response) {
         }, tx);
       });
 
+      businessLogger.info(
+        { business_id: result.business_id, userId, name, status: 'Case A - new' },
+        'New business registered'
+      );
+
       return res.status(201).json({
         message: "Business registered successfully. Awaiting admin approval.",
         business_id: result.business_id,
@@ -206,31 +283,25 @@ export async function create_business(req: Request, res: Response) {
       });
     }
 
-    // Case B: Match found, owned by LGU
-    if (matchingBusiness.user_id === LGU_ADMIN_ID) {
-      // Allow user to claim this LGU business
-      const claimed = await prisma.$transaction(async (tx) => {
-        return claimLguBusiness(matchingBusiness.business_id, userId, tx);
-      });
-
-      businessLogger.info(
-        { business_id: matchingBusiness.business_id, user_id: userId, name },
-        'Business claimed by user'
+    // Match found - evaluate ownership
+    // Case D (PRIORITY): Already claimed by another user
+    if (matchingBusiness.claimed_by_user_id !== null && matchingBusiness.claimed_by_user_id !== userId) {
+      businessLogger.warn(
+        { business_id: matchingBusiness.business_id, claimed_by: matchingBusiness.claimed_by_user_id, user_id: userId, name },
+        'Case D: User attempted to claim business already claimed by another user'
       );
 
-      return res.status(201).json({
-        message: "Business claimed successfully. Awaiting admin approval.",
-        business_id: claimed.business_id,
-        status: claimed.status,
-        isClaim: true
+      return res.status(409).json({
+        error: "This business has already been claimed by another user",
+        code: "BUSINESS_ALREADY_CLAIMED"
       });
     }
 
-    // Case C: Match found, owned by current user
+    // Case C: Owned by current user
     if (matchingBusiness.user_id === userId) {
       businessLogger.warn(
         { business_id: matchingBusiness.business_id, user_id: userId, name },
-        'User attempted to register duplicate business they already own'
+        'Case C: User attempted to register duplicate business they already own'
       );
 
       return res.status(409).json({
@@ -239,16 +310,16 @@ export async function create_business(req: Request, res: Response) {
       });
     }
 
-    // Case D: Match found, already claimed by another user
-    if (matchingBusiness.claimed_by_user_id !== null) {
+    // Case B: Owned by LGU (shouldn't normally reach here if modal was used, but handle it)
+    if (matchingBusiness.user_id === LGU_ADMIN_ID) {
       businessLogger.warn(
-        { business_id: matchingBusiness.business_id, claimed_by: matchingBusiness.claimed_by_user_id, user_id: userId, name },
-        'User attempted to claim business already claimed by another user'
+        { business_id: matchingBusiness.business_id, user_id: userId, name },
+        'Case B: Implicit claim (user checked but skipped modal) - denying registration'
       );
 
       return res.status(409).json({
-        error: "This business has already been claimed by another user",
-        code: "BUSINESS_ALREADY_CLAIMED"
+        error: "This business exists and should be claimed through the match confirmation. Please try again and confirm the match.",
+        code: "MUST_CLAIM_MATCH"
       });
     }
 

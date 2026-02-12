@@ -7,6 +7,7 @@ import {
   configRoutes,
   utilsRoutes,
   businessRoutes,
+  businessSearchRoutes,
   mapRoutes,
   reviewRoutes,
   notificationRoutes,
@@ -94,6 +95,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/utils", utilsRoutes);
 app.use("/api/config", configRoutes);
 app.use("/api/business", businessRoutes);
+app.use("/api/business", businessSearchRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/map", mapRoutes);
