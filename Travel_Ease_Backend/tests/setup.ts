@@ -3,7 +3,7 @@
  */
 
 import { beforeAll, afterAll } from 'vitest';
-import type { User } from '@prisma/client';
+import type { user } from '@prisma/client';
 
 // ============================================
 // Load environment variables from .env FIRST
@@ -46,10 +46,11 @@ interface CreateTestUserData {
   auth_provider?: 'password' | 'google';
   has_email_identity?: boolean;
   profile_completed?: boolean;
+  role?: 'USER' | 'TRAVEL_AGENCY' | 'SUPER_ADMIN' | 'LGU_ADMIN' | 'BUSINESS_OWNER';
 }
 
 interface TestUserResult {
-  user: User;
+  user: user;
   token: string;
 }
 
@@ -60,7 +61,7 @@ interface TestUserResult {
 export async function createTestUser(userData: CreateTestUserData = {}): Promise<TestUserResult> {
   const bcrypt = await import('bcryptjs');
   const jwt = await import('jsonwebtoken');
-  
+
   const hashedPassword = await bcrypt.default.genSalt(10).then(salt =>
     bcrypt.default.hash(userData.password || 'testpass123', salt)
   );
@@ -79,6 +80,7 @@ export async function createTestUser(userData: CreateTestUserData = {}): Promise
       auth_provider: authProvider,
       has_email_identity: hasEmailIdentity,
       profile_completed: userData.profile_completed ?? true, // Default to true for backward compatibility
+      role: userData.role || 'USER',
     }
   });
 
@@ -93,18 +95,9 @@ export async function createTestUser(userData: CreateTestUserData = {}): Promise
 
 // Helper to clean up test data
 export async function cleanupTestData(): Promise<void> {
-  // Delete in reverse order of dependencies
-  await prisma.participant.deleteMany();
-  await prisma.activity.deleteMany();
-  await prisma.travel_plan_favorite.deleteMany();
-  await prisma.travel_plan_review.deleteMany();
+  // Delete top-level entities - DB Cascade should handle children
+  // Order matters: delete plans first (which contain activities linking to businesses)
   await prisma.travel_plan.deleteMany();
-  await prisma.businessReview.deleteMany();
-  await prisma.businessFavorite.deleteMany();
-  // Note: priceRange table removed - prices now stored directly on business table
-  await prisma.businessCategory.deleteMany();
-  await prisma.businessHours.deleteMany();
-  await prisma.menu_item.deleteMany();
   await prisma.business.deleteMany();
   // Don't delete users in case they're needed across tests
 }

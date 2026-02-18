@@ -58,6 +58,14 @@ enum BusinessStatus {
   REJECTED
 }
 
+enum user_role {
+  SUPER_ADMIN
+  LGU_ADMIN
+  BUSINESS_OWNER
+  TRAVEL_AGENCY
+  USER
+}
+
 // User and Authentication - Keep lowercase model name from dev
 model user {
   user_id              Int                    @id @default(autoincrement())
@@ -72,6 +80,7 @@ model user {
   auth_provider        String?                @db.VarChar(50)
   profile_completed    Boolean?               @default(false)
   has_email_identity   Boolean                @default(false)
+  role                 user_role?
   Blog                 Blog[]
   activity             activity[]
   created_businesses   business[]             @relation("created_by")

@@ -99,6 +99,34 @@ export function useUpdateBusiness() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// useSetBusinessStatus
+// Admin-only mutation to set a business status (APPROVED, REJECTED, PENDING, LGU_REGISTERED).
+// Invalidates the specific business detail, lists, and travel spots on success.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useSetBusinessStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      status,
+      rejection_reason,
+    }: {
+      id: string | number;
+      status: "APPROVED" | "REJECTED" | "PENDING" | "LGU_REGISTERED";
+      rejection_reason?: string;
+    }) => businessApi.setBusinessStatus(id, status, rejection_reason),
+    onSuccess: (_, { id }) => {
+      // Invalidate the specific business detail
+      queryClient.invalidateQueries({ queryKey: businessKeys.detail(id) });
+      // Invalidate lists as the business status changes visibility/sorting
+      queryClient.invalidateQueries({ queryKey: businessKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: businessKeys.travelSpots() });
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // useCreateMenuItem
 // Creates a new menu item for a business.
 // Invalidates the menu query on success.

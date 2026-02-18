@@ -263,6 +263,14 @@ model travel_plan_review {
   @@index([user_id], map: "idx_travel_plan_review_user_id")
 }
 
+enum user_role {
+  SUPER_ADMIN
+  LGU_ADMIN
+  BUSINESS_OWNER
+  TRAVEL_AGENCY
+  USER
+}
+
 model user {
   user_id              Int                    @id @default(autoincrement())
   auth_id              String?                @unique @db.Uuid
@@ -276,6 +284,7 @@ model user {
   auth_provider        String?                @db.VarChar(50)
   profile_completed    Boolean?               @default(false)
   has_email_identity   Boolean                @default(false)
+  role                 user_role?
   Blog                 Blog[]
   activity             activity[]
   business             business[]

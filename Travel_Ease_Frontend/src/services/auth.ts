@@ -41,6 +41,7 @@ export interface AuthUser {
   auth_provider?: AuthProvider;
   has_email_identity?: boolean;  // True if user can log in with email+password
   profile_completed?: boolean;
+  role?: string;  // User role: SUPER_ADMIN, LGU_ADMIN, BUSINESS_OWNER, TRAVEL_AGENCY, USER
   created_at?: string;
 }
 
@@ -121,7 +122,7 @@ export const authApi = {
    * Requires user to have set a password first
    */
   async disconnectGoogle(password: string) {
-    const { data } = await api.post<{ message: string; auth_provider: AuthProvider }>(
+    const { data } = await api.post<{ message: string; user?: { auth_provider: AuthProvider } }>(
       "/user/disconnect-google",
       { password }
     );
@@ -133,7 +134,7 @@ export const authApi = {
    * Uses backend admin API to create email identity
    */
   async setPassword(password: string) {
-    const { data } = await api.post<{ message: string; has_email_identity: boolean }>(
+    const { data } = await api.post<{ message: string; has_email_identity: boolean; user?: AuthUser }>(
       "/user/set-password",
       { password }
     );

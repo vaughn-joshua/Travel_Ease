@@ -75,7 +75,7 @@ export async function plan_edit(req: Request, res: Response) {
     // Simple field updates
     if (description !== undefined) updateData.description = description;
     if (location !== undefined) updateData.location = location;
-    
+
     // Validate max_slots against current approved participants
     if (max_slots !== undefined) {
       const newMaxSlots = max_slots === null ? null : parseInt(max_slots);
@@ -87,25 +87,25 @@ export async function plan_edit(req: Request, res: Response) {
       }
       updateData.max_slots = newMaxSlots;
     }
-    
+
     // Validate date range
     const newStartDate = start_date !== undefined ? (start_date ? new Date(start_date) : null) : currentPlan.start_date;
     const newEndDate = end_date !== undefined ? (end_date ? new Date(end_date) : null) : currentPlan.end_date;
-    
+
     if (newStartDate && newEndDate && newStartDate > newEndDate) {
       return res.status(400).json({
         error: "Invalid date range",
         details: "Start date must be before or equal to end date"
       });
     }
-    
+
     if (start_date !== undefined) updateData.start_date = start_date ? new Date(start_date) : null;
     if (end_date !== undefined) updateData.end_date = end_date ? new Date(end_date) : null;
 
     // Status update with related changes
     if (status !== undefined) {
       updateData.status = status;
-      
+
       // When completing or cancelling, turn off visibility
       if (status === 'Completed' || status === 'Cancelled') {
         updateData.visibility = false;
@@ -114,12 +114,19 @@ export async function plan_edit(req: Request, res: Response) {
 
     // Visibility update with timestamp management
     if (visibility !== undefined) {
-      updateData.visibility = visibility;
-      
-      // Set visibility_timestamp when making visible
-      if (visibility === true && currentPlan.visibility === false) {
+      if (visibility === true && currentPlan.visibility !== true) {
+        // Only Travel Agencies can make plans public
+        if (req.user?.role !== 'TRAVEL_AGENCY') {
+          return res.status(403).json({
+            error: "Permission denied",
+            details: "Only users with Travel Agency role can make plans public"
+          });
+        }
         updateData.visibility_timestamp = new Date();
       }
+
+      updateData.visibility = visibility;
+
       // Clear visibility_timestamp when hiding
       if (visibility === false && currentPlan.visibility === true) {
         updateData.visibility_timestamp = null;
@@ -154,22 +161,22 @@ export async function plan_edit(req: Request, res: Response) {
                 target_date: null
               }
             });
-        } else {
-          // Get plan owner for user_id
-          const plan = await tx.travel_plan.findUnique({
-            where: { travel_plan_id: planId },
-            select: { user_id: true }
-          });
-          await tx.activity.create({
-            data: {
-              travel_plan_id: planId,
-              business_id: accommodation_id,
-              is_accommodation: true,
-              target_date: null,
-              user_id: plan?.user_id ?? null
-            }
-          });
-        }
+          } else {
+            // Get plan owner for user_id
+            const plan = await tx.travel_plan.findUnique({
+              where: { travel_plan_id: planId },
+              select: { user_id: true }
+            });
+            await tx.activity.create({
+              data: {
+                travel_plan_id: planId,
+                business_id: accommodation_id,
+                is_accommodation: true,
+                target_date: null,
+                user_id: plan?.user_id ?? null
+              }
+            });
+          }
         }
       });
     }
@@ -188,12 +195,12 @@ export async function plan_edit(req: Request, res: Response) {
       invalidateCachePattern(`travel_plans:upcoming:${userId}`),
       invalidateCachePattern(`travel_plans:ongoing:${userId}`),
     ];
-    
+
     // If visibility or status changed, also invalidate public plans cache
     if (visibility !== undefined || status !== undefined) {
       cacheInvalidations.push(invalidateCachePattern('travel_plans:public:'));
     }
-    
+
     await Promise.all(cacheInvalidations);
 
     const response = {
@@ -208,7 +215,7 @@ export async function plan_edit(req: Request, res: Response) {
         end_date: updatedPlan.end_date
       }
     };
-    
+
     res.status(200).json(response);
   } catch (error) {
     return handlePrismaError(error, res, 'Editing plan');

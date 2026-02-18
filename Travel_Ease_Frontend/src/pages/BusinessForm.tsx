@@ -78,7 +78,7 @@ const initialFormData: FormData = {
   houseNumber: "",
   street: "",
   brgy: "",
-  city: "Tagaytay",
+  city: "Tagaytay City",
   lat: null,
   lng: null,
 };
@@ -146,7 +146,7 @@ export default function BusinessForm() {
         houseNumber: data.location?.address?.split(",")[0] || "",
         street: data.location?.address?.split(",")[1] || "",
         brgy: data.location?.address?.split(",")[2] || "",
-        city: data.location?.address?.split(",")[3] || "Tagaytay",
+        city: data.location?.address?.split(",")[3] || "Tagaytay City",
         lat: data.location?.lat || null,
         lng: data.location?.lng || null,
       });
@@ -1048,13 +1048,13 @@ export default function BusinessForm() {
                     type="text"
                     name="city"
                     value={formData.city}
-                    onChange={handleChange}
+                    readOnly
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red ${
                       errors.city
                         ? "border-red-500 bg-red-50"
                         : "border-gray-300"
                     }`}
-                    placeholder="Tagaytay"
+                    placeholder="Tagaytay City"
                   />
                   {errors.city && (
                     <p className="mt-1 text-sm text-red-600">{errors.city}</p>

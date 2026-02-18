@@ -55,6 +55,7 @@ export interface AuthUser {
   auth_provider?: AuthProvider;
   has_email_identity?: boolean;  // True if user can log in with email+password
   profile_completed?: boolean;
+  role?: string;  // user_role enum: SUPER_ADMIN, LGU_ADMIN, BUSINESS_OWNER, TRAVEL_AGENCY, USER
 }
 
 /** OAuth sync response DTO */
@@ -76,6 +77,7 @@ export interface AuthUserDTO {
   auth_provider?: AuthProvider;
   has_email_identity?: boolean;  // True if user can log in with email+password
   profile_completed?: boolean;
+  role?: string;  // user_role enum: SUPER_ADMIN, LGU_ADMIN, BUSINESS_OWNER, TRAVEL_AGENCY, USER
 }
 
 /** Login response DTO */

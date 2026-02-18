@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import {
   authenticateToken,
 } from "../middleware/auth.js";
+import { requireRole } from "../middleware/roles.js";
 import { requireBusinessOwnership } from "../middleware/ownership.js";
 import { requireGoogleAuth } from "../middleware/requireGoogleAuth.js";
 import {
@@ -382,6 +383,171 @@ router.get("/search", async (req: Request, res: Response) => {
     return handlePrismaError(error, res, "Searching businesses");
   }
 });
+
+// Admin-only endpoint to get pending business registrations
+// Restricted to SUPER_ADMIN and LGU_ADMIN roles
+router.get(
+  "/pending-registrations",
+  authenticateToken,
+  requireRole("SUPER_ADMIN", "LGU_ADMIN"),
+  async (req: Request, res: Response) => {
+    try {
+      const { page = "1", pageSize = "20" } = req.query;
+      const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+      const pageSizeNum = Math.max(1, Math.min(100, parseInt(pageSize as string, 10) || 20));
+      const skip = (pageNum - 1) * pageSizeNum;
+
+      // Fetch pending business registrations
+      const [registrations, total] = await executeWithRetry(() =>
+        Promise.all([
+          prisma.business.findMany({
+            where: {
+              status: "PENDING",
+            },
+            include: {
+              business_category: true,
+              business_hours: true,
+            },
+            orderBy: { business_id: "desc" },
+            skip,
+            take: pageSizeNum,
+          }),
+          prisma.business.count({
+            where: { status: "PENDING" },
+          }),
+        ])
+      );
+
+      const totalPages = Math.ceil(total / pageSizeNum);
+
+      res.json({
+        message: "Success",
+        data: registrations,
+        pagination: {
+          page: pageNum,
+          pageSize: pageSizeNum,
+          total,
+          totalPages,
+        },
+      });
+    } catch (error) {
+      businessLogger.error({ err: error }, "Error fetching pending business registrations");
+      return handlePrismaError(error, res, "Fetching pending registrations");
+    }
+  }
+);
+
+// Admin-only endpoint to set business status
+// Restricted to SUPER_ADMIN and LGU_ADMIN roles
+router.patch(
+  "/status/:id",
+  authenticateToken,
+  requireRole("SUPER_ADMIN", "LGU_ADMIN"),
+  async (req: Request, res: Response) => {
+    try {
+      const businessId = parseInt(req.params.id, 10);
+      const { status, rejection_reason } = req.body;
+      const adminUserId = req.user!.id;
+
+      // Validate status is a valid enum value
+      const validStatuses = ["LGU_REGISTERED", "PENDING", "APPROVED", "REJECTED"];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({
+          error: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+        });
+      }
+
+      // Fetch the business to get owner info for notifications
+      const business = await executeWithRetry(() =>
+        prisma.business.findUnique({
+          where: { business_id: businessId },
+          select: { user_id: true, name: true },
+        })
+      );
+
+      if (!business) {
+        return res.status(404).json({ error: "Business not found" });
+      }
+
+      // Prepare update data
+      const updateData: any = { status };
+
+      if (status === "APPROVED") {
+        updateData.approved_by_user_id = adminUserId;
+        updateData.approved_at = new Date();
+        updateData.rejection_reason = null;
+      } else if (status === "REJECTED") {
+        updateData.rejection_reason = rejection_reason || "Rejected by admin";
+        updateData.approved_by_user_id = null;
+        updateData.approved_at = null;
+      } else {
+        // For other statuses, clear approval data
+        updateData.approved_by_user_id = null;
+        updateData.approved_at = null;
+        updateData.rejection_reason = null;
+      }
+
+      // Update the business
+      const updatedBusiness = await executeWithRetry(() =>
+        prisma.business.update({
+          where: { business_id: businessId },
+          data: updateData,
+        })
+      );
+
+      // Create a notification for the business owner
+      if (business.user_id) {
+        try {
+          const notificationTitle =
+            status === "APPROVED"
+              ? "Business Approved"
+              : status === "REJECTED"
+              ? "Business Rejected"
+              : `Status Changed to ${status}`;
+
+          let notificationMessage = "";
+          if (status === "APPROVED") {
+            notificationMessage = `Your business "${business.name}" has been approved and is now visible to users.`;
+          } else if (status === "REJECTED") {
+            notificationMessage = `Your business "${business.name}" was rejected. Reason: ${updateData.rejection_reason}`;
+          } else {
+            notificationMessage = `Your business "${business.name}" status has been changed to ${status}.`;
+          }
+
+          await executeWithRetry(() =>
+            prisma.notification.create({
+              data: {
+                user_id: business.user_id,
+                type: "business_status_change",
+                title: notificationTitle,
+                message: notificationMessage,
+                is_read: false,
+              },
+            })
+          );
+        } catch (notificationError) {
+          businessLogger.warn(
+            { err: notificationError },
+            "Failed to create notification for business status change"
+          );
+          // Don't fail the request if notification creation fails
+        }
+      }
+
+      // Invalidate relevant caches
+      invalidateCachePattern("business:");
+      invalidateCachePattern("travel_spots");
+
+      res.json({
+        message: `Business status updated to ${status}`,
+        data: updatedBusiness,
+      });
+    } catch (error) {
+      businessLogger.error({ err: error }, "Error updating business status");
+      return handlePrismaError(error, res, "Updating business status");
+    }
+  }
+);
 
 export default router;
 

@@ -107,20 +107,20 @@ api.interceptors.response.use(
     // - ACCOUNT_NOT_REGISTERED: user needs to register
     // - OAUTH_EMAIL_MISSING: OAuth provider didn't return email
     // - GOOGLE_AUTH_REQUIRED: user needs to sign in with Google for this action
-    const isUserFlowError = 
-      code === "ACCOUNT_NOT_REGISTERED" || 
+    const isUserFlowError =
+      code === "ACCOUNT_NOT_REGISTERED" ||
       code === "OAUTH_EMAIL_MISSING" ||
       code === "GOOGLE_AUTH_REQUIRED";
-    
+
     if (isAuthError(error) && !isDbUnavailable && !isUserFlowError) {
       // Attempt auth recovery (reload page) - this is one-shot per session
       handleAuthRecovery(error);
     }
 
     // Only log detailed errors in development (skip abort errors and expected auth errors)
-    const isExpectedAuthError = (status === 401 || status === 403) && 
+    const isExpectedAuthError = (status === 401 || status === 403) &&
       (code === "TOKEN_EXPIRED" || code === "AUTH_REQUIRED" || !code);
-    
+
     if (import.meta.env.DEV && !isExpectedAuthError) {
       console.error("API Error:", {
         status,
@@ -449,6 +449,50 @@ export const businessApi = {
     await api.delete(`/business/delete_business/${id}`);
   },
 
+  // Admin-only: Set business status
+  setBusinessStatus: async (
+    id: string | number,
+    status: "APPROVED" | "REJECTED" | "PENDING" | "LGU_REGISTERED",
+    rejection_reason?: string
+  ): Promise<{ message: string; data: any }> => {
+    const response = await api.patch(`/business/status/${id}`, {
+      status,
+      rejection_reason,
+    });
+    return response.data;
+  },
+
+  // Admin-only: Get pending business registrations
+  getPendingRegistrations: async (page?: number, pageSize?: number): Promise<{
+    message: string;
+    data: Array<{
+      business_id: number;
+      name: string;
+      description: string | null;
+      city: string;
+      brgy: string | null;
+      street: string | null;
+      house_number: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      status: string;
+      created_at?: string;
+      business_category?: Array<{ category_id: number; category_name: string }>;
+      business_hours?: Array<any>;
+    }>;
+    pagination: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+    };
+  }> => {
+    const response = await api.get("/business/pending-registrations", {
+      params: { page: page || 1, pageSize: pageSize || 20 },
+    });
+    return response.data;
+  },
+
   // Get current user's businesses
   getMyBusinesses: async (): Promise<{
     data: Array<{
@@ -572,6 +616,18 @@ export const userApi = {
     travel_plan_id?: number;
   }): Promise<any> => {
     const response = await api.delete("/user/favorite", { data });
+    return response.data;
+  },
+
+  // Change a user's role (admin only)
+  changeUserRole: async (userId: string | number, role: string): Promise<{ user_id: number; role: string }> => {
+    const response = await api.put(`/user/admin/users/${userId}/role`, { role });
+    return response.data;
+  },
+
+  // Upgrade current user to Travel Agency
+  upgradeToAgency: async (): Promise<{ message: string; user: AuthUser }> => {
+    const response = await api.post("/user/upgrade-to-agency");
     return response.data;
   },
 };

@@ -28,6 +28,8 @@ export interface AppUser {
   hasPassword?: boolean;
   /** How the user authenticated */
   source: AuthSource;
+  /** User role: SUPER_ADMIN, LGU_ADMIN, BUSINESS_OWNER, TRAVEL_AGENCY, USER */
+  role?: string;
 }
 
 interface AuthContextType {
@@ -109,6 +111,7 @@ const mapApiUser = (user: AuthUser, source?: AuthSource): AppUser => {
     // hasPassword: true if user can log in with email+password
     // Derive from has_email_identity or auth_provider if not set
     hasPassword: user.has_email_identity ?? (user.auth_provider === "password"),
+    role: user.role,
     source: authSource,
   };
 };

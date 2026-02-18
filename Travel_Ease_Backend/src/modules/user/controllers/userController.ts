@@ -12,7 +12,7 @@ export async function register(req: Request, res: Response) {
 
     // Require Supabase configuration
     if (!isSupabaseConfigured()) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Authentication service unavailable',
         details: 'Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
       });
@@ -63,7 +63,7 @@ export async function register(req: Request, res: Response) {
       })
     );
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'User registered successfully',
       user: {
         user_id: user.user_id,
@@ -75,6 +75,7 @@ export async function register(req: Request, res: Response) {
         auth_provider: 'password',
         has_email_identity: true,
         profile_completed: true,
+        role: user.role,
       },
       supabase_user_id: data.user.id
     });
@@ -90,7 +91,7 @@ export async function login(req: Request, res: Response) {
 
     // Require Supabase configuration
     if (!isSupabaseConfigured()) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Authentication service unavailable',
         details: 'Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
       });
@@ -119,7 +120,7 @@ export async function login(req: Request, res: Response) {
           contact_no: true,
           auth_provider: true,
           has_email_identity: true,
-          profile_completed: true,
+          profile_completed: true, role: true,
         }
       })
     );
@@ -140,6 +141,7 @@ export async function login(req: Request, res: Response) {
         auth_provider: user.auth_provider ?? 'password',
         has_email_identity: user.has_email_identity ?? (user.auth_provider === 'password'), // Derive from provider if not set
         profile_completed: user.profile_completed ?? true, // Existing users default to true
+        role: user.role,
       },
       token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -166,7 +168,7 @@ export async function favorite(req: Request, res: Response) {
           data: { user_id, business_id }
         })
       );
-      return res.status(201).json({ 
+      return res.status(201).json({
         message: 'Business added to favorites',
         favorite: fav
       });
@@ -176,7 +178,7 @@ export async function favorite(req: Request, res: Response) {
           data: { user_id, travel_plan_id }
         })
       );
-      return res.status(201).json({ 
+      return res.status(201).json({
         message: 'Travel plan added to favorites',
         favorite: fav
       });
@@ -185,12 +187,12 @@ export async function favorite(req: Request, res: Response) {
     }
   } catch (error) {
     console.error('Error adding favorite:', error);
-    
+
     const prismaError = error as PrismaError;
     if (prismaError.code === 'P2002') {
       return res.status(409).json({ error: 'Already in favorites' });
     }
-    
+
     return handlePrismaError(error, res, 'Adding favorite');
   }
 }
@@ -210,7 +212,7 @@ export async function remove_favorite(req: Request, res: Response) {
           where: { user_id, business_id }
         })
       );
-      
+
       if (!existing) {
         return res.status(404).json({ error: 'Favorite not found' });
       }
@@ -220,7 +222,7 @@ export async function remove_favorite(req: Request, res: Response) {
           where: { favorite_id: existing.favorite_id }
         })
       );
-      
+
       return res.json({ message: 'Business removed from favorites' });
     } else if (travel_plan_id) {
       const existing = await executeWithRetry(() =>
@@ -228,7 +230,7 @@ export async function remove_favorite(req: Request, res: Response) {
           where: { user_id, travel_plan_id }
         })
       );
-      
+
       if (!existing) {
         return res.status(404).json({ error: 'Favorite not found' });
       }
@@ -238,7 +240,7 @@ export async function remove_favorite(req: Request, res: Response) {
           where: { favorite_id: existing.favorite_id }
         })
       );
-      
+
       return res.json({ message: 'Travel plan removed from favorites' });
     } else {
       return res.status(400).json({ error: 'Must provide either business_id or travel_plan_id' });
@@ -370,11 +372,11 @@ export async function oauth_sync(req: Request, res: Response) {
     if (token && isSupabaseConfigured()) {
       try {
         const { data: supabaseUserData, error: supabaseError } = await supabaseAdmin!.auth.getUser(token);
-        
+
         if (!supabaseError && supabaseUserData?.user?.email) {
           const googleEmail = supabaseUserData.user.email.toLowerCase();
           const dbEmail = user.email.toLowerCase();
-          
+
           // Verify email matches
           if (googleEmail !== dbEmail) {
             return res.status(400).json({
@@ -408,6 +410,7 @@ export async function oauth_sync(req: Request, res: Response) {
             auth_provider: true,
             has_email_identity: true,
             profile_completed: true,
+            role: true,
           },
         })
       );
@@ -416,7 +419,7 @@ export async function oauth_sync(req: Request, res: Response) {
     // Determine onboarding state based on profile_completed flag
     // A user needs onboarding if profile_completed is false/null
     const needsOnboarding = !updatedUser.profile_completed;
-    
+
     // isNewUser: profile was just created via OAuth (first sign-in)
     // We treat users without profile_completed as new users
     const isNewUser = !updatedUser.profile_completed;
@@ -433,6 +436,7 @@ export async function oauth_sync(req: Request, res: Response) {
         auth_provider: updatedUser.auth_provider ?? 'google',
         has_email_identity: updatedUser.has_email_identity ?? false, // Google OAuth users start without email identity
         profile_completed: updatedUser.profile_completed ?? false,
+        role: updatedUser.role,
       },
       isNewUser,
       needsOnboarding,
@@ -473,7 +477,7 @@ export async function update_profile(req: Request, res: Response) {
     const finalFirstName = first_name ?? user.first_name;
     const finalLastName = last_name ?? user.last_name;
     const isProfileComplete = Boolean(finalFirstName?.trim() && finalLastName?.trim());
-    
+
     // Only set profile_completed to true, never revert to false on update
     if (isProfileComplete && !user.profile_completed) {
       updateData.profile_completed = true;
@@ -498,6 +502,7 @@ export async function update_profile(req: Request, res: Response) {
         auth_provider: updatedUser.auth_provider ?? 'password',
         has_email_identity: updatedUser.has_email_identity ?? (updatedUser.auth_provider === 'password'),
         profile_completed: updatedUser.profile_completed ?? false,
+        role: updatedUser.role,
       }
     });
   } catch (error) {
@@ -527,6 +532,7 @@ export async function get_me(req: Request, res: Response) {
           auth_provider: true,
           has_email_identity: true,
           profile_completed: true,
+          role: true,
         }
       })
     );
@@ -546,6 +552,7 @@ export async function get_me(req: Request, res: Response) {
       auth_provider: user.auth_provider ?? 'password',
       has_email_identity: user.has_email_identity ?? (user.auth_provider === 'password'),
       profile_completed: user.profile_completed ?? true,
+      role: user.role,
     });
   } catch (error) {
     console.error('Error fetching profile:', error);
@@ -619,7 +626,7 @@ export async function disconnect_google(req: Request, res: Response) {
     const { password } = req.body;
 
     if (!password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Password is required',
         code: 'PASSWORD_REQUIRED'
       });
@@ -627,7 +634,7 @@ export async function disconnect_google(req: Request, res: Response) {
 
     // Require Supabase configuration
     if (!isSupabaseConfigured()) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Authentication service unavailable',
         code: 'DB_UNAVAILABLE'
       });
@@ -645,7 +652,7 @@ export async function disconnect_google(req: Request, res: Response) {
     }
 
     if (user.auth_provider !== 'google') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Account is not connected with Google',
         code: 'NOT_GOOGLE_ACCOUNT'
       });
@@ -660,21 +667,21 @@ export async function disconnect_google(req: Request, res: Response) {
 
     if (passwordError) {
       console.error('Password verification failed:', passwordError.message);
-      
+
       // If sign-in failed, check if it's because no password is set
       // vs. wrong password
       if (passwordError.message?.toLowerCase().includes('invalid login credentials')) {
         // Could be wrong password OR no email identity
         // Check our flag to give better error message
         if (!user.has_email_identity) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'You must set a password before disconnecting Google. This creates an email login method.',
             code: 'NO_EMAIL_IDENTITY'
           });
         }
       }
-      
-      return res.status(401).json({ 
+
+      return res.status(401).json({
         error: 'Incorrect password',
         code: 'INVALID_PASSWORD'
       });
@@ -693,16 +700,39 @@ export async function disconnect_google(req: Request, res: Response) {
 
     // Password verified - update auth_provider to 'password' in our database
     // The user can now only sign in with email+password
-    await executeWithRetry(() =>
+    const userAfterDisconnect = await executeWithRetry(() =>
       prisma.user.update({
         where: { user_id: userId },
-        data: { auth_provider: 'password' }
+        data: { auth_provider: 'password' },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true,
+          auth_provider: true,
+          has_email_identity: true,
+          profile_completed: true,
+          role: true,
+        }
       })
     );
 
-    res.json({ 
+    res.json({
       message: 'Google account disconnected successfully. You can now only sign in with your email and password.',
-      auth_provider: 'password'
+      user: {
+        user_id: userAfterDisconnect.user_id,
+        auth_id: userAfterDisconnect.auth_id,
+        first_name: userAfterDisconnect.first_name,
+        last_name: userAfterDisconnect.last_name,
+        email: userAfterDisconnect.email,
+        contact_no: userAfterDisconnect.contact_no,
+        auth_provider: userAfterDisconnect.auth_provider,
+        has_email_identity: userAfterDisconnect.has_email_identity,
+        profile_completed: userAfterDisconnect.profile_completed,
+        role: userAfterDisconnect.role,
+      },
     });
   } catch (error) {
     console.error('Error disconnecting Google:', error);
@@ -722,14 +752,14 @@ export async function set_password(req: Request, res: Response) {
     const { password } = req.body;
 
     if (!password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Password is required',
         code: 'PASSWORD_REQUIRED'
       });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Password must be at least 6 characters',
         code: 'PASSWORD_TOO_SHORT'
       });
@@ -737,7 +767,7 @@ export async function set_password(req: Request, res: Response) {
 
     // Require Supabase configuration
     if (!isSupabaseConfigured()) {
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Authentication service unavailable',
         code: 'DB_UNAVAILABLE'
       });
@@ -756,7 +786,7 @@ export async function set_password(req: Request, res: Response) {
 
     // Only Google users need this endpoint
     if (user.auth_provider !== 'google') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'This endpoint is only for Google OAuth users. Use the standard password change flow.',
         code: 'NOT_GOOGLE_USER'
       });
@@ -765,7 +795,7 @@ export async function set_password(req: Request, res: Response) {
     // Use admin API to update user's password
     // This creates an email identity for OAuth users
     if (!authId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'User auth ID not found',
         code: 'NO_AUTH_ID'
       });
@@ -777,7 +807,7 @@ export async function set_password(req: Request, res: Response) {
 
     if (updateError) {
       console.error('Supabase set password error:', updateError);
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Failed to set password. Please try again.',
         code: 'SET_PASSWORD_FAILED',
         details: updateError.message
@@ -785,16 +815,40 @@ export async function set_password(req: Request, res: Response) {
     }
 
     // Update has_email_identity to true since user now has a password
-    await executeWithRetry(() =>
+    const updatedUser = await executeWithRetry(() =>
       prisma.user.update({
         where: { user_id: userId },
-        data: { has_email_identity: true }
+        data: { has_email_identity: true },
+        select: {
+          user_id: true,
+          auth_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          contact_no: true,
+          auth_provider: true,
+          has_email_identity: true,
+          profile_completed: true,
+          role: true,
+        }
       })
     );
 
-    res.json({ 
+    res.json({
       message: 'Password set successfully. You can now log in with your email and password, or disconnect your Google account.',
-      has_email_identity: true
+      has_email_identity: true,
+      user: {
+        user_id: updatedUser.user_id,
+        auth_id: updatedUser.auth_id,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        email: updatedUser.email,
+        contact_no: updatedUser.contact_no,
+        auth_provider: updatedUser.auth_provider,
+        has_email_identity: updatedUser.has_email_identity,
+        profile_completed: updatedUser.profile_completed,
+        role: updatedUser.role,
+      },
     });
   } catch (error) {
     console.error('Error setting password:', error);
@@ -843,3 +897,133 @@ export async function search_users(req: Request, res: Response) {
   }
 }
 
+/**
+ * Change a user's role (SUPER_ADMIN only)
+ * Validates that TRAVEL_AGENCY assignment requires Google verification
+ */
+export async function change_user_role(req: Request, res: Response) {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+    const validRoles = ['SUPER_ADMIN', 'LGU_ADMIN', 'BUSINESS_OWNER', 'TRAVEL_AGENCY', 'USER'];
+
+    // Validate role
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({
+        error: 'Invalid role',
+        message: `Role must be one of: ${validRoles.join(', ')}`
+      });
+    }
+
+    const targetUserId = parseInt(userId, 10);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Fetch target user
+    const targetUser = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { user_id: targetUserId }
+      })
+    );
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // If assigning TRAVEL_AGENCY, ensure user is Google verified
+    if (role === 'TRAVEL_AGENCY') {
+      if (targetUser.auth_provider !== 'google' || !targetUser.has_email_identity) {
+        return res.status(400).json({
+          error: 'Cannot assign TRAVEL_AGENCY role',
+          message: 'User must be verified with Google (auth_provider=google and has_email_identity=true)'
+        });
+      }
+    }
+
+    // Update user role
+    const updatedUser = await executeWithRetry(() =>
+      prisma.user.update({
+        where: { user_id: targetUserId },
+        data: { role: role as any }
+      })
+    );
+
+    res.json({
+      message: 'User role updated successfully',
+      user: {
+        user_id: updatedUser.user_id,
+        email: updatedUser.email,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        role: updatedUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Error changing user role:', error);
+    return handlePrismaError(error, res, 'Changing user role');
+  }
+}
+
+/**
+ * Upgrade current user to TRAVEL_AGENCY role
+ * Requirement: Must be verified with Google
+ */
+export async function upgrade_to_travel_agency(req: Request, res: Response) {
+  try {
+    const userId = req.user!.id;
+
+    const user = await executeWithRetry(() =>
+      prisma.user.findUnique({
+        where: { user_id: userId }
+      })
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if already has the role
+    if (user.role === 'TRAVEL_AGENCY') {
+      return res.json({
+        message: 'You are already a Travel Agency',
+        user: {
+          user_id: user.user_id,
+          role: user.role
+        }
+      });
+    }
+
+    // Verify Google authentication requirement
+    if (user.auth_provider !== 'google' || !user.has_email_identity) {
+      return res.status(400).json({
+        error: 'Cannot upgrade to Travel Agency',
+        message: 'To become a Travel Agency, you must verify your account with Google first.',
+        code: 'GOOGLE_AUTH_REQUIRED'
+      });
+    }
+
+    // Perform upgrade
+    const updatedUser = await executeWithRetry(() =>
+      prisma.user.update({
+        where: { user_id: userId },
+        data: { role: 'TRAVEL_AGENCY' },
+        select: {
+          user_id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          role: true
+        }
+      })
+    );
+
+    res.json({
+      message: 'Successfully upgraded to Travel Agency',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error upgrading to travel agency:', error);
+    return handlePrismaError(error, res, 'Upgrading to travel agency');
+  }
+}

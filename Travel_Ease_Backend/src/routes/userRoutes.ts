@@ -14,6 +14,7 @@ put profile (update profile)
 
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.js';
+import { requireRole } from '../middleware/roles.js';
 import { validate, registerSchema, loginSchema, createFavoriteSchema, updateProfileSchema } from '../schemas/validation.js';
 import { loginRateLimiter, registerRateLimiter } from '../middleware/redisRateLimit.js';
 import {
@@ -30,6 +31,8 @@ import {
   search_users,
   disconnect_google,
   set_password,
+  change_user_role,
+  upgrade_to_travel_agency,
 } from '../modules/user/index.js';
 
 const router = Router();
@@ -49,6 +52,7 @@ router.put('/profile', authenticateToken, update_profile);
 router.delete('/account', authenticateToken, delete_account);
 router.post('/disconnect-google', authenticateToken, disconnect_google);
 router.post('/set-password', authenticateToken, set_password);
+router.post('/upgrade-to-agency', authenticateToken, upgrade_to_travel_agency);
 
 // User search (for collaborator autocomplete)
 router.get('/search', authenticateToken, search_users);
@@ -58,6 +62,9 @@ router.post('/favorite', authenticateToken, validate(createFavoriteSchema), favo
 router.delete('/favorite', authenticateToken, validate(createFavoriteSchema), remove_favorite);
 router.get('/favorite/:id', authenticateToken, favorite_id);
 router.get('/user/:id', authenticateToken, user_id);
+
+// Admin routes (SUPER_ADMIN only)
+router.put('/admin/users/:userId/role', authenticateToken, requireRole('SUPER_ADMIN'), change_user_role);
 
 export default router;
 

@@ -16,6 +16,7 @@ interface UserSeedData {
   contact_no: string;
   auth_provider: string;
   profile_completed: boolean;
+  role?: string; // Optional: defaults to USER
 }
 
 interface BusinessSeedData {
@@ -482,7 +483,17 @@ async function seed(): Promise<void> {
       console.log('Creating users...');
       const createdUsers: User[] = [];
       for (const user of users) {
-        const created = await tx.user.create({ data: user });
+        const created = await tx.user.create({ 
+          data: {
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            contact_no: user.contact_no,
+            auth_provider: user.auth_provider,
+            profile_completed: user.profile_completed,
+            role: (user.role as any) ?? 'USER'
+          }
+        });
         createdUsers.push(created);
       }
       console.log(`   Created ${createdUsers.length} users.\n`);

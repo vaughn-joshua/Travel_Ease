@@ -128,6 +128,7 @@ export const requireGoogleAuth = async (
         last_name: user.last_name,
         auth_provider: mapAuthProvider(user.auth_provider ?? undefined),
         profile_completed: user.profile_completed ?? false,
+        role: user.role ?? undefined,
       };
       return next();
     } catch (error) {
@@ -301,6 +302,7 @@ export const requireGoogleAuth = async (
       last_name: user.last_name,
       auth_provider: 'google',
       profile_completed: user.profile_completed ?? false,
+      role: user.role ?? undefined,
     };
 
     next();
@@ -398,6 +400,7 @@ export const optionalAuth = async (
           email: user.email,
           first_name: user.first_name,
           last_name: user.last_name,
+          role: user.role ?? undefined,
         };
       }
       return next();
@@ -425,6 +428,7 @@ export const optionalAuth = async (
           email: data.user.email,
           first_name: user.first_name,
           last_name: user.last_name,
+          role: user.role ?? undefined,
         };
       }
     }
@@ -469,6 +473,7 @@ export const authenticateToken = async (
         last_name: user.last_name,
         auth_provider: mapAuthProvider(user.auth_provider ?? undefined),
         profile_completed: user.profile_completed ?? false,
+        role: user.role ?? undefined,
       };
       return next();
     }
@@ -633,6 +638,7 @@ export const authenticateToken = async (
       last_name: user.last_name,
       auth_provider: mapAuthProvider(user.auth_provider ?? undefined),
       profile_completed: user.profile_completed ?? false,
+      role: user.role ?? undefined,
     };
     next();
   } catch (error) {

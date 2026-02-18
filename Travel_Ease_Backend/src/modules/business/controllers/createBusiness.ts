@@ -16,7 +16,7 @@ async function findMatchingBusiness(
   tx?: any
 ) {
   const dbClient = tx || prisma;
-  
+
   // Build where clause - name and city are required for deduplication
   const whereClause: any = {
     name: {
@@ -25,17 +25,17 @@ async function findMatchingBusiness(
     },
     city: city
   };
-  
+
   // If street is provided, use it for more precise matching
   if (street) {
     whereClause.street = street;
   }
-  
+
   businessLogger.debug(
     { name, city, street },
     'Searching for matching business'
   );
-  
+
   return dbClient.business.findFirst({
     where: whereClause,
     select: {
@@ -121,6 +121,7 @@ async function createNewBusiness(
 
 /**
  * Claim an LGU-owned business
+ * Sets status to PENDING to require admin approval
  */
 async function claimLguBusiness(
   businessId: number,
@@ -131,7 +132,8 @@ async function claimLguBusiness(
     where: { business_id: businessId },
     data: {
       claimed_by_user_id: userId,
-      claimed_at: new Date()
+      claimed_at: new Date(),
+      status: 'PENDING' // Require admin approval for claims
     }
   });
 }
