@@ -62,7 +62,7 @@ export async function all_plans(req: Request, res: Response) {
   const filters = buildPlanFilters(req.query as Record<string, string>);
 
   // Build cache key for this user's grouped plans
-  const cacheKey = buildCacheKey('travel_plans', 'all', userId, filters);
+  const cacheKey = buildCacheKey('travel_plans', 'all', userId, filters as any);
 
   try {
     const { data: cachedResult, fromCache, cacheBackend } = await cacheResult({
@@ -79,7 +79,7 @@ export async function all_plans(req: Request, res: Response) {
               AND p.status = true
             WHERE tp.user_id = ${userId} OR p.participant_id IS NOT NULL
           `,
-        1);
+          1);
 
         const accessiblePlanIds = userPlanAccess.map(p => p.travel_plan_id);
 
@@ -115,7 +115,7 @@ export async function all_plans(req: Request, res: Response) {
               },
               orderBy: [{ start_date: 'asc' }, { travel_plan_id: 'desc' }],
             }),
-          1),
+            1),
           // Get participant counts for all accessible plans
           executeWithRetry(() =>
             prisma.participant.groupBy({
@@ -126,7 +126,7 @@ export async function all_plans(req: Request, res: Response) {
               },
               _count: { participant_id: true },
             }),
-          1),
+            1),
         ]);
 
         // Build participant count map
@@ -164,7 +164,7 @@ export async function all_plans(req: Request, res: Response) {
         allPlans.forEach((plan) => {
           const status = plan.status as keyof typeof STATUS_GROUPS;
           const group = STATUS_GROUPS[status] || 'previous';
-          
+
           const formattedPlan = formatPlan(plan, {
             approvedParticipants: countMap[plan.travel_plan_id] || 0,
             accommodation: accommodationMap.get(plan.travel_plan_id) || null,

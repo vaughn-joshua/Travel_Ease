@@ -29,7 +29,7 @@ interface BusinessSeedData {
   longtitude: number;
   description: string;
   rating: number;
-  status: boolean;
+  status: any;
   picture: string;
 }
 
@@ -125,7 +125,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9621,
     description: 'A cozy cafe famous for its breakfast meals and scenic garden views. Perfect spot for a relaxing morning in Tagaytay.',
     rating: 4.5,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800"]}'
   },
   {
@@ -138,7 +138,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9567,
     description: 'The best bulalo (beef bone marrow soup) in Tagaytay! A must-visit for Filipino comfort food lovers.',
     rating: 4.7,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800"]}'
   },
   {
@@ -151,7 +151,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9445,
     description: 'Luxury hotel with stunning views of Taal Volcano. Features world-class amenities and dining options.',
     rating: 4.8,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"]}'
   },
   {
@@ -164,7 +164,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9678,
     description: 'Popular outdoor recreational area with cable cars, ziplines, and horseback riding. Great for family outings!',
     rating: 4.3,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800"]}'
   },
   {
@@ -177,7 +177,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9234,
     description: 'Home to the world\'s largest collection of jigsaw puzzles! A unique attraction for puzzle enthusiasts.',
     rating: 4.2,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=800"]}'
   },
   {
@@ -190,7 +190,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9512,
     description: 'Premium Starbucks experience with exclusive reserve coffees and breathtaking Taal Lake views.',
     rating: 4.6,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=800"]}'
   },
   {
@@ -203,7 +203,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9389,
     description: 'Fine dining restaurant serving Filipino-Spanish cuisine with panoramic views of Taal Lake.',
     rating: 4.4,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800"]}'
   },
   {
@@ -216,7 +216,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9567,
     description: 'Exclusive mountain resort with golf courses, spa, and premium accommodations.',
     rating: 4.9,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800"]}'
   },
   {
@@ -229,7 +229,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9423,
     description: 'Best place to buy Tagaytay souvenirs and delicacies like buko pie, tarts, and local crafts.',
     rating: 4.1,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800"]}'
   },
   {
@@ -242,7 +242,7 @@ const businesses: BusinessSeedData[] = [
     longtitude: 120.9534,
     description: 'Theme park featuring the iconic Sky Eye ferris wheel with amazing views of Taal Lake and volcano.',
     rating: 4.4,
-    status: true,
+    status: 'APPROVED',
     picture: '{"secure_url":["https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?w=800"]}'
   }
 ];
@@ -456,12 +456,12 @@ const menuItems: MenuItemSeedData[] = [
   { business_index: 0, name: 'Tapsilog', description: 'Beef tapa with garlic rice and egg', price: 325, category: 'Breakfast' },
   { business_index: 0, name: 'Pancakes', description: 'Fluffy pancakes with butter and syrup', price: 195, category: 'Breakfast' },
   { business_index: 0, name: 'Kapeng Barako', description: 'Strong local coffee', price: 95, category: 'Drinks' },
-  
+
   // Bulalo Point
   { business_index: 1, name: 'Special Bulalo', description: 'Beef bone marrow soup with vegetables', price: 550, category: 'Main' },
   { business_index: 1, name: 'Crispy Pata', description: 'Deep fried pork leg', price: 650, category: 'Main' },
   { business_index: 1, name: 'Sinigang na Baboy', description: 'Pork in sour tamarind soup', price: 350, category: 'Main' },
-  
+
   // Josephine's Restaurant
   { business_index: 6, name: 'Paella Valenciana', description: 'Spanish rice with seafood and meat', price: 850, category: 'Main' },
   { business_index: 6, name: 'Kare-Kare', description: 'Oxtail stew with peanut sauce', price: 550, category: 'Main' },
@@ -472,7 +472,7 @@ const menuItems: MenuItemSeedData[] = [
 async function seed(): Promise<void> {
   try {
     console.log('Starting database seed...\n');
-    
+
     // Test connection
     await prisma.$queryRaw`SELECT 1`;
     console.log('Database connection established.\n');
@@ -483,7 +483,7 @@ async function seed(): Promise<void> {
       console.log('Creating users...');
       const createdUsers: User[] = [];
       for (const user of users) {
-        const created = await tx.user.create({ 
+        const created = await tx.user.create({
           data: {
             first_name: user.first_name,
             last_name: user.last_name,
@@ -515,10 +515,10 @@ async function seed(): Promise<void> {
 
       // Ensure subcategories exist first
       console.log('Ensuring subcategories exist...');
-      const uniqueSubcategories = [...new Set(businessCategories.map(c => 
+      const uniqueSubcategories = [...new Set(businessCategories.map(c =>
         JSON.stringify({ main_category: c.main_category, subcategory_name: c.subcategory_name })
       ))].map(s => JSON.parse(s) as { main_category: category; subcategory_name: string });
-      
+
       for (const subcat of uniqueSubcategories) {
         await tx.subcategory.upsert({
           where: {
@@ -546,7 +546,7 @@ async function seed(): Promise<void> {
             },
           },
         });
-        
+
         if (!subcategory) {
           console.warn(`   Subcategory not found: ${c.main_category} > ${c.subcategory_name}`);
           continue;
@@ -591,7 +591,7 @@ async function seed(): Promise<void> {
           continue;
         }
         seenSubcategoryIds.add(cat.subcategory_id);
-        
+
         const created = await tx.price_range.create({
           data: {
             subcategory_id: cat.subcategory_id,
@@ -810,7 +810,7 @@ async function seed(): Promise<void> {
     });
 
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.warn('Errors during seeding:', error);
     throw error;
   } finally {
     await prisma.$disconnect();

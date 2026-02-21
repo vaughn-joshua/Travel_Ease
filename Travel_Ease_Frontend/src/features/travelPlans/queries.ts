@@ -22,6 +22,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { travelPlanKeys } from "../../lib/queryKeys";
 import { travelPlanApi } from "../../services/travelPlanApi";
+import { trafficApi } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { fetch_grouped_plans } from "../../utils/travel_plan/fetch_grouped_plans";
 import { fetch_public_plans, fetch_public_plans_with_meta, type PublicPlansResult } from "../../utils/travel_plan/fetch_public_plans";
@@ -198,7 +199,7 @@ export function useTravelPlanDetail(id: number | string | undefined) {
   // Use AuthContext to ensure we only fetch when user is authenticated
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
-  
+
   return useQuery<TravelPlan | null, Error>({
     queryKey: travelPlanKeys.detail(id ?? ""),
     queryFn: () => fetch_plan_id(id!),
@@ -249,12 +250,31 @@ export function useUserPlanRole(planId: number | string | undefined) {
   // Use AuthContext to ensure we only fetch when user is authenticated
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !authLoading && Boolean(user);
-  
+
   return useQuery<UserRoleResponse, Error>({
     queryKey: ["travel-plan", "user-role", planId],
     queryFn: () => travelPlanApi.getUserRole(planId!),
     enabled: planId !== undefined && planId !== "" && isAuthenticated,
     staleTime: 1000 * 30,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useTrafficSuggestion
+// Fetches alternative activities if traffic between two activities is heavy.
+// ─────────────────────────────────────────────────────────────────────────────
+export function useTrafficSuggestion(
+  originId: number | null | undefined,
+  destId: number | undefined,
+  dayGroup: string = 'weekday',
+  originLat?: number,
+  originLng?: number
+) {
+  return useQuery({
+    queryKey: ["traffic-suggestion", originId, destId, dayGroup, originLat, originLng],
+    queryFn: () => trafficApi.getAlternativeSuggestion(originId ?? null, destId!, dayGroup, originLat, originLng),
+    enabled: (!!originId || (!!originLat && !!originLng)) && !!destId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 

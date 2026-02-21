@@ -15,6 +15,7 @@ import configRoutes from './configRoutes.js';
 import utilsRoutes from './utilsRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import { blogRoutes } from './blogRoutes.js';
+import trafficRoutes from './trafficRoutes.js';
 
 // Legacy exports for backward compatibility
 export const travel_plan_routes = travelPlanRoutes;
@@ -38,6 +39,7 @@ export {
   utilsRoutes,
   notificationRoutes,
   blogRoutes,
+  trafficRoutes,
 };
 
 export default {
@@ -50,5 +52,6 @@ export default {
   utilsRoutes,
   notificationRoutes,
   blogRoutes,
+  trafficRoutes,
 };
 

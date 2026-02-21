@@ -53,7 +53,7 @@ async function seedLguBusinesses() {
     // Read JSON file
     const dataPath = path.join(__dirname, '../data/lgu_businesses.json');
     businessLogger.info(`Loading from: ${dataPath}`);
-    
+
     const rawData = fs.readFileSync(dataPath, 'utf-8');
     const businesses: LguBusiness[] = JSON.parse(rawData);
 
@@ -117,7 +117,7 @@ async function seedLguBusinesses() {
     );
 
     if (errors.length > 0) {
-      businessLogger.warn('Errors during seeding:', errors);
+      console.warn('Errors during seeding:', errors);
     }
 
     process.exit(0);

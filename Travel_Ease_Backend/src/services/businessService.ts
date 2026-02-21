@@ -328,9 +328,9 @@ export function formatBusinessToDTO(business: any): BusinessDTO {
     date: review.review_date,
     user: review.user
       ? {
-          id: review.user.user_id,
-          name: `${review.user.first_name} ${review.user.last_name}`.trim(),
-        }
+        id: review.user.user_id,
+        name: `${review.user.first_name} ${review.user.last_name}`.trim(),
+      }
       : null,
   }));
 
@@ -368,10 +368,10 @@ export function formatBusinessToDTO(business: any): BusinessDTO {
     status: business.status,
     owner: business.user
       ? {
-          id: business.user.user_id,
-          name: `${business.user.first_name} ${business.user.last_name}`.trim(),
-          email: business.user.email,
-        }
+        id: business.user.user_id,
+        name: `${business.user.first_name} ${business.user.last_name}`.trim(),
+        email: business.user.email,
+      }
       : null,
   };
 }
@@ -628,7 +628,7 @@ export async function createBusiness(
         picture: input.secure_url
           ? JSON.stringify({ secure_url: input.secure_url })
           : null,
-        status: false, // Default to not approved
+        status: "PENDING", // Default to not approved
         min_price: input.min_price ?? null,
         max_price: input.max_price ?? null,
       },

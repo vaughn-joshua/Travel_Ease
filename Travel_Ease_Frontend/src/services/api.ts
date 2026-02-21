@@ -512,7 +512,7 @@ export const businessApi = {
 };
 
 // User types
-interface AuthUser {
+export interface AuthUser {
   user_id: number;
   auth_id?: string | null;
   first_name: string;
@@ -592,6 +592,21 @@ export const userApi = {
   searchUsers: async (query: string): Promise<UserSearchResult[]> => {
     if (!query || query.length < 2) return [];
     const response = await api.get("/user/search", { params: { q: query } });
+    return response.data;
+  },
+
+  // Get all users (admin only, paginated)
+  getAllUsers: async (
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+  ): Promise<{
+    users: AuthUser[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }> => {
+    const response = await api.get("/user/admin/users", {
+      params: { page, limit, search }
+    });
     return response.data;
   },
 
@@ -799,6 +814,59 @@ export const notificationApi = {
       notification_id: notificationId,
       accept,
     });
+    return response.data;
+  },
+};
+
+// Traffic types
+export interface TrafficAlternative {
+  business_id: number;
+  name: string;
+  description: string;
+  city: string;
+  rating: number | null;
+  status: boolean;
+  picture: string | null;
+}
+
+export interface TrafficSuggestionResponse {
+  heavyTraffic: boolean;
+  trafficLevel?: 'LIGHT' | 'MODERATE' | 'HEAVY' | 'UNKNOWN';
+  eta?: number;
+  reason?: string;
+  suggestionZone?: number;
+  mainCategoryMatches?: string;
+  alternatives?: TrafficAlternative[] | null;
+}
+
+export const trafficApi = {
+  // Generate traffic snapshots (SUPER_ADMIN only)
+  generateSnapshots: async (): Promise<{ message: string; results?: any }> => {
+    // Override the default 30s timeout to 5 minutes since OSRM requests take a while (90+ sec)
+    const response = await api.post("/traffic/generate-snapshots", {}, { timeout: 300000 });
+    return response.data;
+  },
+
+  getAlternativeSuggestion: async (
+    originId: number | null,
+    destId: number,
+    dayGroup: string = 'weekday',
+    originLat?: number,
+    originLng?: number
+  ): Promise<TrafficSuggestionResponse> => {
+    const params: Record<string, any> = {
+      destination_activity_id: destId,
+      day_group: dayGroup,
+    };
+
+    if (originId) {
+      params.origin_activity_id = originId;
+    } else if (originLat && originLng) {
+      params.origin_lat = originLat;
+      params.origin_lng = originLng;
+    }
+
+    const response = await api.get('/traffic/alternative-suggestion', { params });
     return response.data;
   },
 };

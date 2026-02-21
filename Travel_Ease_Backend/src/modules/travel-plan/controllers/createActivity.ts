@@ -28,6 +28,7 @@ export async function create_activity(req: Request, res: Response) {
     province,
     city,
     business_id,
+    insert_after_activity_id,
   } = req.body;
 
   // Use authenticated user ID from middleware
@@ -61,27 +62,27 @@ export async function create_activity(req: Request, res: Response) {
 
     // Normalize budget_range - ensure it's a valid enum value or null
     const normalizedBudgetRange = normalizeBudgetRange(budget_range);
-    
+
     const activityData: any = {
-          travel_plan_id: parseInt(travel_plan_id),
-          business_id: business_id ? parseInt(String(business_id)) : null,
-          target_date: target_date ? new Date(target_date) : null,
-          user_id: userId,
-          lat: finalLat,
-          lng: finalLng,
-          // Location fields
-          location: location || null,
-          name: name || null,
-          brgy: brgy || null,
-          province: province || null,
-          city: city || null
+      travel_plan_id: parseInt(travel_plan_id),
+      business_id: business_id ? parseInt(String(business_id)) : null,
+      target_date: target_date ? new Date(target_date) : null,
+      user_id: userId,
+      lat: finalLat,
+      lng: finalLng,
+      // Location fields
+      location: location || null,
+      name: name || null,
+      brgy: brgy || null,
+      province: province || null,
+      city: city || null
     };
-    
+
     // Only include notes if it's provided (not undefined)
     if (notes !== undefined && notes !== null) {
       activityData.notes = notes;
     }
-    
+
     // Only include budget_range if it's a valid enum value
     // Prisma accepts string values for enums at runtime
     if (normalizedBudgetRange) {
@@ -90,6 +91,72 @@ export async function create_activity(req: Request, res: Response) {
         activityData.budget_range = normalizedBudgetRange;
       }
     }
+
+    // ---------------------------------------------------------
+    // Traffic Zoning Logic
+    // ---------------------------------------------------------
+    // Determine zone based on final coordinates
+    let zoneId: number | null = null;
+    if (finalLat !== null && finalLng !== null) {
+      const { getZoneForCoordinates } = await import("../../../services/zoneService.js");
+      zoneId = await getZoneForCoordinates(finalLat, finalLng);
+      activityData.zone_id = zoneId;
+    } else {
+      // If no location provided, and zone_id is required strictly by business logic:
+      // The prompt says "When activity is created... Read lat and lng... Determine zone... If outside... reject"
+      // This implies we MUST have location.
+      // However, to avoid breaking "Note-only" activities if they exist, we might check if user INTENDED a location.
+      // But assuming the goal is strict tracking:
+      return res.status(400).json({
+        error: "Location required.",
+        details: "Activities must have a valid location (lat/lng or business_id) to be assigned a traffic zone."
+      });
+    }
+
+    // ---------------------------------------------------------
+    // Sorting Logic
+    // ---------------------------------------------------------
+    let sortOrder = 0;
+    const parsedTargetDate = target_date ? new Date(target_date) : null;
+
+    if (insert_after_activity_id) {
+      const targetActivity = await prisma.activity.findUnique({
+        where: { activity_id: parseInt(String(insert_after_activity_id)) },
+        select: { sort_order: true }
+      });
+
+      if (targetActivity) {
+        sortOrder = targetActivity.sort_order || 0;
+
+        // Shift all subsequent activities (including the target) down for this day
+        await prisma.activity.updateMany({
+          where: {
+            travel_plan_id: parseInt(travel_plan_id),
+            target_date: parsedTargetDate,
+            sort_order: { gte: sortOrder }
+          },
+          data: {
+            sort_order: { increment: 1 }
+          }
+        });
+      }
+    } else {
+      // Append to the end of the day
+      const lastActivity = await prisma.activity.findFirst({
+        where: {
+          travel_plan_id: parseInt(travel_plan_id),
+          target_date: parsedTargetDate
+        },
+        orderBy: { sort_order: 'desc' },
+        select: { sort_order: true }
+      });
+
+      if (lastActivity) {
+        sortOrder = (lastActivity.sort_order || 0) + 1;
+      }
+    }
+
+    activityData.sort_order = sortOrder;
 
     const activity = await executeWithRetry(() =>
       prisma.activity.create({
@@ -101,8 +168,8 @@ export async function create_activity(req: Request, res: Response) {
     await invalidateCachePattern(`activities:plan:${travel_plan_id}`);
 
     const formattedActivity = formatActivity(activity);
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       message: "Activity created successfully",
       ...formattedActivity
     });

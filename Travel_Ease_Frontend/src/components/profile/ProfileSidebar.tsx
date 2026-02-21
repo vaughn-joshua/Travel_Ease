@@ -33,9 +33,9 @@ export function ProfileSidebar({ activeTab, onTabChange }: ProfileSidebarProps) 
     tabs.push({ id: 'business-registrations', label: 'Business Registrations', visible: true });
   }
 
-  // Role Management - only SUPER_ADMIN
+  // Admin Panel - only SUPER_ADMIN
   if (user?.role === 'SUPER_ADMIN') {
-    tabs.push({ id: 'role-management', label: 'Role Management', visible: true });
+    tabs.push({ id: 'admin-panel', label: 'Admin Panel', visible: true });
   }
 
   // Favorites - all roles
@@ -51,11 +51,10 @@ export function ProfileSidebar({ activeTab, onTabChange }: ProfileSidebarProps) 
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`flex-shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-              activeTab === tab.id
+            className={`flex-shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id
                 ? 'border-primary-red text-primary-red'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -76,11 +75,10 @@ export function ProfileSidebar({ activeTab, onTabChange }: ProfileSidebarProps) 
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab.id
+              className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
                   ? 'bg-red-50 text-primary-red border-l-4 border-primary-red'
                   : 'text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
             >
               {tab.label}
             </button>

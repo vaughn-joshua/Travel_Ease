@@ -183,7 +183,7 @@ router.get(
       const maxLimit = Math.min(parseInt(limit || "50", 10) || 50, 100);
 
       // Build where clause
-      const where: Record<string, unknown> = { status: true };
+      const where: Record<string, unknown> = { status: { in: ["APPROVED", "LGU_REGISTERED"] } };
       if (search) {
         where.OR = [
           { name: { contains: search, mode: "insensitive" } },
@@ -337,7 +337,7 @@ router.get("/search", async (req: Request, res: Response) => {
     const businesses = await executeWithRetry(() =>
       prisma.business.findMany({
         where: {
-          status: true,
+          status: { in: ["APPROVED", "LGU_REGISTERED"] },
           OR: [
             { name: { contains: searchQuery, mode: "insensitive" } },
             { description: { contains: searchQuery, mode: "insensitive" } },
@@ -379,8 +379,11 @@ router.get("/search", async (req: Request, res: Response) => {
       data: normalizedBusinesses,
     });
   } catch (error) {
-    businessLogger.error({ err: error }, "Error searching businesses");
-    return handlePrismaError(error, res, "Searching businesses");
+    res.status(500).json({
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    return;
   }
 });
 
@@ -502,8 +505,8 @@ router.patch(
             status === "APPROVED"
               ? "Business Approved"
               : status === "REJECTED"
-              ? "Business Rejected"
-              : `Status Changed to ${status}`;
+                ? "Business Rejected"
+                : `Status Changed to ${status}`;
 
           let notificationMessage = "";
           if (status === "APPROVED") {
@@ -517,7 +520,7 @@ router.patch(
           await executeWithRetry(() =>
             prisma.notification.create({
               data: {
-                user_id: business.user_id,
+                user_id: business.user_id!,
                 type: "business_status_change",
                 title: notificationTitle,
                 message: notificationMessage,

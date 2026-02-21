@@ -111,7 +111,7 @@ function normalizePlace(raw: NominatimResult | MapboxFeature, provider = 'nomina
         : null,
     };
   }
-  
+
   if (provider === 'mapbox') {
     const r = raw as MapboxFeature;
     const [lng, lat] = r.center || [0, 0];
@@ -124,7 +124,7 @@ function normalizePlace(raw: NominatimResult | MapboxFeature, provider = 'nomina
       boundingBox: r.bbox || null,
     };
   }
-  
+
   return raw as unknown as NormalizedPlace;
 }
 
@@ -153,7 +153,7 @@ function normalizeRoute(raw: OSRMResponse, provider = 'osrm'): NormalizedRoute |
       })) || [],
     };
   }
-  
+
   return null;
 }
 
@@ -185,18 +185,18 @@ export async function searchPlaces(query: string, options: SearchOptions = {}): 
   const { limit = 10, region } = options;
   const cacheKey = { q: query, limit, region };
   const ttl = cacheConfig.ttl.search;
-  
+
   const cache = getCache('search');
   const key = createCacheKey('search', cacheKey);
   const cached = cache.get(key) as NormalizedPlace[] | undefined;
-  
+
   if (cached !== undefined) {
     return { data: cached, fromCache: true };
   }
-  
+
   const provider = mapConfig.provider;
   let results: NormalizedPlace[] = [];
-  
+
   try {
     if (provider === 'nominatim' || !mapbox.accessToken) {
       const params = new URLSearchParams({
@@ -208,22 +208,22 @@ export async function searchPlaces(query: string, options: SearchOptions = {}): 
       if (region) {
         params.append('countrycodes', region);
       }
-      
+
       const url = `${nominatim.baseUrl}/search?${params}`;
       const startTime = Date.now();
-      
+
       try {
         const response = await axios.get<NominatimResult[]>(
           url,
           { headers: { 'User-Agent': nominatim.userAgent } }
         );
-        
+
         const duration = Date.now() - startTime;
         mapLogger.debug(
           { provider: 'nominatim', query, limit, region, duration, resultCount: response.data.length },
           `Nominatim search succeeded`
         );
-        
+
         results = response.data.map(r => normalizePlace(r, 'nominatim'));
       } catch (axiosError) {
         const duration = Date.now() - startTime;
@@ -238,26 +238,26 @@ export async function searchPlaces(query: string, options: SearchOptions = {}): 
       if (region) {
         params.append('country', region);
       }
-      
+
       const url = `${mapbox.baseUrl}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params}`;
       const startTime = Date.now();
-      
+
       try {
         const response = await axios.get<{ features: MapboxFeature[] }>(url);
-        
+
         const duration = Date.now() - startTime;
         mapLogger.debug(
           { provider: 'mapbox', query, limit, region, duration, resultCount: response.data.features.length },
           `Mapbox search succeeded`
         );
-        
+
         results = response.data.features.map(r => normalizePlace(r, 'mapbox'));
       } catch (axiosError) {
         const duration = Date.now() - startTime;
         throw mapProviderError(axiosError, { provider: 'mapbox', query, duration, url });
       }
     }
-    
+
     cache.set(key, results, ttl);
     return { data: results, fromCache: false };
   } catch (error) {
@@ -280,13 +280,13 @@ export async function geocode(address: string): Promise<CacheResult<NormalizedPl
   const cache = getCache('geocode');
   const key = createCacheKey('geocode', { address });
   const cached = cache.get(key) as NormalizedPlace | undefined;
-  
+
   if (cached !== undefined) {
     return { data: cached, fromCache: true };
   }
-  
+
   const ttl = cacheConfig.ttl.geocode;
-  
+
   try {
     const params = new URLSearchParams({
       q: address,
@@ -294,16 +294,16 @@ export async function geocode(address: string): Promise<CacheResult<NormalizedPl
       addressdetails: '1',
       limit: '1',
     });
-    
+
     const response = await axios.get<NominatimResult[]>(
       `${nominatim.baseUrl}/search?${params}`,
       { headers: { 'User-Agent': nominatim.userAgent } }
     );
-    
+
     if (!response.data || response.data.length === 0) {
       return { data: null, fromCache: false };
     }
-    
+
     const result = normalizePlace(response.data[0], 'nominatim');
     cache.set(key, result, ttl);
     return { data: result, fromCache: false };
@@ -319,13 +319,13 @@ export async function reverseGeocode(lat: number, lng: number): Promise<CacheRes
   const cache = getCache('geocode');
   const key = createCacheKey('reverse', { lat: lat.toFixed(6), lng: lng.toFixed(6) });
   const cached = cache.get(key) as NormalizedPlace | undefined;
-  
+
   if (cached !== undefined) {
     return { data: cached, fromCache: true };
   }
-  
+
   const ttl = cacheConfig.ttl.geocode;
-  
+
   try {
     const params = new URLSearchParams({
       lat: lat.toString(),
@@ -333,16 +333,16 @@ export async function reverseGeocode(lat: number, lng: number): Promise<CacheRes
       format: 'json',
       addressdetails: '1',
     });
-    
+
     const response = await axios.get<NominatimResult & { error?: string }>(
       `${nominatim.baseUrl}/reverse?${params}`,
       { headers: { 'User-Agent': nominatim.userAgent } }
     );
-    
+
     if (!response.data || response.data.error) {
       return { data: null, fromCache: false };
     }
-    
+
     const result = normalizePlace(response.data, 'nominatim');
     cache.set(key, result, ttl);
     return { data: result, fromCache: false };
@@ -359,12 +359,12 @@ interface RouteOptions {
  * Get route between two points
  */
 export async function getRoute(
-  origin: Coordinates, 
-  destination: Coordinates, 
+  origin: Coordinates,
+  destination: Coordinates,
   options: RouteOptions = {}
 ): Promise<CacheResult<NormalizedRoute | null>> {
   const { profile = 'driving' } = options;
-  
+
   const cache = getCache('route');
   const key = createCacheKey('route', {
     olat: origin.lat.toFixed(5),
@@ -374,20 +374,20 @@ export async function getRoute(
     profile,
   });
   const cached = cache.get(key) as NormalizedRoute | undefined;
-  
+
   if (cached !== undefined) {
     return { data: cached, fromCache: true };
   }
-  
+
   const ttl = cacheConfig.ttl.route;
-  
+
   try {
     // OSRM profile mapping
-    const osrmProfile = profile === 'walking' ? 'foot' : 
-                        profile === 'cycling' ? 'bike' : 'car';
-    
+    const osrmProfile = profile === 'walking' ? 'foot' :
+      profile === 'cycling' ? 'bike' : 'car';
+
     const coords = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
-    
+
     const response = await axios.get<OSRMResponse>(
       `${osrm.baseUrl}/route/v1/${osrmProfile}/${coords}`,
       {
@@ -398,11 +398,11 @@ export async function getRoute(
         },
       }
     );
-    
+
     if (response.data.code !== 'Ok') {
       return { data: null, fromCache: false };
     }
-    
+
     const result = normalizeRoute(response.data, 'osrm');
     if (result) {
       cache.set(key, result, ttl);
@@ -430,7 +430,7 @@ function mapProviderError(error: unknown, context?: Record<string, unknown>): Ma
   const status = axiosError.response?.status;
   const responseData = axiosError.response?.data;
   const message = axiosError.response?.data?.message || axiosError.message || 'Unknown error';
-  
+
   // Log full error details for debugging
   const logContext = {
     provider: context?.provider,
@@ -441,11 +441,11 @@ function mapProviderError(error: unknown, context?: Record<string, unknown>): Ma
     errorMessage: message,
     responseData: responseData && typeof responseData === 'object' ? JSON.stringify(responseData).slice(0, 500) : responseData,
     requestConfig: {
-      method: axiosError.config?.method,
-      url: axiosError.config?.url,
+      method: (axiosError as any).config?.method,
+      url: (axiosError as any).config?.url,
     },
   };
-  
+
   if (status === 429) {
     mapLogger.warn(logContext, 'Map provider rate limit exceeded');
     const err: MapError = new Error('Map provider rate limit exceeded. Please try again later.');

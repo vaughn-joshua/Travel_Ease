@@ -90,6 +90,7 @@ interface ActivityData {
   target_date?: Date | null;
   budget_range?: string | null;
   is_priority?: boolean | null;
+  sort_order?: number | null;
   user?: {
     first_name: string;
     last_name: string;
@@ -135,6 +136,7 @@ export function formatActivity(
     target_date: data.target_date,
     budget_range: budgetRange,
     is_priority: data.is_priority ?? false,
+    sort_order: data.sort_order ?? 0,
 
     // Include user relation if present
     ...(data.user && {

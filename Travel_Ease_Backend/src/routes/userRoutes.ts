@@ -33,6 +33,7 @@ import {
   set_password,
   change_user_role,
   upgrade_to_travel_agency,
+  get_all_users,
 } from '../modules/user/index.js';
 
 const router = Router();
@@ -64,6 +65,7 @@ router.get('/favorite/:id', authenticateToken, favorite_id);
 router.get('/user/:id', authenticateToken, user_id);
 
 // Admin routes (SUPER_ADMIN only)
+router.get('/admin/users', authenticateToken, requireRole('SUPER_ADMIN'), get_all_users);
 router.put('/admin/users/:userId/role', authenticateToken, requireRole('SUPER_ADMIN'), change_user_role);
 
 export default router;

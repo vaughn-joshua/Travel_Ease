@@ -184,7 +184,7 @@ export function formatActivityToDTO(activity: any): ActivityDTO {
 export async function getActivitiesByPlan(planId: number): Promise<ActivityDTO[]> {
   const activities = await executeWithRetry(() =>
     prisma.activity.findMany({
-      where: { 
+      where: {
         travel_plan_id: planId,
         is_accommodation: { not: true } // Exclude accommodation activities
       },
@@ -250,16 +250,41 @@ export async function getActivityById(activityId: number): Promise<ActivityDTO |
 /**
  * Create a new activity
  */
+// Helper to resolve zone
+async function resolveZone(input: CreateActivityInput): Promise<number | null> {
+  const { getZoneForCoordinates, getZoneForBusiness } = await import('./zoneService.js');
+
+  // 1. Try explicit coordinates
+  if (input.lat !== undefined && input.lng !== undefined && input.lat !== null && input.lng !== null) {
+    const lat = typeof input.lat === 'string' ? parseFloat(input.lat) : input.lat;
+    const lng = typeof input.lng === 'string' ? parseFloat(input.lng) : input.lng;
+    return getZoneForCoordinates(lat, lng);
+  }
+
+  // 2. Try business coordinates
+  if (input.business_id) {
+    return getZoneForBusiness(input.business_id);
+  }
+
+  return null;
+}
+
+/**
+ * Create a new activity
+ */
 export async function createActivity(
   userId: number,
   input: CreateActivityInput
 ): Promise<ActivityDTO> {
+  const zoneId = await resolveZone(input);
+
   const activity = await executeWithRetry(() =>
     prisma.activity.create({
       data: {
         travel_plan_id: input.travel_plan_id,
         user_id: userId,
         business_id: input.business_id ?? null,
+        zone_id: zoneId,
         notes: input.notes ?? null,
         target_date: input.target_date ? new Date(input.target_date) : null,
         budget_range: normalizeBudgetRange(input.budget_range) as any,
@@ -286,7 +311,29 @@ export async function updateActivity(
   input: UpdateActivityInput
 ): Promise<ActivityDTO> {
   const updateData: any = {};
-  
+
+  // If coordinates are updated, re-calculate zone
+  if ((input.lat !== undefined && input.lat !== null) || (input.lng !== undefined && input.lng !== null)) {
+    // Need both lat and lng to be safe, or fetch existing if partial update?
+    // Assuming partial update might provide only one.
+    // For simplicity, if lat/lng provided, we try to update zone.
+    // If only one provided, we might default to null if we can't fetch existing.
+    // But usually updates provide both or none for location.
+    // Let's fetch existing if needed? Or just assume if provided we check.
+
+    // Since strict zoning, we should probably fetch existing activity to merge coordinates?
+    // But querying DB inside update logic is expensive.
+    // Optimization: If lat/lng provided, calculate zone.
+    const lat = input.lat ? (typeof input.lat === 'string' ? parseFloat(input.lat) : input.lat) : null;
+    const lng = input.lng ? (typeof input.lng === 'string' ? parseFloat(input.lng) : input.lng) : null;
+
+    if (lat !== null && lng !== null) {
+      const { getZoneForCoordinates } = await import('./zoneService.js');
+      const zoneId = await getZoneForCoordinates(lat, lng);
+      updateData.zone_id = zoneId;
+    }
+  }
+
   if (input.notes !== undefined) updateData.notes = input.notes;
   if (input.target_date !== undefined) {
     updateData.target_date = input.target_date ? new Date(input.target_date) : null;
@@ -336,13 +383,20 @@ export async function bulkCreateActivities(
   userId: number,
   activities: CreateActivityInput[]
 ): Promise<ActivityDTO[]> {
+  // Resolve zones in parallel
+  const activitiesWithZones = await Promise.all(activities.map(async (input) => {
+    const zoneId = await resolveZone(input);
+    return { ...input, zone_id: zoneId };
+  }));
+
   const created = await prisma.$transaction(
-    activities.map(input => 
+    activitiesWithZones.map(input =>
       prisma.activity.create({
         data: {
           travel_plan_id: input.travel_plan_id,
           user_id: userId,
           business_id: input.business_id ?? null,
+          zone_id: input.zone_id,
           notes: input.notes ?? null,
           target_date: input.target_date ? new Date(input.target_date) : null,
           budget_range: normalizeBudgetRange(input.budget_range) as any,
@@ -385,7 +439,7 @@ export async function getActivitiesByPlans(planIds: number[]): Promise<Map<numbe
   for (const activity of activities) {
     const planId = activity.travel_plan_id;
     if (planId === null) continue;
-    
+
     const formatted = formatActivityToDTO(activity);
     const existing = result.get(planId) || [];
     existing.push(formatted);

@@ -135,6 +135,15 @@ export async function plan_edit(req: Request, res: Response) {
 
     // Handle accommodation update
     if (accommodation_id !== undefined) {
+      let zoneId: number | null = null;
+      if (accommodation_id !== null) {
+        const { getZoneForBusiness } = await import('../../../services/zoneService.js');
+        zoneId = await getZoneForBusiness(accommodation_id);
+        if (zoneId === null) {
+          throw new Error("Accommodation business is located outside of supported traffic zones (Tagaytay City).");
+        }
+      }
+
       await prisma.$transaction(async (tx) => {
         // Find existing accommodation activity
         const existingAccommodation = await tx.activity.findFirst({
@@ -158,6 +167,7 @@ export async function plan_edit(req: Request, res: Response) {
               where: { activity_id: existingAccommodation.activity_id },
               data: {
                 business_id: accommodation_id,
+                zone_id: zoneId,
                 target_date: null
               }
             });
@@ -171,6 +181,7 @@ export async function plan_edit(req: Request, res: Response) {
               data: {
                 travel_plan_id: planId,
                 business_id: accommodation_id,
+                zone_id: zoneId,
                 is_accommodation: true,
                 target_date: null,
                 user_id: plan?.user_id ?? null

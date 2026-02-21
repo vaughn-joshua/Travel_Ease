@@ -6,7 +6,7 @@ import { AccountDetailsTab } from '../components/profile/AccountDetailsTab';
 import { NotificationsTab } from '../components/profile/NotificationsTab';
 import { ManageBusinessTab } from '../components/profile/ManageBusinessTab';
 import { BusinessRegistrationsTab } from '../components/profile/BusinessRegistrationsTab';
-import { RoleManagementTab } from '../components/profile/RoleManagementTab';
+import { AdminPanelTab } from '../components/profile/AdminPanelTab';
 import { FavoritesTab } from '../components/profile/FavoritesTab';
 
 export default function Profile() {
@@ -29,8 +29,8 @@ export default function Profile() {
         return <ManageBusinessTab />;
       case 'business-registrations':
         return <BusinessRegistrationsTab />;
-      case 'role-management':
-        return <RoleManagementTab />;
+      case 'admin-panel':
+        return <AdminPanelTab />;
       case 'favorites':
         return <FavoritesTab />;
       default:

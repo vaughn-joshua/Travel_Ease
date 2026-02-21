@@ -20,5 +20,6 @@ export {
   disconnect_google,
   set_password,
   change_user_role,
-  upgrade_to_travel_agency
+  upgrade_to_travel_agency,
+  get_all_users
 } from './controllers/userController.js';

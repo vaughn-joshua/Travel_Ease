@@ -11,6 +11,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:seed-subcategories": "tsx scripts/seedSubcategories.ts",
     "seed:lgu": "tsx scripts/seedLguBusinesses.ts",
+    "seed:categories": "tsx scripts/seedCategoriesForExisting.ts",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",

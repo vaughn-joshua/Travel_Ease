@@ -85,21 +85,21 @@ export default function Create_Activity({
     console.log("[CreateActivity] on_submit - search_result:", search_result);
     console.log("[CreateActivity] on_submit - has business_id:", !!search_result.business_id);
     console.log("[CreateActivity] on_submit - coordinates:", { lat: search_result.lat, lng: search_result.lng });
-    
+
     // If business_id is provided, coordinates are optional (backend will fetch from business if needed)
     // Otherwise, coordinates are required
     if (!search_result.business_id) {
       // Validate coordinates are valid numbers when business_id is not provided
-    if (typeof search_result.lat !== 'number' || typeof search_result.lng !== 'number') {
+      if (typeof search_result.lat !== 'number' || typeof search_result.lng !== 'number') {
         console.error("[CreateActivity] ❌ Invalid coordinates (not numbers):", { lat: search_result.lat, lng: search_result.lng });
-      alert("Invalid location coordinates. Please select a valid location.");
-      return;
-    }
+        alert("Invalid location coordinates. Please select a valid location.");
+        return;
+      }
 
-    if (isNaN(search_result.lat) || isNaN(search_result.lng)) {
+      if (isNaN(search_result.lat) || isNaN(search_result.lng)) {
         console.error("[CreateActivity] ❌ Invalid coordinates (NaN):", { lat: search_result.lat, lng: search_result.lng });
-      alert("Invalid location coordinates. Please select a valid location.");
-      return;
+        alert("Invalid location coordinates. Please select a valid location.");
+        return;
       }
     } else {
       console.log("[CreateActivity] ✅ business_id provided, coordinates optional");
@@ -141,12 +141,23 @@ export default function Create_Activity({
         console.error("[CreateActivity] ❌ ERROR - Full error object:", error);
         console.error("[CreateActivity] Error message:", error instanceof Error ? error.message : String(error));
         console.error("[CreateActivity] Error stack:", error instanceof Error ? error.stack : "No stack");
+
+        let errorMessage = "Unknown error";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
         if (error && typeof error === 'object' && 'response' in error) {
           const axiosError = error as any;
           console.error("[CreateActivity] Response status:", axiosError.response?.status);
           console.error("[CreateActivity] Response data:", axiosError.response?.data);
+
+          if (axiosError.response?.data?.error) {
+            errorMessage = axiosError.response.data.error;
+          }
         }
-        alert(`Failed to create activity: ${error instanceof Error ? error.message : "Unknown error"}`);
+
+        alert(`Failed to create activity: ${errorMessage}`);
       },
     });
   };
@@ -155,7 +166,7 @@ export default function Create_Activity({
     // Ensure coordinates are valid numbers (default to 0 if business_id is provided and coords missing)
     const parsedLat = typeof result.lat === 'string' ? parseFloat(result.lat) : Number(result.lat);
     const parsedLng = typeof result.lng === 'string' ? parseFloat(result.lng) : Number(result.lng);
-    
+
     // If business_id is provided, backend can fetch coordinates from business
     // Otherwise, validate coordinates are valid numbers
     if (!result.business_id && (isNaN(parsedLat) || isNaN(parsedLng))) {
@@ -163,13 +174,13 @@ export default function Create_Activity({
       alert("Invalid location coordinates. Please try selecting the location again.");
       return;
     }
-    
+
     const validatedResult: SearchResult = {
       ...result,
       lat: isNaN(parsedLat) ? 0 : parsedLat,
       lng: isNaN(parsedLng) ? 0 : parsedLng,
     };
-    
+
     set_search_result(validatedResult);
   };
 
@@ -183,8 +194,8 @@ export default function Create_Activity({
         <form onSubmit={handleSubmit(on_submit)} className="space-y-4">
           <div>
             <label className="label">Location:</label>
-            <MapSearchBox 
-              onSearch={handleSearch} 
+            <MapSearchBox
+              onSearch={handleSearch}
               initialValue={initialLocation?.name || ""}
             />
             {search_result && (

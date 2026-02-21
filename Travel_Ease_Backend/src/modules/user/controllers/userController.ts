@@ -360,6 +360,7 @@ export async function oauth_sync(req: Request, res: Response) {
           auth_provider: true,
           has_email_identity: true,
           profile_completed: true,
+          role: true,
         },
       })
     );
@@ -1025,5 +1026,65 @@ export async function upgrade_to_travel_agency(req: Request, res: Response) {
   } catch (error) {
     console.error('Error upgrading to travel agency:', error);
     return handlePrismaError(error, res, 'Upgrading to travel agency');
+  }
+}
+
+/**
+ * Get all users with pagination and optional search (SUPER_ADMIN only)
+ */
+export async function get_all_users(req: Request, res: Response) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 10)); // Max 100 per page
+    const search = req.query.search as string;
+
+    const skip = (page - 1) * limit;
+
+    const whereClause: any = {};
+    if (search && search.trim().length > 0) {
+      whereClause.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { first_name: { contains: search, mode: 'insensitive' } },
+        { last_name: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const [users, total] = await executeWithRetry(() =>
+      Promise.all([
+        prisma.user.findMany({
+          where: whereClause,
+          select: {
+            user_id: true,
+            email: true,
+            first_name: true,
+            last_name: true,
+            contact_no: true,
+            role: true,
+            created_at: true,
+            auth_provider: true,
+            profile_completed: true,
+            has_email_identity: true
+          },
+          orderBy: { created_at: 'desc' },
+          skip,
+          take: limit
+        }),
+        prisma.user.count({ where: whereClause })
+      ])
+    );
+
+    res.json({
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching all users:', error);
+    return handlePrismaError(error, res, 'Fetching all users');
   }
 }

@@ -80,6 +80,8 @@ const budgetRangeValues = [
 // Activity Schemas
 export const createActivitySchema = z.object({
   travel_plan_id: z.number().int().positive().or(z.string().transform(Number)),
+  business_id: z.number().int().positive().or(z.string().transform(Number)).optional(),
+  insert_after_activity_id: z.number().int().positive().or(z.string().transform(Number)).optional(),
   notes: z.string().optional(),
   target_date: z.string().optional(),
   budget_range: z.enum(budgetRangeValues).optional(),

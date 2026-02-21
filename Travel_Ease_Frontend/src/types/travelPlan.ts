@@ -98,7 +98,7 @@ export interface Activity {
   travel_plan_id: number;
   business_id?: number | null;
   user_id: number;
-  
+
   // Location fields
   location: string | null;
   name: string | null;
@@ -107,17 +107,18 @@ export interface Activity {
   brgy: string | null;
   province: string | null;
   city: string | null;
-  
+
   // Activity details
   notes: string | null;
   target_date: string | null;
   budget_range: BudgetRange | null;
   is_priority: boolean;
-  
+  sort_order?: number;
+
   // User info from relation (flattened)
   first_name?: string;
   last_name?: string;
-  
+
   // Business relation if included
   business?: {
     business_id: number;
@@ -165,6 +166,7 @@ export interface CreateActivityPayload {
   budget_range?: BudgetRange;
   notes?: string;
   business_id?: number; // Optional: link activity to a business
+  insert_after_activity_id?: number; // Optional: sequence ordering
 }
 
 export interface UpdateActivityPayload {
