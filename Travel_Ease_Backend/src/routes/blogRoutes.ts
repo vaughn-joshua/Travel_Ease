@@ -4,6 +4,7 @@ import { prisma, executeWithRetry, executeWithTimeout, handlePrismaError, parseP
 import { authenticateToken } from '../middleware/auth.js';
 import { createBlogSchema, updateBlogSchema, blogQuerySchema, isValidBlogStatusTransition } from '../schemas/blogSchemas.js';
 import { cacheResult, buildCacheKey, invalidateCachePattern } from '../lib/cache.js';
+import RSSParser from 'rss-parser';
 
 export const blogRoutes = Router();
 
@@ -12,6 +13,7 @@ const CACHE_TTL = {
   OVERVIEW: 60,      // 1 minute for blog overview
   FEATURED: 120,     // 2 minutes for featured blogs
   LIST: 30,          // 30 seconds for paginated lists
+  RSS: 300,          // 5 minutes for RSS feeds
 };
 
 /**
@@ -23,6 +25,186 @@ const requireGoogleAuth = (req: Request, res: Response, next: NextFunction) => {
   // Authentication is already verified by authenticateToken middleware
   next();
 };
+
+/**
+ * GET /api/blogs/rss-feed - CORS-safe RSS proxy (public)
+ * 
+ * Query params:
+ *   url     - The external RSS/Atom feed URL (required, must start with http/https)
+ *   limit   - Max number of items to return (optional, default 6, max 20)
+ *   keyword - Optional keyword filter: only items whose title/excerpt/sourceName
+ *             contain this string (case-insensitive) are returned
+ * 
+ * Returns: { items: RSSItem[], feedTitle: string, fromCache: boolean }
+ * Cache key: rss:<url>:<keyword>   TTL: 5 minutes
+ */
+blogRoutes.get('/rss-feed', async (req: Request, res: Response) => {
+  try {
+    const { url, limit, keyword } = req.query;
+
+    // Validate url param
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ error: 'Query param "url" is required' });
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return res.status(400).json({ error: 'Query param "url" must start with http:// or https://' });
+    }
+
+    const maxItems = Math.min(Number(limit) || 6, 20);
+    const kw = typeof keyword === 'string' && keyword.trim() ? keyword.trim().toLowerCase() : null;
+
+    // Unique cache key per URL + keyword combination
+    const cacheKey = buildCacheKey('rss', encodeURIComponent(url), kw ?? 'all');
+
+    const { data: payload, fromCache, cacheBackend } = await cacheResult({
+      key: cacheKey,
+      ttl: CACHE_TTL.RSS,
+      fetchFn: async () => {
+        const parser = new RSSParser({
+          timeout: 8000,
+          headers: { 'User-Agent': 'TravelEase-RSS-Reader/1.0' },
+          customFields: {
+            item: [
+              ['media:content', 'mediaContent'],
+              ['media:thumbnail', 'mediaThumbnail'],
+              ['enclosure', 'enclosure'],
+              ['content:encoded', 'contentEncoded'],
+            ],
+          },
+        });
+
+        const feed = await parser.parseURL(url as string);
+
+        // Fetch more items than needed so filtering doesn't exhaust the list
+        const fetchLimit = kw ? Math.min(maxItems * 5, 100) : maxItems;
+
+        // ── Step 1: Extract what we can from the RSS XML itself ───────────────
+        const rawItems = (feed.items ?? []).slice(0, fetchLimit).map((item: any) => {
+          let imageUrl: string | null = null;
+
+          // Try RSS-embedded image fields first (fastest, no extra request)
+          if (item.mediaContent?.$.url)       imageUrl = item.mediaContent.$.url;
+          else if (item.mediaThumbnail?.$.url) imageUrl = item.mediaThumbnail.$.url;
+          else if (item.enclosure?.url)        imageUrl = item.enclosure.url;
+          else {
+            // Try sniffing <img> from content:encoded or description HTML
+            const htmlContent = item.contentEncoded || item.content || item.summary || '';
+            const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i);
+            if (imgMatch) imageUrl = imgMatch[1];
+          }
+
+          // Strip HTML from excerpt
+          const rawExcerpt = item.contentSnippet || item.summary || '';
+          const excerpt = rawExcerpt.replace(/<[^>]+>/g, '').slice(0, 200).trim();
+
+          return {
+            title: item.title ?? 'Untitled',
+            link: item.link ?? '',
+            pubDate: item.pubDate ?? item.isoDate ?? new Date().toISOString(),
+            author: item.creator || item.author || feed.title || 'Unknown',
+            excerpt,
+            imageUrl,
+            sourceName: feed.title ?? new URL(url as string).hostname,
+          };
+        });
+
+        // ── Step 2: Enrich items that still have no image via og:image ────────
+        // Fetch og:image from each article page in parallel (capped concurrency)
+        const itemsMissingImage = rawItems.filter((item) => !item.imageUrl && item.link);
+
+        if (itemsMissingImage.length > 0) {
+          /**
+           * Fetch og:image (or twitter:image) from a single article page.
+           * Returns null on any error so the card gracefully falls back to gradient.
+           */
+          const fetchOgImage = async (articleUrl: string): Promise<string | null> => {
+            try {
+              const { default: axios } = await import('axios');
+              const response = await axios.get(articleUrl, {
+                timeout: 5000,
+                headers: {
+                  'User-Agent': 'TravelEase-RSS-Reader/1.0',
+                  'Accept': 'text/html',
+                },
+                maxRedirects: 3,
+                // Only download first 50 KB — enough to parse <head>
+                maxContentLength: 50 * 1024,
+              });
+
+              const html: string = response.data ?? '';
+
+              // Try og:image first
+              const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+                           || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+              if (ogMatch?.[1]) return ogMatch[1];
+
+              // Fallback: twitter:image
+              const twMatch = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+                           || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+              if (twMatch?.[1]) return twMatch[1];
+
+              return null;
+            } catch {
+              return null;
+            }
+          };
+
+          // Run all og:image fetches in parallel
+          const enriched = await Promise.all(
+            itemsMissingImage.map((item) => fetchOgImage(item.link))
+          );
+
+          // Map results back to the items by link
+          const ogImageMap = new Map<string, string | null>();
+          itemsMissingImage.forEach((item, i) => ogImageMap.set(item.link, enriched[i]));
+
+          // Apply enriched images
+          for (const item of rawItems) {
+            if (!item.imageUrl && ogImageMap.has(item.link)) {
+              item.imageUrl = ogImageMap.get(item.link) ?? null;
+            }
+          }
+        }
+
+        // ── Step 3: Filter and slice ──────────────────────────────────────────
+        const items = kw
+          ? rawItems
+              .filter(
+                (item) =>
+                  item.title.toLowerCase().includes(kw) ||
+                  item.excerpt.toLowerCase().includes(kw) ||
+                  item.sourceName.toLowerCase().includes(kw)
+              )
+              .slice(0, maxItems)
+          : rawItems.slice(0, maxItems);
+
+        return { items, feedTitle: feed.title ?? 'RSS Feed' };
+      },
+    });
+
+
+    res.set('X-Cache', fromCache ? `HIT:${cacheBackend}` : 'MISS');
+    res.json({ ...payload, fromCache });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[RSS] Failed to fetch/parse RSS feed:', message);
+
+    // Distinguish network/parse errors from unexpected ones
+    if (
+      message.includes('Invalid') ||
+      message.includes('ECONNREFUSED') ||
+      message.includes('fetch') ||
+      message.includes('timeout') ||
+      message.includes('parse')
+    ) {
+      return res.status(502).json({ error: 'Failed to fetch or parse the RSS feed', details: message });
+    }
+
+    return res.status(500).json({ error: 'Internal server error while processing RSS feed' });
+  }
+});
+
+
 
 /**
  * GET /api/blogs - List blogs with pagination, filtering, and search (public)
