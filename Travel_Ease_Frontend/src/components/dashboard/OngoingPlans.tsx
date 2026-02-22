@@ -14,6 +14,7 @@ import {
   DbUnavailableBanner,
   PlanCardSkeleton 
 } from "../ui/PlanCard";
+import { WeatherWidget } from "../blog/Weather/Weather";
 
 const TAGAYTAY_CENTER: [number, number] = [14.1154, 120.962];
 
@@ -346,6 +347,10 @@ export default function OngoingPlans(): React.ReactElement {
                   </div>
                 </div>
               </div>
+              {/* Weather at destination */}
+              <div className="mt-2 pt-2 border-t border-gray-100">
+                <WeatherWidget lat={selectedActivity[0]} lng={selectedActivity[1]} compact />
+              </div>
             </div>
           )}
         </div>
@@ -428,27 +433,51 @@ export default function OngoingPlans(): React.ReactElement {
             )}
           </div>
 
-          {/* Day tabs */}
+          {/* Day tabs with per-day weather */}
           <div className="flex gap-1.5 p-3 border-b border-gray-100 overflow-x-auto bg-white">
-            {Array.from({ length: days }, (_, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setSelectedDay(i + 1);
-                  setSelectedActivity(null);
-                  setRouteInfo(null);
-                  setFocusedPosition(null);
-                  setHighlightedMarkerId(null);
-                }}
-                className={`px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
-                  selectedDay === i + 1
-                    ? "bg-primary-red text-white shadow-sm"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                Day {i + 1}
-              </button>
-            ))}
+            {Array.from({ length: days }, (_, i) => {
+              // Compute the date for this day so WeatherWidget can fetch a forecast
+              const dayDate = selectedPlan.start_date
+                ? (() => {
+                    const d = new Date(selectedPlan.start_date);
+                    d.setDate(d.getDate() + i);
+                    return d.toISOString().split('T')[0];
+                  })()
+                : undefined;
+              // Use accommodation coords, or Tagaytay center as fallback
+              const weatherLat = selectedPlan.accommodation?.lat ?? TAGAYTAY_CENTER[0];
+              const weatherLng = selectedPlan.accommodation?.lng ?? TAGAYTAY_CENTER[1];
+
+              return (
+                <div key={i} className="flex flex-col items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => {
+                      setSelectedDay(i + 1);
+                      setSelectedActivity(null);
+                      setRouteInfo(null);
+                      setFocusedPosition(null);
+                      setHighlightedMarkerId(null);
+                    }}
+                    className={`px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
+                      selectedDay === i + 1
+                        ? "bg-primary-red text-white shadow-sm"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    Day {i + 1}
+                  </button>
+                  {dayDate && (
+                    <WeatherWidget
+                      lat={weatherLat}
+                      lng={weatherLng}
+                      date={dayDate}
+                      compact
+                      className="text-[10px]"
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Activities list */}
