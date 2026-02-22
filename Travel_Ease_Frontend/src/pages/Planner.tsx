@@ -19,6 +19,7 @@ import { travelPlanKeys } from "../lib/queryKeys";
 import { useTravelPlanActivities } from "../features/travelPlans/queries";
 import { StatusBadge, SlotsPill } from "../components/ui/PlanCard";
 import { formatPlanDateRange } from "../utils/date";
+import { WeatherWidget } from "../components/blog/Weather/Weather";
 
 const itineraryRoute = {
   start: [14.1154, 120.9618] as [number, number],
@@ -428,6 +429,10 @@ export default function Planner(): React.ReactElement {
                     </div>
                   </div>
                 </div>
+                {/* Weather at destination */}
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <WeatherWidget lat={clickedActivity.end[0]} lng={clickedActivity.end[1]} compact />
+                </div>
               </div>
             )}
           </div>
@@ -589,8 +594,8 @@ export default function Planner(): React.ReactElement {
           <div className="flex-1 overflow-y-auto">
             {activeRightTab === "activities" && (
               <div className="p-4">
-                {/* Day Selector */}
-                <div className="flex items-center justify-between gap-3 mb-4">
+                {/* Day Selector with per-day weather */}
+                <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="relative flex-1 min-w-0">
                     {/* Left fade */}
                     <div 
@@ -609,19 +614,43 @@ export default function Planner(): React.ReactElement {
                       onScroll={handleDayScroll}
                       className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth"
                     >
-                      {Array.from({ length: days }, (_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => click_day(i + 1)}
-                          className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
-                            daySelected === i + 1
-                              ? "bg-primary-red text-white shadow-sm"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                          }`}
-                        >
-                          Day {i + 1}
-                        </button>
-                      ))}
+                      {Array.from({ length: days }, (_, i) => {
+                        // Compute the ISO date for this day's weather forecast
+                        const dayDate = dates.start
+                          ? (() => {
+                              const d = new Date(dates.start);
+                              d.setDate(d.getDate() + i);
+                              return d.toISOString().split('T')[0];
+                            })()
+                          : undefined;
+                        // Use accommodation or plan location coordinates
+                        const weatherLat = plan?.accommodation?.lat ?? 14.1154;
+                        const weatherLng = plan?.accommodation?.lng ?? 120.962;
+
+                        return (
+                          <div key={i} className="flex flex-col items-center gap-0.5 shrink-0">
+                            <button
+                              onClick={() => click_day(i + 1)}
+                              className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
+                                daySelected === i + 1
+                                  ? "bg-primary-red text-white shadow-sm"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              }`}
+                            >
+                              Day {i + 1}
+                            </button>
+                            {dayDate && (
+                              <WeatherWidget
+                                lat={weatherLat}
+                                lng={weatherLng}
+                                date={dayDate}
+                                compact
+                                className="text-[10px] px-0.5"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   {showAddActivity && (

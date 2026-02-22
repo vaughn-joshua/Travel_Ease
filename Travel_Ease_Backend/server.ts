@@ -13,6 +13,7 @@ import {
   notificationRoutes,
   blogRoutes,
   trafficRoutes,
+  weatherRoutes,
 } from "./src/routes/index.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
 import { requestLogger } from "./src/middleware/requestLogger.js";
@@ -102,6 +103,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/map", mapRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/traffic", trafficRoutes);
+app.use("/api/weather", weatherRoutes);
 
 // Health check with database status
 app.get("/api/health", async (req: Request, res: Response) => {

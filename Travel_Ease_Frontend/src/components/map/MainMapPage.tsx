@@ -9,6 +9,7 @@ import { useTravelSpots } from "../../features/businesses/queries";
 import type { SearchResult, RouteSubmission } from "../../types/map";
 import type { RouteInfo } from "./RoutingMachine";
 import type { MapMarker } from "../../pages/LandingPage";
+import { WeatherWidget } from "../blog/Weather/Weather";
 
 // Main categories from backend enum
 const CATEGORIES = [
@@ -483,6 +484,11 @@ export default function MainMapPage(): React.ReactElement {
                   <p className="text-xs text-gray-500">km</p>
                 </div>
               </div>
+            </div>
+            {/* Weather at destination */}
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Destination Weather</p>
+              <WeatherWidget lat={end[0]} lng={end[1]} compact />
             </div>
           </div>
         )}

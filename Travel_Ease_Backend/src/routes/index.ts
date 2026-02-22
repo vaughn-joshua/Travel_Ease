@@ -16,6 +16,7 @@ import utilsRoutes from './utilsRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import { blogRoutes } from './blogRoutes.js';
 import trafficRoutes from './trafficRoutes.js';
+import weatherRoutes from './weatherRoutes.js';
 
 // Legacy exports for backward compatibility
 export const travel_plan_routes = travelPlanRoutes;
@@ -26,6 +27,7 @@ export const business_routes = businessRoutes;
 export const map_routes = mapRoutes;
 export const review_routes = reviewRoutes;
 export const notification_routes = notificationRoutes;
+export const weather_routes = weatherRoutes;
 
 // New exports with camelCase naming
 export {
@@ -40,6 +42,7 @@ export {
   notificationRoutes,
   blogRoutes,
   trafficRoutes,
+  weatherRoutes,
 };
 
 export default {
@@ -53,5 +56,6 @@ export default {
   notificationRoutes,
   blogRoutes,
   trafficRoutes,
+  weatherRoutes,
 };
 
