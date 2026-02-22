@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import Button from "../components/ui/Button";
 import { ArrowRight, Map as MapIcon, PenTool, Loader2 } from "lucide-react";
 import MapPreview from "../components/blog/MapPreview";
+import RSSBlogSection from "../components/blog/blog_scrape/RSSBlogSection";
 
 export default function Blogs() {
   const { user } = useAuth();
@@ -240,6 +241,30 @@ export default function Blogs() {
           tone="muted"
         />
       )}
+
+      {/* RSS Blog Section — Tagaytay & Philippines blogs (auth-gated) */}
+      <RSSBlogSection
+        title="Discover Tagaytay & the Philippines"
+        description="Fresh travel guides and tips from top Philippine travel blogs — Tagaytay first."
+        itemsPerFeed={6}
+        feedUrls={[
+          {
+            // Priority 1 — Tagaytay category feed (all posts are about Tagaytay)
+            label: "Tagaytay Guide",
+            url: "https://thepoortraveler.net/category/tagaytay/feed/",
+          },
+          {
+            // Priority 2 — The Poor Traveler main Philippines travel feed
+            label: "PH Travel Guide",
+            url: "https://thepoortraveler.net/feed/",
+          },
+          {
+            // Priority 3 — Philippines tours blog (includes South Luzon / Taal area)
+            label: "Philippines Tours",
+            url: "https://www.filipinotravel.com.ph/feed/",
+          },
+        ]}
+      />
 
       {/* Map Preview Section */}
       <section className="py-24 bg-white">

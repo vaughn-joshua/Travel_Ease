@@ -4,6 +4,7 @@ import type {
   BlogListResponse,
   BlogQueryParams,
   BlogOverviewResponse,
+  RSSFeedResponse,
 } from "../types/blog";
 import { handleAuthRecovery, isAuthError, isNetworkError } from "../lib/authRecovery";
 
@@ -216,6 +217,17 @@ export const blogApi = {
       }
       throw error;
     }
+  },
+
+  // Fetch and parse an external RSS feed via the backend proxy (CORS-safe)
+  fetchRSSFeed: async (
+    feedUrl: string,
+    limit = 6
+  ): Promise<RSSFeedResponse> => {
+    const response = await api.get("/blogs/rss-feed", {
+      params: { url: feedUrl, limit },
+    });
+    return response.data;
   },
 };
 
