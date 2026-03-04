@@ -118,21 +118,6 @@ export default function RoutingMachine({
       return;
     }
 
-    // #region agent log
-    const orsKeyAvailable = !!(import.meta.env.VITE_ORS_API_KEY);
-    fetch('http://127.0.0.1:7770/ingest/8f171a9d-a399-4148-8ac5-d55ee422f38d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d46656'},body:JSON.stringify({sessionId:'d46656',runId:'post-fix',hypothesisId:'D-E',location:'RoutingMachine.tsx:entry',message:'[POST-FIX] Router selection',data:{startLat,startLng,endLat,endLng,orsKeyPresent:orsKeyAvailable,routerUsed:orsKeyAvailable?'ORS':'OSRM-fallback'},timestamp:Date.now()})}).catch(()=>{});
-    const origOpen = XMLHttpRequest.prototype.open;
-    const capturedUrls: string[] = [];
-    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
-      const urlStr = String(url);
-      if (urlStr.includes('osrm') || urlStr.includes('openrouteservice')) {
-        capturedUrls.push(urlStr);
-        fetch('http://127.0.0.1:7770/ingest/8f171a9d-a399-4148-8ac5-d55ee422f38d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d46656'},body:JSON.stringify({sessionId:'d46656',runId:'post-fix',hypothesisId:'A-C',location:'RoutingMachine.tsx:XHR-intercept',message:'[POST-FIX] XHR intercepted - verify no more OSRM calls',data:{url:urlStr,method},timestamp:Date.now()})}).catch(()=>{});
-      }
-      return origOpen.apply(this, [method, url, ...rest] as any);
-    };
-    // #endregion
-
     try {
       // Use ORS when key is set (accurate Philippines data), otherwise fall back to OSRM demo
       const orsApiKey = import.meta.env.VITE_ORS_API_KEY ?? '';
@@ -168,12 +153,6 @@ export default function RoutingMachine({
             distance: Math.round(distanceKm * 10) / 10,
             time: Math.round(timeMin),
           };
-
-          // #region agent log
-          const rawRoute = route as any;
-          fetch('http://127.0.0.1:7770/ingest/8f171a9d-a399-4148-8ac5-d55ee422f38d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d46656'},body:JSON.stringify({sessionId:'d46656',runId:'post-fix',hypothesisId:'B-C-E',location:'RoutingMachine.tsx:routesfound',message:'[POST-FIX] ORS route found - verify new distance/time vs old OSRM (was 1477m/176s)',data:{totalDistance:route.summary.totalDistance,totalTime:route.summary.totalTime,distanceKm,timeMin,capturedUrls,numSteps:rawRoute.instructions?.length??0,firstSteps:(rawRoute.instructions||[]).slice(0,5).map((s:any)=>({road:s.road,type:s.type,distance:s.distance}))},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
-
           onRouteFoundRef.current?.(routeInfo);
         }
       });
@@ -186,9 +165,6 @@ export default function RoutingMachine({
 
       return () => {
         map.removeControl(routingControl);
-        // #region agent log
-        XMLHttpRequest.prototype.open = origOpen;
-        // #endregion
       };
     } catch {
       return () => {};
