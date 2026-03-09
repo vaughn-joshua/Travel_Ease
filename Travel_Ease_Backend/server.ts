@@ -47,13 +47,26 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 // CORS configuration with explicit origin whitelist
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map(o => o.trim()) || [
+const defaultOrigins = [
   "http://localhost:3000",
-  "http://localhost:5173", // Vite dev server
-  "http://127.0.0.1:5173", // Vite dev server (IP)
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "http://localhost:3001",
   "http://127.0.0.1:3001",
 ];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : defaultOrigins;
+
+if (process.env.FRONTEND_URL) {
+  const frontendUrl = process.env.FRONTEND_URL.trim().replace(/\/$/, "");
+  if (!allowedOrigins.includes(frontendUrl)) allowedOrigins.push(frontendUrl);
+  const wwwVariant = frontendUrl.startsWith("https://www.")
+    ? frontendUrl.replace("https://www.", "https://")
+    : `https://www.${frontendUrl.replace(/^https?:\/\//, "")}`;
+  if (!allowedOrigins.includes(wwwVariant)) allowedOrigins.push(wwwVariant);
+}
 
 // In development, allow any localhost/127.0.0.1 origin
 const isDev = process.env.NODE_ENV !== "production";
