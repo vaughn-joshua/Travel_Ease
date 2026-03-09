@@ -57,14 +57,15 @@ const defaultOrigins = [
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
-  : defaultOrigins;
+  : [...defaultOrigins];
 
 if (process.env.FRONTEND_URL) {
   const frontendUrl = process.env.FRONTEND_URL.trim().replace(/\/$/, "");
   if (!allowedOrigins.includes(frontendUrl)) allowedOrigins.push(frontendUrl);
-  const wwwVariant = frontendUrl.startsWith("https://www.")
-    ? frontendUrl.replace("https://www.", "https://")
-    : `https://www.${frontendUrl.replace(/^https?:\/\//, "")}`;
+  const hasWww = /^https?:\/\/www\./.test(frontendUrl);
+  const wwwVariant = hasWww
+    ? frontendUrl.replace(/^(https?:\/\/)www\./, "$1")
+    : frontendUrl.replace(/^(https?:\/\/)/, "$1www.");
   if (!allowedOrigins.includes(wwwVariant)) allowedOrigins.push(wwwVariant);
 }
 
