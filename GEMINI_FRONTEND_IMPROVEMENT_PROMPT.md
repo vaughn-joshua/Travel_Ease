@@ -19,7 +19,7 @@ Improve the overall frontend of TravelEase (https://travelease.app) — a full-s
 
 ## Figma Wireframe (Design Source of Truth)
 
-**Figma URL:** `https://www.figma.com/design/Iyp33sWyotQ1doHA5satvH/Wireframe?node-id=330-218`
+**Figma URL:** `https://www.figma.com/design/40Wx2nqUrfkDyxRuVWu1pG/TRAVELEASE?node-id=62-2`
 
 ### Required Figma MCP Workflow (Do Not Skip)
 

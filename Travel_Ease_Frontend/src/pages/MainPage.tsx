@@ -68,7 +68,7 @@ export default function MainPage(): React.ReactElement {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
           {/* LEFT COLUMN - Main content */}
           <div className="w-full lg:flex-[2] min-w-0 space-y-8">
             {/* Ongoing Plans Section */}

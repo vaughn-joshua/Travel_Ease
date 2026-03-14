@@ -366,18 +366,18 @@ export default function BusinessDetail() {
           <div className="lg:col-span-2 space-y-8">
             {/* Description */}
             {business.description && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   About
                 </h2>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 leading-relaxed text-lg">
                   {business.description}
                 </p>
               </div>
             )}
 
             {/* Tabs */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
               <div className="flex border-b border-gray-200">
                 <button
                   type="button"
@@ -628,11 +628,11 @@ export default function BusinessDetail() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Hours */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">
                 Operating Hours
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {DAYS_ORDER.map((day) => {
                   const hours = business.hours[day];
                   const isOpen = hours?.open && hours?.close;
@@ -665,11 +665,11 @@ export default function BusinessDetail() {
             </div>
 
             {/* Location */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">
                 Location
               </h3>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-base">
                 {business.location.address}
               </p>
               {business.location.lat && business.location.lng && (
@@ -677,10 +677,10 @@ export default function BusinessDetail() {
                   href={`https://www.google.com/maps?q=${business.location.lat},${business.location.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center text-primary-red hover:text-primary-red-dark text-sm font-medium"
+                  className="mt-6 inline-flex items-center justify-center w-full px-4 py-2 border border-primary-red text-primary-red hover:bg-primary-red hover:text-white rounded-lg transition-colors text-sm font-medium"
                 >
                   <svg
-                    className="w-4 h-4 mr-1"
+                    className="w-4 h-4 mr-2"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -699,21 +699,21 @@ export default function BusinessDetail() {
 
             {/* Owner Info */}
             {business.owner && (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">
                   Owner
                 </h3>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-primary-red/10 rounded-full flex items-center justify-center">
-                    <span className="text-primary-red font-semibold">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-gray-700 font-bold text-lg">
                       {business.owner.name.charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-semibold text-gray-900 text-base">
                       {business.owner.name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 mt-0.5">
                       {business.owner.email}
                     </p>
                   </div>

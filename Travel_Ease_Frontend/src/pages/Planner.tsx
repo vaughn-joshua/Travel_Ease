@@ -377,11 +377,11 @@ export default function Planner(): React.ReactElement {
   return (
     <div className="h-screen flex flex-col bg-gray-100">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 overflow-hidden max-w-[1600px] mx-auto w-full">
         {/* LEFT COLUMN - Map + Plan Details */}
-        <div className="flex-1 lg:flex-[2] flex flex-col gap-4 min-w-0 min-h-[50vh] lg:min-h-0">
+        <div className="flex-1 lg:flex-[2] flex flex-col gap-6 min-w-0 min-h-[50vh] lg:min-h-0">
           {/* Map Container */}
-          <div className="flex-1 relative rounded-2xl overflow-hidden shadow-lg border border-gray-200 min-h-[300px] bg-gray-200">
+          <div className="flex-1 relative rounded-[1.5rem] overflow-hidden shadow-sm border border-gray-200 min-h-[300px] bg-gray-200">
             <LandingPage
               start={itineraryRoute.start}
               end={clickedActivity.end}
@@ -549,7 +549,7 @@ export default function Planner(): React.ReactElement {
         </div>
 
         {/* RIGHT COLUMN - Tabbed Panel */}
-        <div className="w-full lg:w-[380px] xl:w-[420px] flex flex-col bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden max-h-[50vh] lg:max-h-none">
+        <div className="w-full lg:w-[380px] xl:w-[420px] flex flex-col bg-white rounded-[1.5rem] shadow-sm border border-gray-200 overflow-hidden max-h-[50vh] lg:max-h-none">
           {/* Tab Navigation */}
           <div className="flex border-b border-gray-100 bg-gray-50/50">
             <button

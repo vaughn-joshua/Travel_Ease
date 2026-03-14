@@ -78,9 +78,9 @@ export default function BlogDetail() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
+      <div className="bg-gray-50 py-16 sm:py-20">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
             <Link
               to="/blogs"
               className="inline-flex items-center text-primary-red hover:text-primary-red-dark transition-colors duration-200"
@@ -183,14 +183,14 @@ export default function BlogDetail() {
             </div>
           )}
 
-          <div className="text-center">
-            <span className="inline-block bg-primary-red text-white px-3 py-1 rounded-full text-sm font-medium mb-4">
+          <div className="text-center pt-8">
+            <span className="inline-block bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase mb-6">
               {blog.category}
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight tracking-tight">
               {blog.title}
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto">
               {blog.excerpt}
             </p>
 
@@ -214,8 +214,8 @@ export default function BlogDetail() {
       </div>
 
       {/* Cover Image */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden mb-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="aspect-[21/9] bg-gray-100 rounded-2xl overflow-hidden mb-12 shadow-sm border border-gray-200">
           <img
             src={blog.coverImageUrl}
             alt={blog.title}
@@ -224,17 +224,17 @@ export default function BlogDetail() {
         </div>
 
         {/* Content */}
-        <div className="prose prose-lg max-w-none">
+        <article className="prose prose-lg prose-gray max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-a:text-primary-red hover:prose-a:text-primary-red-dark prose-img:rounded-xl">
           <div
             dangerouslySetInnerHTML={{ __html: blog.content }}
-            className="text-gray-800 leading-relaxed"
+            className="text-gray-700 leading-relaxed"
           />
-        </div>
+        </article>
 
         {/* Back to Blogs Button */}
-        <div className="mt-12 text-center">
-          <Link to="/blogs" className="btn-primary">
-            Read More Blogs
+        <div className="mt-16 pt-8 border-t border-gray-100 text-center">
+          <Link to="/blogs" className="inline-flex items-center justify-center font-medium transition-colors duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 px-6 py-3">
+            Read More Travel Stories
           </Link>
         </div>
       </div>

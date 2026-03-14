@@ -31,7 +31,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               block w-full rounded-lg border-gray-300 shadow-sm 
               focus:ring-primary-red focus:border-primary-red sm:text-sm
               disabled:bg-gray-50 disabled:text-gray-500
-              placeholder:text-gray-400
+              placeholder:text-gray-400 transition-colors duration-200
               py-2.5
               ${leftIcon ? 'pl-10' : 'pl-3'}
               ${rightIcon ? 'pr-10' : 'pr-3'}
