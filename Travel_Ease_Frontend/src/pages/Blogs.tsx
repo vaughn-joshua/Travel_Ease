@@ -127,7 +127,7 @@ export default function Blogs() {
         <div className="relative h-full flex items-center justify-center text-center px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl space-y-8 animate-fade-in">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1.5 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-primary-red animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-primary-red" />
               <span className="text-sm font-medium text-white tracking-wide uppercase">TravelEase Magazine</span>
             </div>
 
@@ -199,8 +199,6 @@ export default function Blogs() {
 
       {/* Newsletter Section */}
       <section className="bg-primary-red py-24 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold sm:text-4xl mb-6">

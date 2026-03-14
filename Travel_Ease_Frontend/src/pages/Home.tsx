@@ -66,7 +66,7 @@ export default function Home() {
 
             {/* Right Content - Stats/Features */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                 <div className="w-12 h-12 bg-primary-red/10 rounded-xl flex items-center justify-center mb-4">
                   <MapIcon className="w-6 h-6 text-primary-red" />
                 </div>
@@ -78,7 +78,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                 <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
                   <Calendar className="w-6 h-6 text-blue-600" />
                 </div>
@@ -90,7 +90,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4">
                   <Building2 className="w-6 h-6 text-green-600" />
                 </div>
@@ -102,7 +102,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                 <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
                   <Star className="w-6 h-6 text-amber-600" />
                 </div>
@@ -183,13 +183,13 @@ export default function Home() {
             {/* Blogs Card */}
             <Link
               to="/blogs"
-              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all hover:-translate-y-1"
+              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-colors hover:-translate-y-1"
             >
               <div className="h-48 overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1604237233847-0cd10a179521?fm=jpg&q=60&w=800"
                   alt="Travel Stories"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover  transition-transform duration-300"
                 />
               </div>
               <div className="p-6">
@@ -211,13 +211,13 @@ export default function Home() {
             {/* Businesses Card */}
             <Link
               to="/businesses"
-              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all hover:-translate-y-1"
+              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-colors hover:-translate-y-1"
             >
               <div className="h-48 overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?fm=jpg&q=60&w=800"
                   alt="Local Businesses"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover  transition-transform duration-300"
                 />
               </div>
               <div className="p-6">
@@ -239,13 +239,13 @@ export default function Home() {
             {/* Travel Plans Card */}
             <Link
               to={isLoggedIn ? "/plans" : "/signup"}
-              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all hover:-translate-y-1"
+              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 shadow-sm hover:shadow-md transition-colors hover:-translate-y-1"
             >
               <div className="h-48 overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?fm=jpg&q=60&w=800"
                   alt="Plan Your Trip"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover  transition-transform duration-300"
                 />
               </div>
               <div className="p-6">

@@ -98,14 +98,6 @@ export default function Businesses() {
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/30 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent" />
         </div>
-        <div
-          className="pointer-events-none absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-white/25 blur-3xl"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-48 right-12 h-72 w-72 rounded-full bg-white/20 blur-3xl"
-          aria-hidden="true"
-        />
 
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-12 px-4 py-24 text-center sm:px-6 lg:px-8 lg:py-32">
           <div className="w-full max-w-3xl rounded-[30px] border border-white/25 bg-white/10 p-10 shadow-lg shadow-primary-red/20 backdrop-blur">

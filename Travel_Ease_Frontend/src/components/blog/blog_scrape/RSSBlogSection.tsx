@@ -219,7 +219,7 @@ const RSSBlogSection: React.FC<RSSBlogSectionProps> = ({
               <button
                 key={feed.url}
                 onClick={() => setActiveTab(i)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 ${
                   activeTab === i
                     ? "bg-primary-red text-white shadow-sm shadow-primary-red/30"
                     : "bg-white text-gray-600 border border-gray-200 hover:border-primary-red hover:text-primary-red"

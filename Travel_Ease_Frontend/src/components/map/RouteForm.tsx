@@ -161,7 +161,7 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
         </div>
         <div className={`
           w-8 h-8 rounded-lg flex items-center justify-center
-          transition-all duration-200
+          transition-colors duration-200
           ${isExpanded ? "bg-gray-200 rotate-180" : "bg-gray-100"}
         `}>
           <svg 
@@ -179,7 +179,7 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
       <div 
         id="route-form-content"
         className={`
-          overflow-hidden transition-all duration-300 ease-out
+          overflow-hidden transition-colors duration-200 ease-out
           ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
         `}
       >
@@ -257,7 +257,7 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
                 group p-2 rounded-xl
                 bg-gray-100 hover:bg-gray-200
                 text-gray-500 hover:text-gray-700
-                transition-all duration-200
+                transition-colors duration-200
                 disabled:opacity-30 disabled:cursor-not-allowed
                 focus:outline-none focus:ring-2 focus:ring-primary-red/30
               "
@@ -341,7 +341,7 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
                 onClick={() => onProfileChange(mode.value)}
                 className={`
                   flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg
-                  text-xs font-medium transition-all duration-200
+                  text-xs font-medium transition-colors duration-200
                   ${profile === mode.value
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -362,10 +362,10 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
               w-full py-3 px-4 rounded-xl
               font-semibold text-sm
               flex items-center justify-center gap-2
-              transition-all duration-200
+              transition-colors duration-200
               focus:outline-none focus:ring-2 focus:ring-offset-2
               ${canSubmit 
-                ? "bg-primary-red text-white hover:bg-primary-red-dark shadow-lg shadow-primary-red/30 hover:shadow-xl hover:shadow-primary-red/40 focus:ring-primary-red" 
+                ? "bg-primary-red text-white hover:bg-primary-red-dark shadow-lg shadow-primary-red/30 shadow-sm hover:shadow-md hover:shadow-primary-red/40 focus:ring-primary-red" 
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }
             `}

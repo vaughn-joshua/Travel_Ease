@@ -258,7 +258,7 @@ export default function Collaborators({
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 placeholder={addParticipantMutation.isPending ? "Adding..." : "Search by email..."}
                 disabled={addParticipantMutation.isPending}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-red focus:border-transparent outline-none transition-all disabled:bg-gray-100"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-red focus:border-transparent outline-none transition-colors disabled:bg-gray-100"
               />
               {isSearching && !addParticipantMutation.isPending && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">

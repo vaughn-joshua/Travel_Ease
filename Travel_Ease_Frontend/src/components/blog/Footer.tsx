@@ -34,11 +34,11 @@ const Footer: React.FC = () => {
             type="email"
             required
             placeholder="you@example.com"
-            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:border-primary-red focus:outline-none focus:ring-2 focus:ring-primary-red/20 transition-all shadow-sm"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:border-primary-red focus:outline-none focus:ring-2 focus:ring-primary-red/20 transition-colors shadow-sm"
           />
           <button
             type="submit"
-            className="w-full sm:w-auto whitespace-nowrap rounded-xl bg-primary-red px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-red-dark hover:shadow-lg hover:shadow-primary-red/20 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2"
+            className="w-full sm:w-auto whitespace-nowrap rounded-xl bg-primary-red px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-red-dark focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2"
           >
             Subscribe
           </button>

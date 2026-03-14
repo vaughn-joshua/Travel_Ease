@@ -210,7 +210,7 @@ export default function Activities({
             return (
               <React.Fragment key={plan.activity_id}>
                 <div
-                  className={`group relative p-4 rounded-xl border cursor-pointer transition-all duration-200 ${plan.is_priority
+                  className={`group relative p-4 rounded-xl border cursor-pointer transition-colors duration-200 ${plan.is_priority
                     ? "bg-amber-50/50 border-amber-200 hover:border-amber-300"
                     : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm"
                     }`}
@@ -229,7 +229,7 @@ export default function Activities({
                     <button
                       onClick={(e) => handle_toggle_priority(e, plan)}
                       disabled={togglePriorityMutation.isPending}
-                      className={`absolute top-3 right-3 p-1.5 rounded-lg transition-all ${plan.is_priority
+                      className={`absolute top-3 right-3 p-1.5 rounded-lg transition-colors ${plan.is_priority
                         ? "text-amber-500 bg-amber-100 hover:bg-amber-200"
                         : "text-gray-300 hover:text-amber-400 hover:bg-amber-50"
                         } ${togglePriorityMutation.isPending ? "opacity-50" : ""}`}

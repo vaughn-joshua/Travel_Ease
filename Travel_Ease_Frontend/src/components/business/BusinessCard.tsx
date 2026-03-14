@@ -33,10 +33,10 @@ const BusinessCard: React.FC<BusinessCardProps> = ({
   const isDark = variant === "dark";
 
   const cardBase =
-    "flex h-full flex-col overflow-hidden rounded-3xl border transition duration-300 ease-out";
+    "flex h-full flex-col overflow-hidden rounded-3xl border transition-colors duration-200";
   const cardStyles = isDark
-    ? "border-primary-red/20 bg-white/95 text-gray-900 shadow-lg shadow-primary-red/10 backdrop-blur hover:-translate-y-1 hover:border-primary-red/40"
-    : "border-primary-red/10 bg-white shadow-sm hover:-translate-y-1 hover:shadow-xl";
+    ? "border-primary-red/20 bg-white/95 text-gray-900 shadow-sm hover:border-primary-red/40 hover:bg-gray-50"
+    : "border-gray-200 bg-white shadow-sm hover:border-gray-300 hover:bg-gray-50";
 
   const titleColor = "text-gray-900 group-hover:text-primary-red";
   const bodyColor = "text-gray-600";
@@ -75,7 +75,7 @@ const BusinessCard: React.FC<BusinessCardProps> = ({
           <OptimizedImage
             src={coverImage}
             alt={business.name}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition duration-500 "
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
           <div

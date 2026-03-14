@@ -74,14 +74,14 @@ export default function UpcomingPlans(): React.ReactElement {
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className="group bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-indigo-200 hover:shadow-md transition-all duration-200"
+            className="group bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-indigo-200 hover:shadow-md transition-colors duration-200"
             onClick={() => handle_click(plan.id)}
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-3">
               <StatusBadge status="Draft" />
               <svg 
-                className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" 
+                className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-transform" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"

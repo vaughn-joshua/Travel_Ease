@@ -84,7 +84,7 @@ export default function PublicPlans(): React.ReactElement {
         return (
           <div
             key={plan.id}
-            className={`group relative p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+            className={`group relative p-4 rounded-xl border cursor-pointer transition-colors duration-200 ${
               isJoined 
                 ? "bg-green-50/50 border-green-200 hover:border-green-300" 
                 : "bg-white border-gray-100 hover:border-primary-red/30 hover:shadow-sm"
@@ -147,7 +147,7 @@ export default function PublicPlans(): React.ReactElement {
                   Plan is full
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 text-xs text-primary-red font-medium group-hover:gap-2 transition-all">
+                <span className="inline-flex items-center gap-1.5 text-xs text-primary-red font-medium group-hover:gap-2 transition-colors">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>

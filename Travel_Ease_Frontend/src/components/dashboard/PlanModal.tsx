@@ -136,7 +136,7 @@ export default function PlanModal({ results, on_close }: PlanModalProps): React.
               return (
                 <div
                   key={planId}
-                  className={`group relative p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                  className={`group relative p-4 rounded-xl border cursor-pointer transition-colors duration-200 ${
                     isOwnPlan 
                       ? "border-primary-red/30 bg-primary-red/5 hover:border-primary-red/50" 
                       : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-md"

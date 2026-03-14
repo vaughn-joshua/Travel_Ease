@@ -105,7 +105,7 @@ function StarRatingInput({
           onClick={() => onRatingChange(star)}
           onMouseEnter={() => setHoverRating(star)}
           onMouseLeave={() => setHoverRating(0)}
-          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red rounded transition-transform hover:scale-110"
+          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-red rounded transition-transform "
         >
           <svg
             className={`${sizeClasses[size]} ${
@@ -164,7 +164,7 @@ function RatingBar({ stars, count, total }: { stars: number; count: number; tota
       </svg>
       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+          className="h-full bg-yellow-400 rounded-full transition-colors duration-500"
           style={{ width: `${percentage}%` }}
         />
       </div>

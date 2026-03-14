@@ -152,7 +152,7 @@ export default function QuickJoin({ on_close }: QuickJoinProps): React.ReactElem
               }}
               value={dateRange}
               onChange={handle_change}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-red focus:border-transparent outline-none transition-all cursor-pointer"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-red focus:border-transparent outline-none transition-colors cursor-pointer"
               placeholder="Select your travel dates"
             />
             <input type="hidden" {...register("start_date", { required: true })} />

@@ -48,7 +48,7 @@ const ScrapedCard: React.FC<ScrapedCardProps> = ({
   const cardContent = (
     <Card
       noPadding
-      className={`h-full flex flex-col transition-all duration-300 group-hover:-translate-y-1 hover:shadow-lg ${className}`}
+      className={`h-full flex flex-col transition-colors duration-200 group-hover:-translate-y-1 hover:shadow-lg ${className}`}
     >
       {/* Cover image / gradient fallback */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -56,7 +56,7 @@ const ScrapedCard: React.FC<ScrapedCardProps> = ({
           <img
             src={item.imageUrl}
             alt={item.title}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition duration-500 "
             onError={(e) => {
               // Fall back to gradient if image fails to load
               const target = e.currentTarget as HTMLImageElement;

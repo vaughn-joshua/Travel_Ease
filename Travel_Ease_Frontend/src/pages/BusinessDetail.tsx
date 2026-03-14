@@ -162,7 +162,7 @@ export default function BusinessDetail() {
             onClick={() => onRatingChange(star)}
             onMouseEnter={() => setHoverRating(star)}
             onMouseLeave={() => setHoverRating(0)}
-            className="p-0.5 transition-transform hover:scale-110"
+            className="p-0.5 transition-transform "
           >
             <svg
               className={`h-8 w-8 ${

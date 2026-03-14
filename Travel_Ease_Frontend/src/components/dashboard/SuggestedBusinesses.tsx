@@ -142,7 +142,7 @@ export default function SuggestedBusinesses({
           >
             <button
               onClick={() => handleCategoryClick(null)}
-              className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
+              className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-colors duration-200 chip-interactive ${
                 selectedCategory === null
                   ? "bg-primary-red text-white shadow-sm"
                   : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -154,7 +154,7 @@ export default function SuggestedBusinesses({
               <button
                 key={category.id}
                 onClick={() => handleCategoryClick(category.id)}
-                className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive flex items-center gap-1.5 ${
+                className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-colors duration-200 chip-interactive flex items-center gap-1.5 ${
                   selectedCategory === category.id
                     ? "bg-primary-red text-white shadow-sm"
                     : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -263,7 +263,7 @@ export default function SuggestedBusinesses({
                     handleBusinessClick(business);
                   }
                 }}
-                className="group bg-white rounded-xl p-3 cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-100 hover:border-gray-200"
+                className="group bg-white rounded-xl p-3 cursor-pointer hover:shadow-md transition-colors duration-200 border border-gray-100 hover:border-gray-200"
                 title="Click to view, double-click to add"
               >
                 <div className="flex gap-3">

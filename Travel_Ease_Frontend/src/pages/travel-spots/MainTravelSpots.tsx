@@ -214,7 +214,7 @@ export default function MainTravelSpots(): React.ReactElement {
         </div>
 
         {/* Filters Card (Category, Price Range, Sort) */}
-        <div className={`mb-6 p-4 rounded-xl border-2 transition-all ${
+        <div className={`mb-6 p-4 rounded-xl border-2 transition-colors ${
           hasPendingChanges 
             ? "border-amber-400 bg-amber-50/50" 
             : "border-gray-200 bg-white"
@@ -321,7 +321,7 @@ export default function MainTravelSpots(): React.ReactElement {
               type="button"
               onClick={applyFilters}
               disabled={!hasPendingChanges}
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
                 hasPendingChanges
                   ? "bg-primary-red text-white hover:bg-red-700 shadow-md hover:shadow-lg"
                   : "bg-gray-200 text-gray-400 cursor-not-allowed"
