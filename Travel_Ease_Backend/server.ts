@@ -76,9 +76,6 @@ console.log(`CORS: ${allowedOrigins.length} allowed origins configured (isDev=${
 app.use(
   cors({
     origin: (origin, callback) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7770/ingest/8f171a9d-a399-4148-8ac5-d55ee422f38d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ab27af'},body:JSON.stringify({sessionId:'ab27af',location:'server.ts:cors',message:'CORS origin check',data:{origin:origin||'none',allowedCount:allowedOrigins.length,isDev},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-      // #endregion
       if (!origin) return callback(null, true);
 
       if (isDev && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
@@ -123,9 +120,6 @@ app.use("/api/weather", weatherRoutes);
 
 // Health check with database status
 app.get("/api/health", async (req: Request, res: Response) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7770/ingest/8f171a9d-a399-4148-8ac5-d55ee422f38d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ab27af'},body:JSON.stringify({sessionId:'ab27af',location:'server.ts:health',message:'Health endpoint hit',data:{origin:req.headers.origin||'none',host:req.headers.host,xForwardedHost:req.headers['x-forwarded-host']||'none'},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-  // #endregion
   let dbStatus = "unknown";
   try {
     const connected = await testConnection();
