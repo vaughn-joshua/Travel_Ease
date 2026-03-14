@@ -218,49 +218,52 @@ router.get(
         }),
         ttl: CACHE_TTL.TRAVEL_SPOTS,
         fetchFn: async () => {
-          const businesses = await executeWithRetry(() =>
-            prisma.business.findMany({
-              where,
-              select: {
-                business_id: true,
-                user_id: true,
-                name: true,
-                house_number: true,
-                street: true,
-                brgy: true,
-                city: true,
-                latitude: true,
-                longtitude: true, // Note: DB column has typo 'longtitude' instead of 'longitude'
-                description: true,
-                rating: true,
-                status: true,
-                picture: true,
-                min_price: true,
-                max_price: true,
-              },
-              orderBy: [{ rating: "desc" }],
-              take: maxLimit,
+          // Batch both queries in a single transaction to avoid
+          // two separate BEGIN/DEALLOCATE ALL/COMMIT cycles (~400ms saved)
+          const [businesses, reviewCountsRaw] = await executeWithRetry(() =>
+            prisma.$transaction(async (tx) => {
+              const biz = await tx.business.findMany({
+                where,
+                select: {
+                  business_id: true,
+                  user_id: true,
+                  name: true,
+                  house_number: true,
+                  street: true,
+                  brgy: true,
+                  city: true,
+                  latitude: true,
+                  longtitude: true, // Note: DB column has typo 'longtitude' instead of 'longitude'
+                  description: true,
+                  rating: true,
+                  status: true,
+                  picture: true,
+                  min_price: true,
+                  max_price: true,
+                },
+                orderBy: [{ rating: "desc" }],
+                take: maxLimit,
+              });
+
+              const businessIds = biz.map((b) => b.business_id);
+              const counts = businessIds.length > 0
+                ? await tx.business_review.groupBy({
+                    by: ["business_id"],
+                    where: { business_id: { in: businessIds } },
+                    _count: { review_id: true },
+                  })
+                : [];
+
+              return [biz, counts] as const;
             })
           );
 
-          // Fetch review counts in a single query
-          const businessIds = businesses.map((b) => b.business_id);
-          let reviewCounts: Record<number, number> = {};
-          if (businessIds.length > 0) {
-            const counts = await executeWithRetry(() =>
-              prisma.business_review.groupBy({
-                by: ["business_id"],
-                where: { business_id: { in: businessIds } },
-                _count: { review_id: true },
-              })
-            );
-            reviewCounts = counts.reduce((acc, r) => {
-              if (r.business_id !== null) {
-                acc[r.business_id] = r._count.review_id;
-              }
-              return acc;
-            }, {} as Record<number, number>);
-          }
+          const reviewCounts = reviewCountsRaw.reduce((acc, r) => {
+            if (r.business_id !== null) {
+              acc[r.business_id] = r._count.review_id;
+            }
+            return acc;
+          }, {} as Record<number, number>);
 
           // Attach reviewCount and normalize longtitude -> longitude
           return businesses.map((b) => {

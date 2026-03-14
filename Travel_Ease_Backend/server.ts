@@ -56,7 +56,7 @@ const defaultOrigins = [
 ];
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim().replace(/\/$/, ""))
   : [...defaultOrigins];
 
 if (process.env.FRONTEND_URL) {
@@ -69,16 +69,15 @@ if (process.env.FRONTEND_URL) {
   if (!allowedOrigins.includes(wwwVariant)) allowedOrigins.push(wwwVariant);
 }
 
-// In development, allow any localhost/127.0.0.1 origin
 const isDev = process.env.NODE_ENV !== "production";
+
+console.log(`CORS: ${allowedOrigins.length} allowed origins configured (isDev=${isDev})`);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
 
-      // In development, allow any localhost or 127.0.0.1 origin
       if (isDev && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
         return callback(null, true);
       }
@@ -86,8 +85,8 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`CORS blocked origin: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
+        console.warn(`CORS blocked origin: ${origin}. Allowed: [${allowedOrigins.join(", ")}]`);
+        callback(null, false);
       }
     },
     credentials: true,

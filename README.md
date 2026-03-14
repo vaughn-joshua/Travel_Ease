@@ -472,22 +472,12 @@ This monorepo is designed for deployment to:
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key
    VITE_ENABLE_EDITOR=false
+   BACKEND_URL=https://your-backend.up.railway.app
    ```
 
-4. **API Rewrites**:
-   - Update `Travel_Ease_Frontend/vercel.json` with your Railway backend URL:
-   ```json
-   {
-     "rewrites": [
-       {
-         "source": "/api/:path*",
-         "destination": "https://your-backend.railway.app/api/:path*"
-       }
-     ]
-   }
-   ```
+   > **Critical**: `BACKEND_URL` must be the Railway root URL **without** `/api`. The edge function at `api/[...path].ts` appends the request path automatically. If `BACKEND_URL` is missing, all `/api/*` requests will return 502.
 
-5. **Deploy**: Push to main branch or trigger manual deployment
+4. **Deploy**: Push to main branch or trigger manual deployment
 
 ### Backend Deployment (Railway)
 
@@ -504,7 +494,7 @@ This monorepo is designed for deployment to:
    # Database (Required)
    DATABASE_URL=postgresql://postgres:password@host:5432/postgres
    
-   # Server
+   # Server (NODE_ENV=production is critical for security and CORS)
    PORT=3001
    NODE_ENV=production
    
@@ -517,8 +507,9 @@ This monorepo is designed for deployment to:
    # JWT (for local auth fallback)
    JWT_SECRET=your-secure-random-string
    
-   # CORS (your Vercel frontend URL)
+   # CORS (your Vercel frontend URL, no trailing slash)
    ALLOWED_ORIGINS=https://your-app.vercel.app
+   FRONTEND_URL=https://your-app.vercel.app
    
    # Redis (optional - auto-detected if set)
    REDIS_URL=redis://default:password@host:port
@@ -528,6 +519,8 @@ This monorepo is designed for deployment to:
    NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
    OSRM_BASE_URL=https://router.project-osrm.org
    ```
+
+   > **Critical**: `NODE_ENV=production` must be set. Without it, the server runs in dev mode, which changes CORS behavior and leaks stack traces in error responses.
 
 4. **Procfile** handles startup:
    - `release`: Runs `npx prisma migrate deploy` on each deployment
@@ -575,11 +568,15 @@ npm run dev:frontend
 ### Troubleshooting Deployment
 
 **CORS Errors**:
-- Ensure `ALLOWED_ORIGINS` in backend includes your Vercel frontend URL
-- Check that the URL doesn't have a trailing slash
+- Ensure `ALLOWED_ORIGINS` on Railway includes your Vercel frontend URL (exact match, no trailing slash)
+- Set `FRONTEND_URL` on Railway for automatic www/non-www handling
+- Ensure `NODE_ENV=production` is set on Railway
 
-**API Calls Failing**:
-- Verify `vercel.json` has correct backend URL in rewrites
+**API Calls Failing / Network Error**:
+- Verify `BACKEND_URL` is set in Vercel (Railway root URL, no `/api` suffix)
+- Test: `curl https://your-frontend.vercel.app/api/health` should return backend health JSON
+- If it returns HTML or 502, `BACKEND_URL` is missing or wrong
+- Ensure `VITE_API_BASE_URL=/api` in Vercel (not a direct Railway URL)
 - Check Railway logs for backend errors
 - Ensure `DATABASE_URL` is correctly set
 

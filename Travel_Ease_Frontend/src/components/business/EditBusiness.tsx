@@ -2,6 +2,7 @@ import { useForm, FieldValues } from "react-hook-form";
 import RegisterMap from "./RegisterMap";
 import { useEffect, useState, ChangeEvent } from "react";
 import { useUpdateBusiness } from "../../features/businesses/mutations";
+import { API_BASE_URL } from "../../config/api";
 
 // Predefined category list selection
 const category = [
@@ -110,7 +111,7 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
         const street = business.street;
         const brgy = business.brgy;
 
-        const response = await fetch("/api/map/search", {
+        const response = await fetch(`${API_BASE_URL}/map/search`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -120,7 +121,6 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
 
         const result = await response.json();
 
-        // Convert API results to map-friendly format
         const cleanPins =
           result?.places?.map((loc: { lat: number; lng: number }) => ({
             lat: Number(loc.lat),
@@ -144,7 +144,7 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
       const street = getValues("street");
       const brgy = getValues("brgy");
 
-      const response = await fetch("/api/map/search", {
+      const response = await fetch(`${API_BASE_URL}/map/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -154,7 +154,6 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
 
       const result = await response.json();
 
-      // Convert API results to map-friendly format
       const cleanPins =
         result?.places?.map((loc: { lat: number; lng: number }) => ({
           lat: Number(loc.lat),
@@ -218,7 +217,7 @@ function EditBusiness({ on_close, business }: EditBusinessProps) {
     if (value.length >= 3) {
       try {
         const response = await fetch(
-          `/api/map/suggestions?query=${encodeURIComponent(value)}`,
+          `${API_BASE_URL}/map/suggestions?query=${encodeURIComponent(value)}`,
           {
             method: "GET",
           }

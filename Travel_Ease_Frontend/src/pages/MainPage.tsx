@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import CreatePlan from "../components/dashboard/CreatePlan";
 import UpcomingPlans from "../components/dashboard/UpcomingPlans";
@@ -11,27 +11,8 @@ import PageContainer from "../components/ui/PageContainer";
 import type { TravelPlan } from "../types/travelPlan";
 import { travelPlanKeys } from "../lib/queryKeys";
 import { useAuth } from "../context/AuthContext";
-import {
-  useOngoingPlans,
-  useUpcomingPlans,
-  usePreviousPlans,
-  usePublicPlans,
-} from "../features/travelPlans/queries";
 
 type ModalType = "" | "create" | "join" | "quick";
-
-// Rotating loading messages
-const LOADING_MESSAGES = [
-  "Preparing your travel dashboard...",
-  "Loading your adventures...",
-  "Getting everything ready...",
-  "Almost there...",
-];
-
-// Loading timeout in milliseconds (10 seconds)
-const LOADING_TIMEOUT_MS = 10000;
-// Message rotation interval (2.5 seconds)
-const MESSAGE_INTERVAL_MS = 2500;
 
 export default function MainPage(): React.ReactElement {
   const queryClient = useQueryClient();
@@ -39,54 +20,6 @@ export default function MainPage(): React.ReactElement {
 
   const isAuthenticated = !authLoading && Boolean(user);
 
-  // Use TanStack Query hooks to track loading states
-  const { isLoading: ongoingLoading, isFetched: ongoingFetched } = useOngoingPlans(isAuthenticated);
-  const { isLoading: upcomingLoading, isFetched: upcomingFetched } = useUpcomingPlans(isAuthenticated);
-  const { isLoading: previousLoading, isFetched: previousFetched } = usePreviousPlans(isAuthenticated);
-  const { isLoading: publicLoading, isFetched: publicFetched } = usePublicPlans();
-
-  // Combined loading state
-  const isAnyLoading = useMemo(() => {
-    if (authLoading) return true;
-    if (!isAuthenticated) return publicLoading;
-    return ongoingLoading || upcomingLoading || previousLoading || publicLoading;
-  }, [authLoading, isAuthenticated, ongoingLoading, upcomingLoading, previousLoading, publicLoading]);
-
-  const allFetched = useMemo(() => {
-    if (!isAuthenticated) return publicFetched;
-    return ongoingFetched && upcomingFetched && previousFetched && publicFetched;
-  }, [isAuthenticated, ongoingFetched, upcomingFetched, previousFetched, publicFetched]);
-
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [forceShowContent, setForceShowContent] = useState(false);
-
-  useEffect(() => {
-    setForceShowContent(false);
-    setMessageIndex(0);
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (!isAnyLoading && allFetched) return;
-    if (forceShowContent) return;
-
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
-    }, MESSAGE_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [isAnyLoading, allFetched, forceShowContent]);
-
-  useEffect(() => {
-    if (forceShowContent) return;
-    if (!isAnyLoading && allFetched) return;
-
-    const timeout = setTimeout(() => {
-      setForceShowContent(true);
-    }, LOADING_TIMEOUT_MS);
-
-    return () => clearTimeout(timeout);
-  }, [isAnyLoading, allFetched, forceShowContent]);
-  
   const [activeModal, setActiveModal] = useState<ModalType>("");
   const [results, setResults] = useState<TravelPlan[]>([]);
 
@@ -95,29 +28,13 @@ export default function MainPage(): React.ReactElement {
     setActiveModal("");
   }, [queryClient]);
 
-  const showLoadingOverlay = isAnyLoading && !allFetched && !forceShowContent;
-
-  // Loading state with improved design
-  if (showLoadingOverlay) {
+  // Show a brief skeleton only while auth state is resolving
+  if (authLoading) {
     return (
       <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center px-4">
-          {/* Animated logo/spinner */}
-          <div className="relative w-16 h-16 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-primary-red border-t-transparent animate-spin" />
-            <div className="absolute inset-3 rounded-full bg-primary-red/10 flex items-center justify-center">
-              <svg className="w-6 h-6 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-lg text-gray-700 font-medium mb-2">
-            {LOADING_MESSAGES[messageIndex]}
-          </p>
-          <p className="text-sm text-gray-400">
-            This usually takes just a moment
-          </p>
+        <div className="relative w-12 h-12 mx-auto">
+          <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
+          <div className="absolute inset-0 rounded-full border-4 border-primary-red border-t-transparent animate-spin" />
         </div>
       </div>
     );
