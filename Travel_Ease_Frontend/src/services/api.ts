@@ -47,17 +47,16 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Only log in development
     if (import.meta.env.DEV) {
-      console.log(
-        `Making ${config.method?.toUpperCase()} request to: ${config.url}`
+      console.debug(
+        `[API] ${config.method?.toUpperCase()} ${config.url}`
       );
     }
     return config;
   },
   (error) => {
     if (import.meta.env.DEV) {
-      console.error("Request error:", error);
+      console.error("[API] Request setup error:", error?.message || error);
     }
     return Promise.reject(error);
   }
@@ -66,13 +65,11 @@ api.interceptors.request.use(
 // Response interceptor for global error handling
 api.interceptors.response.use(
   (response) => {
-    // Only log in development
     if (import.meta.env.DEV) {
-      console.log(
-        `Response received: ${response.status} ${response.config.url}`
+      console.debug(
+        `[API] ${response.status} ${response.config.url}`
       );
     }
-    // Handle 204 No Content responses (empty body)
     if (response.status === 204) {
       return { ...response, data: null };
     }
@@ -90,9 +87,8 @@ api.interceptors.response.use(
     // Network errors (ECONNREFUSED, ERR_NETWORK, etc.) are NOT auth problems
     // Don't trigger auth recovery - the server is unreachable
     if (isNetworkError(error)) {
-      // Log network error in development but don't trigger auth recovery
       if (import.meta.env.DEV) {
-        console.warn("[API] Network error detected, skipping auth recovery:", error.code || error.message);
+        console.warn(`[API] Network error (${error.code || "UNKNOWN"}) ${error.config?.url ?? ""} — ${error.message}`);
       }
       return Promise.reject(error);
     }
@@ -118,49 +114,35 @@ api.interceptors.response.use(
       handleAuthRecovery(error);
     }
 
-    // Only log detailed errors in development (skip abort errors and expected auth errors)
     const isExpectedAuthError = (status === 401 || status === 403) &&
       (code === "TOKEN_EXPIRED" || code === "AUTH_REQUIRED" || !code);
 
     if (import.meta.env.DEV && !isExpectedAuthError) {
-      console.error("API Error:", {
-        status,
-        statusText: error.response?.statusText,
-        code,
-        message: error.message,
-        url: error.config?.url,
-      });
+      const url = error.config?.url;
+      let hint = "";
 
-      // Handle specific error cases with helpful messages
       if (status === 500) {
-        console.error("Internal server error - check backend logs");
+        hint = "Internal server error - check backend logs";
       } else if (code === "STORAGE_UNAVAILABLE") {
-        console.error(
-          "Storage unavailable - Supabase Storage bucket may not exist or is not public. " +
-          "Create a PUBLIC bucket named 'images' in Supabase Dashboard > Storage."
-        );
+        hint =
+          "Storage unavailable - create a PUBLIC bucket named 'images' in Supabase Dashboard > Storage";
       } else if (status === 503 || code === "DB_UNAVAILABLE") {
-        console.error("Service unavailable - database may be down");
+        hint = "Service unavailable - database may be down";
       } else if (code === "CONNECTION_ERROR") {
-        console.error(
-          "Database connection error - Supabase may be paused or unreachable"
-        );
+        hint = "Database connection error - Supabase may be paused or unreachable";
       } else if (error.code === "ECONNREFUSED") {
-        console.error("Connection refused - is the backend server running?");
+        hint = "Connection refused - is the backend server running?";
       } else if (error.code === "ERR_NETWORK") {
-        // Check if this might be a CORS issue (network error with no response)
-        if (!error.response) {
-          console.error(
-            "Network error - this may be a CORS issue. Check that the backend allows requests from this origin."
-          );
-        } else {
-          console.error("Network error - check your internet connection");
-        }
+        hint = error.response
+          ? "Network error - check your internet connection"
+          : "Network error - possible CORS issue. Check that the backend allows this origin.";
       } else if (error.code === "ECONNABORTED") {
-        console.error(
-          "Request timeout - backend may be slow or database unreachable"
-        );
+        hint = "Request timeout - backend may be slow or database unreachable";
       }
+
+      console.error(
+        `[API] ${status ?? "ERR"} ${url ?? "unknown"} — ${error.message}${hint ? ` (${hint})` : ""}`
+      );
     }
 
     return Promise.reject(error);
