@@ -33,12 +33,12 @@ const BlogCard: React.FC<BlogCardProps> = ({
       className={`group block focus:outline-none ${className}`}
       aria-label={`Read blog post: ${blog.title}`}
     >
-      <Card noPadding className={`h-full flex flex-col transition-colors duration-200 ${isDark ? 'bg-white/95 border-primary-red/20 shadow-sm' : 'hover:border-gray-200 hover:bg-gray-50 shadow-sm'}`}>
+      <Card noPadding className={`h-full flex flex-col transition-all duration-300 group-hover:-translate-y-1 ${isDark ? 'bg-white/95 border-primary-red/20 shadow-lg shadow-primary-red/10' : 'hover:shadow-lg'}`}>
         <div className="relative aspect-[4/3] overflow-hidden">
           <OptimizedImage
             src={blog.coverImageUrl}
             alt={blog.title}
-            className="h-full w-full object-cover transition duration-500 "
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />

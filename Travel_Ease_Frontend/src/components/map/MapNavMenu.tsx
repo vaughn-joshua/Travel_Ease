@@ -93,18 +93,18 @@ export default function MapNavMenu(): React.ReactElement {
           shadow-lg
           border
           flex items-center justify-center
-          transition-colors duration-200 ease-out
+          transition-all duration-300 ease-out
           focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2 focus:ring-offset-transparent
           ${isOpen 
             ? "bg-primary-red text-white border-primary-red shadow-primary-red/30 scale-105" 
-            : "bg-white/90 text-gray-700 border-white/60 shadow-black/15 hover:bg-white shadow-sm hover:shadow-md "
+            : "bg-white/90 text-gray-700 border-white/60 shadow-black/15 hover:bg-white hover:shadow-xl hover:scale-105"
           }
         `}
         aria-label="Toggle navigation menu"
         aria-expanded={isOpen}
       >
         <span className={`
-          transition-colors duration-200
+          transition-all duration-300
           ${isOpen ? "rotate-180 opacity-0 scale-0" : "rotate-0 opacity-100 scale-100"}
           absolute
         `}>
@@ -113,7 +113,7 @@ export default function MapNavMenu(): React.ReactElement {
           </span>
         </span>
         <span className={`
-          transition-colors duration-200
+          transition-all duration-300
           ${isOpen ? "rotate-0 opacity-100 scale-100" : "-rotate-180 opacity-0 scale-0"}
           absolute
         `}>
@@ -132,7 +132,7 @@ export default function MapNavMenu(): React.ReactElement {
           shadow-2xl shadow-black/20
           border border-white/60
           overflow-hidden
-          transition-colors duration-200 ease-out origin-top-left
+          transition-all duration-300 ease-out origin-top-left
           ${isOpen 
             ? "opacity-100 scale-100 translate-y-0" 
             : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
@@ -156,7 +156,7 @@ export default function MapNavMenu(): React.ReactElement {
                 group flex items-center gap-3 px-3 py-2.5 rounded-xl
                 text-gray-700
                 hover:bg-primary-red/10 hover:text-primary-red
-                transition-colors duration-200
+                transition-all duration-200
                 focus:outline-none focus:ring-2 focus:ring-primary-red/30 focus:bg-primary-red/5
               "
               style={{ animationDelay: `${index * 50}ms` }}
@@ -178,7 +178,7 @@ export default function MapNavMenu(): React.ReactElement {
                 )}
               </div>
               <svg 
-                className="w-4 h-4 text-gray-300 group-hover:text-primary-red group-hover:translate-x-0.5 transition-colors opacity-0 group-hover:opacity-100" 
+                className="w-4 h-4 text-gray-300 group-hover:text-primary-red group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -201,7 +201,7 @@ export default function MapNavMenu(): React.ReactElement {
               className="
                 group flex items-center gap-3 px-3 py-2.5 rounded-xl
                 hover:bg-gray-100
-                transition-colors duration-200
+                transition-all duration-200
                 focus:outline-none focus:ring-2 focus:ring-primary-red/30
               "
             >
@@ -233,7 +233,7 @@ export default function MapNavMenu(): React.ReactElement {
                   flex items-center gap-3 px-3 py-2.5 rounded-xl
                   text-gray-700
                   hover:bg-gray-100
-                  transition-colors duration-200
+                  transition-all duration-200
                   focus:outline-none focus:ring-2 focus:ring-primary-red/30
                 "
               >
@@ -251,7 +251,7 @@ export default function MapNavMenu(): React.ReactElement {
                   flex items-center gap-3 px-3 py-2.5 rounded-xl
                   bg-primary-red text-white
                   hover:bg-primary-red-dark
-                  transition-colors duration-200
+                  transition-all duration-200
                   focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2
                 "
               >

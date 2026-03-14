@@ -9,7 +9,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={`bg-white rounded-xl border border-gray-100 shadow-sm hover:border-gray-200 transition-colors duration-200 overflow-hidden ${className}`}
+        className={`bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden ${className}`}
         {...props}
       >
         <div className={noPadding ? '' : 'p-5'}>

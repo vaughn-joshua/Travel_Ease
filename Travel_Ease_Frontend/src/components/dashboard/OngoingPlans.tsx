@@ -228,12 +228,12 @@ export default function OngoingPlans(): React.ReactElement {
             <div
               key={plan.id}
               onClick={() => handleCardClick(plan.id)}
-              className="group bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-emerald-200 hover:shadow-md transition-colors duration-200"
+              className="group bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-emerald-200 hover:shadow-md transition-all duration-200"
             >
               <div className="flex items-start justify-between gap-2 mb-3">
                 <StatusBadge status="Active" />
                 <svg 
-                  className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-transform" 
+                  className="w-4 h-4 text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" 
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -306,7 +306,7 @@ export default function OngoingPlans(): React.ReactElement {
           {/* Plan title overlay */}
           <div className="absolute top-4 left-4 right-4 sm:right-auto sm:max-w-[70%] rounded-xl border border-gray-200/50 bg-white/95 backdrop-blur-sm px-4 py-3 shadow-lg pointer-events-none z-[12]">
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-xs font-medium text-emerald-600">Live Trip</span>
             </div>
             <h3 className="font-bold text-gray-900">{selectedPlan.title}</h3>
@@ -453,7 +453,7 @@ export default function OngoingPlans(): React.ReactElement {
                       setFocusedPosition(null);
                       setHighlightedMarkerId(null);
                     }}
-                    className={`px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+                    className={`px-4 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all ${
                       selectedDay === i + 1
                         ? "bg-primary-red text-white shadow-sm"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -507,7 +507,7 @@ export default function OngoingPlans(): React.ReactElement {
                     <div
                       key={activity.activity_id}
                       onClick={() => handleActivityClick(activity)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-colors ${
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
                         isSelected || isHighlighted
                           ? "border-primary-red bg-primary-red/5 shadow-sm"
                           : "border-gray-200 bg-white hover:border-primary-red/30 hover:shadow-sm"

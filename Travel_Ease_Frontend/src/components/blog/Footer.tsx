@@ -3,103 +3,116 @@ import { Link } from "react-router-dom";
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8">
-          {/* Brand Column */}
-          <div className="col-span-1 md:col-span-1 flex flex-col gap-4">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="flex items-center justify-center bg-gray-900 rounded-lg w-10 h-10 shrink-0">
-                <span className="text-white font-bold text-lg leading-none">TE</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900 tracking-tight">TravelEase</span>
-            </Link>
-            <p className="text-gray-500 text-sm leading-relaxed mt-2 max-w-xs">
-              We craft seamless journeys for curious explorers. From curated
-              itineraries to on-call travel support, TravelEase elevates every
-              trip with local insight and human-first planning.
-            </p>
+    <footer className="bg-gradient-to-b from-white to-gray-50 border-t border-gray-100 text-gray-700">
+      <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+        {/* Tagaytay Aesthetic Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full mb-6">
+            <span className="text-lg">🌿</span>
+            <span className="text-sm font-medium text-green-700">Where Cool Breeze Meets Adventure</span>
+            <span className="text-lg">⛰️</span>
           </div>
-
-          {/* Explore Column */}
-          <div className="flex flex-col gap-4">
-            <h4 className="text-gray-900 font-semibold tracking-wide">Explore</h4>
-            <ul className="flex flex-col gap-3 text-sm">
-              <li>
-                <Link to="/blogs" className="text-gray-500 hover:text-primary-red transition-colors">
-                  Blog Stories
-                </Link>
-              </li>
-              <li>
-                <Link to="/travel_spots_page" className="text-gray-500 hover:text-primary-red transition-colors">
-                  Featured Spots
-                </Link>
-              </li>
-              <li>
-                <Link to="/map" className="text-gray-500 hover:text-primary-red transition-colors">
-                  Interactive Map
-                </Link>
-              </li>
-              <li>
-                <Link to="/plans" className="text-gray-500 hover:text-primary-red transition-colors">
-                  Plan a Trip
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources Column */}
-          <div className="flex flex-col gap-4">
-            <h4 className="text-gray-900 font-semibold tracking-wide">Resources</h4>
-            <ul className="flex flex-col gap-3 text-sm">
-              <li>
-                <Link to="/about" className="text-gray-500 hover:text-primary-red transition-colors">
-                  About TravelEase
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="text-gray-500 hover:text-primary-red transition-colors">
-                  FAQs
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-gray-500 hover:text-primary-red transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-gray-500 hover:text-primary-red transition-colors">
-                  Terms & Conditions
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact Column */}
-          <div className="flex flex-col gap-4">
-            <h4 className="text-gray-900 font-semibold tracking-wide">Contact</h4>
-            <ul className="flex flex-col gap-3 text-sm text-gray-500">
-              <li>
-                <a href="mailto:hello@travelease.com" className="hover:text-primary-red transition-colors">
-                  hello@travelease.com
-                </a>
-              </li>
-              <li>
-                <p>+1 (234) 567-890</p>
-              </li>
-              <li className="pt-2">
-                <p>123 Travel Street</p>
-                <p>San Francisco, CA 94103</p>
-              </li>
-            </ul>
-          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+            Join the TravelEase Community
+          </h2>
+          <p className="mt-3 text-gray-600 max-w-lg mx-auto">
+            Discover the best of Tagaytay — from scenic ridge views to hidden local gems. 
+            Get curated travel tips delivered to your inbox.
+          </p>
         </div>
 
-        {/* Bottom Border & Copyright */}
-        <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} TravelEase. All rights reserved.
+        {/* Newsletter - Centered */}
+        <form
+          className="flex flex-col sm:flex-row gap-3 justify-center items-center max-w-md mx-auto mb-16"
+          onSubmit={(event) => event.preventDefault()}
+        >
+          <label htmlFor="footer-email" className="sr-only">
+            Email address
+          </label>
+          <input
+            id="footer-email"
+            type="email"
+            required
+            placeholder="you@example.com"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-900 placeholder-gray-400 focus:border-primary-red focus:outline-none focus:ring-2 focus:ring-primary-red/20 transition-all shadow-sm"
+          />
+          <button
+            type="submit"
+            className="w-full sm:w-auto whitespace-nowrap rounded-xl bg-primary-red px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-red-dark hover:shadow-lg hover:shadow-primary-red/20 focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2"
+          >
+            Subscribe
+          </button>
+        </form>
+
+        {/* Tagaytay Vibes Divider */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+          <div className="h-px w-16 bg-gradient-to-r from-transparent to-gray-200" />
+          <div className="flex items-center gap-2 text-gray-400">
+            <span>☕</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Tagaytay, Philippines</span>
+            <span>🌅</span>
+          </div>
+          <div className="h-px w-16 bg-gradient-to-l from-transparent to-gray-200" />
+        </div>
+
+        {/* Centered Brand & Links */}
+        <div className="text-center space-y-6">
+          {/* Logo */}
+          <Link to="/" className="inline-flex items-center gap-2 group">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-red text-sm font-bold text-white shadow-lg shadow-primary-red/20 group-hover:shadow-primary-red/30 transition-shadow">
+              TE
+            </span>
+            <span className="text-xl font-bold text-gray-900">
+              TravelEase
+            </span>
+          </Link>
+
+          {/* Tagline */}
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">
+            Your gateway to Tagaytay's breathtaking views, cool climate, and unforgettable experiences.
           </p>
+
+          {/* Navigation Links */}
+          <nav className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm">
+            <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/blogs">
+              Blog Stories
+            </Link>
+            <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/travel_spots_page">
+              Featured Spots
+            </Link>
+            <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/map">
+              Interactive Map
+            </Link>
+            <Link className="text-gray-600 hover:text-primary-red transition-colors" to="/plans">
+              Plan a Trip
+            </Link>
+          </nav>
+        </div>
+
+        {/* Aesthetic Footer Bottom */}
+        <div className="mt-12 pt-8 border-t border-gray-100">
+          <div className="flex flex-col items-center gap-4">
+            {/* Tagaytay Features */}
+            <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <span>🌡️</span> Cool 23°C Climate
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span>🏔️</span> Taal Volcano Views
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span>🍃</span> Fresh Mountain Air
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span>☕</span> Café Culture
+              </span>
+            </div>
+            
+            {/* Copyright */}
+            <p className="text-sm text-gray-500">
+              &copy; {new Date().getFullYear()} TravelEase. Crafted with 💚 in Tagaytay.
+            </p>
+          </div>
         </div>
       </div>
     </footer>

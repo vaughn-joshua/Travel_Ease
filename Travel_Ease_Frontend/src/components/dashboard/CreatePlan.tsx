@@ -207,7 +207,7 @@ export default function Create_Plan({
           <div
             className={`
               w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-              transition-colors duration-200
+              transition-all duration-200
               ${
                 step === counter
                   ? "bg-red-500 text-white shadow-lg scale-110"
@@ -256,7 +256,7 @@ export default function Create_Plan({
                   <input
                     {...register("title", { required: "Title is required" })}
                     placeholder="e.g., Summer Beach Getaway"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                   />
                   {typedErrors.title && (
                     <p className="text-red-500 text-xs mt-1">
@@ -275,7 +275,7 @@ export default function Create_Plan({
                     })}
                     placeholder="Describe your travel plan..."
                     rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none resize-none"
                   />
                   {typedErrors.description && (
                     <p className="text-red-500 text-xs mt-1">
@@ -303,7 +303,7 @@ export default function Create_Plan({
                       })}
                       value="Tagaytay Cavite"
                       readOnly
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
                   </div>
                   {typedErrors.location && (
@@ -328,7 +328,7 @@ export default function Create_Plan({
                           required: "Start date is required",
                         })}
                         min={today}
-                        className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none cursor-pointer"
+                        className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none cursor-pointer"
                       />
                     </div>
                     {typedErrors.start_date && (
@@ -358,7 +358,7 @@ export default function Create_Plan({
                           },
                         })}
                         min={startDate || today}
-                        className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none cursor-pointer"
+                        className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none cursor-pointer"
                       />
                     </div>
                     {typedErrors.end_date && (
@@ -412,7 +412,7 @@ export default function Create_Plan({
                         },
                       })}
                       placeholder="e.g., 5"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
                   </div>
                   {typedErrors.slots && (
@@ -463,7 +463,7 @@ export default function Create_Plan({
                       onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
                       onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                       placeholder="Search by email..."
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors outline-none"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none"
                     />
                     {isSearching && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -554,7 +554,7 @@ export default function Create_Plan({
                 type="button"
                 onClick={handleNext}
                 disabled={createPlanMutation.isPending}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue
               </button>
@@ -562,7 +562,7 @@ export default function Create_Plan({
               <button
                 type="submit"
                 disabled={createPlanMutation.isPending}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createPlanMutation.isPending ? (
                   <span className="flex items-center justify-center gap-2">

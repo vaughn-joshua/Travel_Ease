@@ -245,10 +245,10 @@ export default function MapSearchBox({
               rounded-xl
               shadow-lg shadow-black/10
               text-sm text-gray-800 placeholder-gray-400
-              transition-colors duration-200
+              transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-primary-red/50 focus:border-primary-red/30
               focus:shadow-xl focus:shadow-primary-red/10
-              group-shadow-sm hover:shadow-md
+              group-hover:shadow-xl
             "
           />
           
@@ -262,7 +262,7 @@ export default function MapSearchBox({
               w-8 h-8 rounded-lg
               flex items-center justify-center
               text-gray-400 hover:text-primary-red hover:bg-primary-red/10
-              transition-colors duration-200
+              transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-primary-red/50
               disabled:opacity-50
             "

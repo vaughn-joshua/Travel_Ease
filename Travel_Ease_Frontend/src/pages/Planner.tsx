@@ -393,7 +393,7 @@ export default function Planner(): React.ReactElement {
             {/* Plan title overlay */}
             <div className="absolute top-4 left-4 right-4 sm:right-auto sm:max-w-[70%] rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200/50 px-4 py-3 shadow-lg z-[1000] pointer-events-none">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`w-2 h-2 rounded-full ${plan.status === "Active" ? "bg-emerald-500" : "bg-gray-400"}`} />
+                <span className={`w-2 h-2 rounded-full ${plan.status === "Active" ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
                 <span className="text-xs font-medium text-gray-500">{plan.status}</span>
               </div>
               <h3 className="font-bold text-gray-900">{plan.title}</h3>
@@ -554,7 +554,7 @@ export default function Planner(): React.ReactElement {
           <div className="flex border-b border-gray-100 bg-gray-50/50">
             <button
               onClick={() => setActiveRightTab("activities")}
-              className={`flex-1 py-3.5 px-4 text-sm font-medium transition-colors relative ${
+              className={`flex-1 py-3.5 px-4 text-sm font-medium transition-all relative ${
                 activeRightTab === "activities"
                   ? "text-primary-red"
                   : "text-gray-500 hover:text-gray-700"
@@ -572,7 +572,7 @@ export default function Planner(): React.ReactElement {
             </button>
             <button
               onClick={() => setActiveRightTab("suggested")}
-              className={`flex-1 py-3.5 px-4 text-sm font-medium transition-colors relative ${
+              className={`flex-1 py-3.5 px-4 text-sm font-medium transition-all relative ${
                 activeRightTab === "suggested"
                   ? "text-primary-red"
                   : "text-gray-500 hover:text-gray-700"
@@ -631,7 +631,7 @@ export default function Planner(): React.ReactElement {
                           <div key={i} className="flex flex-col items-center gap-0.5 shrink-0">
                             <button
                               onClick={() => click_day(i + 1)}
-                              className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-colors duration-200 chip-interactive ${
+                              className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
                                 daySelected === i + 1
                                   ? "bg-primary-red text-white shadow-sm"
                                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"

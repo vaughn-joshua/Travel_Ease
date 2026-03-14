@@ -42,7 +42,7 @@ export default function AlternativeSuggestionsModal({
                         {alternatives.map((business, idx) => (
                             <div
                                 key={idx}
-                                className="group bg-white p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-md transition-colors flex flex-col sm:flex-row gap-4 items-start sm:items-center"
+                                className="group bg-white p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-md transition-all flex flex-col sm:flex-row gap-4 items-start sm:items-center"
                             >
                                 {/* Image thumbnail */}
                                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-100">
@@ -50,7 +50,7 @@ export default function AlternativeSuggestionsModal({
                                         <img
                                             src={business.picture}
                                             alt={business.name}
-                                            className="w-full h-full object-cover  transition-transform"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=No+Image';
                                             }}

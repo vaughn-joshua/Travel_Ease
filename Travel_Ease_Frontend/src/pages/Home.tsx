@@ -17,130 +17,127 @@ export default function Home() {
   const isLoggedIn = !!user;
 
   return (
-    <main className="bg-white text-gray-900 font-sans">
-      {/* Hero Section */}
-      <section className="py-20 lg:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-16 items-center">
-          {/* Left Content */}
-          <div className="flex-1 space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-primary-red" />
-              <span className="text-sm font-medium text-gray-600 tracking-wide">
-                Welcome to TravelEase
-              </span>
-            </div>
-
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight leading-[1.1]">
-              Plan Your Perfect <br />
-              <span className="text-primary-red">Tagaytay Adventure</span>
-            </h1>
-
-            <p className="text-lg text-gray-600 leading-relaxed max-w-xl">
-              Discover local favorites, plan your itinerary, and explore the
-              best restaurants, attractions, and accommodations in Tagaytay.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Link to={isLoggedIn ? "/plans" : "/signup"}>
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto min-w-[180px]"
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
-                >
-                  {isLoggedIn ? "My Travel Plans" : "Get Started Free"}
-                </Button>
-              </Link>
-              <Link to="/blogs">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto min-w-[180px]"
-                  leftIcon={<BookOpen className="w-4 h-4" />}
-                >
-                  Read Travel Stories
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Right Content - Stats/Features */}
-          <div className="flex-1 grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-primary-red/30 hover:bg-gray-50 transition-colors duration-200 cursor-pointer">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                <MapIcon className="w-6 h-6 text-gray-700" />
+    <main className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Welcome Section */}
+      <section className="py-20 lg:py-28 bg-gradient-to-br from-gray-50 to-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary-red/20 bg-primary-red/5 px-4 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-primary-red animate-pulse" />
+                <span className="text-sm font-medium text-primary-red tracking-wide">
+                  Welcome to TravelEase
+                </span>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                Interactive Map
-              </h3>
-              <p className="text-sm text-gray-600">
-                Explore businesses and attractions with our live map
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                Plan Your Perfect <br />
+                <span className="text-primary-red">Tagaytay Adventure</span>
+              </h1>
+
+              <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-xl">
+                Discover local favorites, plan your itinerary, and explore the
+                best restaurants, attractions, and accommodations in Tagaytay.
               </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                <Link to={isLoggedIn ? "/plans" : "/signup"}>
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto min-w-[180px]"
+                    rightIcon={<ArrowRight className="w-5 h-5" />}
+                  >
+                    {isLoggedIn ? "My Travel Plans" : "Get Started Free"}
+                  </Button>
+                </Link>
+                <Link to="/blogs">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto min-w-[180px]"
+                    leftIcon={<BookOpen className="w-4 h-4" />}
+                  >
+                    Read Travel Stories
+                  </Button>
+                </Link>
+              </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-primary-red/30 hover:bg-gray-50 transition-colors duration-200 cursor-pointer mt-8">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                <Calendar className="w-6 h-6 text-gray-700" />
+            {/* Right Content - Stats/Features */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-primary-red/10 rounded-xl flex items-center justify-center mb-4">
+                  <MapIcon className="w-6 h-6 text-primary-red" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg mb-1">
+                  Interactive Map
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Explore businesses and attractions with our live map
+                </p>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                Trip Planner
-              </h3>
-              <p className="text-sm text-gray-600">
-                Create and manage your travel itineraries
-              </p>
-            </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-primary-red/30 hover:bg-gray-50 transition-colors duration-200 cursor-pointer -mt-8">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                <Building2 className="w-6 h-6 text-gray-700" />
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg mb-1">
+                  Trip Planner
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Create and manage your travel itineraries
+                </p>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                Local Businesses
-              </h3>
-              <p className="text-sm text-gray-600">
-                Find the best restaurants, hotels & activities
-              </p>
-            </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-primary-red/30 hover:bg-gray-50 transition-colors duration-200 cursor-pointer">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                <Star className="w-6 h-6 text-gray-700" />
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4">
+                  <Building2 className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg mb-1">
+                  Local Businesses
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Find the best restaurants, hotels & activities
+                </p>
               </div>
-              <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                Reviews & Ratings
-              </h3>
-              <p className="text-sm text-gray-600">
-                Read honest reviews from real travelers
-              </p>
+
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
+                  <Star className="w-6 h-6 text-amber-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg mb-1">
+                  Reviews & Ratings
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Read honest reviews from real travelers
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Map Preview Section */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6 order-2 lg:order-1">
-              <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white p-2">
-                <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 relative">
-                  {/* The actual map component */}
-                  <MapPreview />
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 max-w-md">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-4">
+              <MapPreview />
+              <p className="text-xs text-gray-500">
                 Explore the latest accommodations, restaurants, and attractions
                 around Tagaytay. Pins update as new businesses join TravelEase.
               </p>
             </div>
 
-            <div className="space-y-8 order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 text-xs font-semibold tracking-wider">
-                <MapIcon className="w-4 h-4 text-primary-red" />
-                <span>INTERACTIVE MAP</span>
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">
+                <MapIcon className="w-3.5 h-3.5" />
+                <span>Interactive Map</span>
               </div>
 
-              <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">
-                Discover Local Favorites <br /> & Hidden Gems
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+                Discover Local Favorites & <br /> Hidden Gems
               </h2>
 
               <p className="text-lg text-gray-600 leading-relaxed">
@@ -149,18 +146,18 @@ export default function Home() {
                 ratings, reviews, and more details.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-2">
                 <Link to="/map">
                   <Button
                     size="lg"
-                    className="w-full sm:w-auto min-w-[160px]"
+                    className="w-full sm:w-auto"
                     leftIcon={<MapIcon className="w-4 h-4" />}
                   >
                     Open Full Map
                   </Button>
                 </Link>
                 <Link to="/travel_spots_page">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto min-w-[160px]">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
                     Browse All Spots
                   </Button>
                 </Link>
@@ -171,10 +168,10 @@ export default function Home() {
       </section>
 
       {/* Quick Links Section */}
-      <section className="py-24 bg-white">
+      <section className="py-20 bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl font-bold text-gray-900">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               Explore TravelEase
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -183,68 +180,86 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
+            {/* Blogs Card */}
             <Link
               to="/blogs"
-              className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer"
+              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all hover:-translate-y-1"
             >
-              <div className="h-56 overflow-hidden bg-gray-100">
+              <div className="h-48 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1604237233847-0cd10a179521?fm=jpg&q=80&w=800"
+                  src="https://images.unsplash.com/photo-1604237233847-0cd10a179521?fm=jpg&q=60&w=800"
                   alt="Travel Stories"
-                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
-              <div className="p-8 flex-1 flex flex-col">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-primary-red transition-colors duration-200">
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <BookOpen className="w-5 h-5 text-primary-red" />
+                  <span className="text-sm font-medium text-primary-red">
+                    Travel Stories
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-red transition-colors">
                   Read Our Blog
                 </h3>
-                <p className="text-gray-600 text-base flex-1">
+                <p className="text-gray-600">
                   Discover curated travel stories, tips, and destination guides
-                  crafted by our travel strategists.
                 </p>
               </div>
             </Link>
 
+            {/* Businesses Card */}
             <Link
               to="/businesses"
-              className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer"
+              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all hover:-translate-y-1"
             >
-              <div className="h-56 overflow-hidden bg-gray-100">
+              <div className="h-48 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?fm=jpg&q=80&w=800"
+                  src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?fm=jpg&q=60&w=800"
                   alt="Local Businesses"
-                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
-              <div className="p-8 flex-1 flex flex-col">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-primary-red transition-colors duration-200">
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Building2 className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-medium text-green-600">
+                    Directory
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-red transition-colors">
                   Browse Businesses
                 </h3>
-                <p className="text-gray-600 text-base flex-1">
-                  Find restaurants, hotels, attractions and more in Tagaytay.
-                  Read honest reviews from real travelers.
+                <p className="text-gray-600">
+                  Find restaurants, hotels, attractions and more in Tagaytay
                 </p>
               </div>
             </Link>
 
+            {/* Travel Plans Card */}
             <Link
               to={isLoggedIn ? "/plans" : "/signup"}
-              className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 transition-colors duration-200 cursor-pointer"
+              className="group bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all hover:-translate-y-1"
             >
-              <div className="h-56 overflow-hidden bg-gray-100">
+              <div className="h-48 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?fm=jpg&q=80&w=800"
+                  src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?fm=jpg&q=60&w=800"
                   alt="Plan Your Trip"
-                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
-              <div className="p-8 flex-1 flex flex-col">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-primary-red transition-colors duration-200">
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">
+                    Planner
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-red transition-colors">
                   {isLoggedIn ? "My Travel Plans" : "Start Planning"}
                 </h3>
-                <p className="text-gray-600 text-base flex-1">
-                  Create personalized itineraries, collaborate with friends, and
-                  make the most out of your trip.
+                <p className="text-gray-600">
+                  Create personalized itineraries and collaborate with friends
                 </p>
               </div>
             </Link>
@@ -253,30 +268,35 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gray-900 text-white">
-        <div className="max-w-4xl mx-auto px-4 text-center sm:px-6 lg:px-8 space-y-8">
-          <h2 className="text-4xl font-bold sm:text-5xl">
+      <section className="py-20 bg-primary-red text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-white/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold sm:text-4xl mb-6">
             Ready to Explore Tagaytay?
           </h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+          <p className="text-lg text-white/90 mb-10 max-w-2xl mx-auto">
             Join thousands of travelers who plan their perfect trips with
             TravelEase. Sign up today and start your adventure!
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to={isLoggedIn ? "/plans" : "/signup"}>
               <Button
+                variant="secondary"
                 size="lg"
-                className="w-full sm:w-auto min-w-[180px]"
+                className="!rounded-md !bg-white !text-primary-red hover:!bg-gray-100 border-none shadow-lg"
+                rightIcon={<ArrowRight className="w-5 h-5" />}
               >
-                {isLoggedIn ? "Go to My Plans" : "Sign Up Now"}
+                {isLoggedIn ? "Go to My Plans" : "Sign Up Free"}
               </Button>
             </Link>
             <Link to="/businesses">
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full sm:w-auto min-w-[180px] border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                className="!rounded-md border-white text-white hover:bg-white hover:text-primary-red"
               >
                 Explore Businesses
               </Button>

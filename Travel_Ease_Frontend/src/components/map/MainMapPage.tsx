@@ -355,9 +355,9 @@ export default function MainMapPage(): React.ReactElement {
                     className={`
                       filter-panel-btn
                       relative flex items-center gap-2.5 px-3 py-3.5 rounded-xl text-sm font-medium
-                      transition-colors duration-200 ease-out
+                      transition-all duration-200 ease-out
                       focus:outline-none focus:ring-2 focus:ring-primary-red/50 focus:ring-offset-1
-                       
+                      hover:scale-[1.02] active:scale-[0.98]
                       ${isSelected
                         ? "bg-primary-red text-white shadow-lg shadow-primary-red/30"
                         : "bg-white text-gray-700 border border-gray-200 hover:border-primary-red/40 hover:text-primary-red hover:bg-red-50/50 shadow-sm hover:shadow-md"
@@ -400,7 +400,7 @@ export default function MainMapPage(): React.ReactElement {
                     bg-gray-100 text-gray-700 
                     border border-gray-200 
                     hover:bg-red-50 hover:text-red-600 hover:border-red-200 
-                    transition-colors duration-200 
+                    transition-all duration-200 
                     flex items-center gap-2
                     focus:outline-none focus:ring-2 focus:ring-primary-red/30
                   "
@@ -505,8 +505,8 @@ export default function MainMapPage(): React.ReactElement {
           shadow-lg shadow-black/15
           border border-white/60
           flex items-center justify-center
-          transition-colors duration-200
-          hover:border-gray-200 hover:bg-gray-50 shadow-sm hover:bg-white
+          transition-all duration-200
+          hover:scale-105 hover:shadow-xl hover:bg-white
           focus:outline-none focus:ring-2 focus:ring-primary-red focus:ring-offset-2
           active:scale-95
           disabled:opacity-50 disabled:cursor-wait
@@ -647,8 +647,8 @@ export default function MainMapPage(): React.ReactElement {
             border border-red-400/50
             flex items-center justify-center
             text-white
-            transition-colors duration-200
-            hover:border-gray-200 hover:bg-gray-50 shadow-sm hover:bg-red-600
+            transition-all duration-200
+            hover:scale-105 hover:shadow-xl hover:bg-red-600
             focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2
             active:scale-95
           "

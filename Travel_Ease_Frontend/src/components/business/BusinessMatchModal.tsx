@@ -64,7 +64,7 @@ export default function BusinessMatchModal({
                 {matches.map((business) => (
                   <label
                     key={business.business_id}
-                    className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors"
+                    className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all"
                     style={{
                       borderColor: selectedId === business.business_id ? '#dc2626' : '#e5e7eb',
                       backgroundColor: selectedId === business.business_id ? '#fef2f2' : '#ffffff'

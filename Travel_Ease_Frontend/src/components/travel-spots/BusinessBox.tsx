@@ -73,7 +73,7 @@ export default function BusinessBox({
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-colors duration-200 cursor-pointer">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all duration-200 cursor-pointer">
         {/* Featured Image */}
         <div className="relative h-40 bg-gray-100">
           <img

@@ -305,9 +305,9 @@ export default function Edit_Plan({
               <button
                 type="button"
                 onClick={handlePublishPlan}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors shadow-sm flex items-center gap-1 ${watch('visibility')
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shadow-sm flex items-center gap-1 ${watch('visibility')
                     ? 'bg-green-100 text-green-700 border border-green-200 cursor-default'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md '
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md hover:scale-105'
                   }`}
                 title={watch('visibility') ? "Plan is public" : "Make this plan visible for all to join"}
               >
