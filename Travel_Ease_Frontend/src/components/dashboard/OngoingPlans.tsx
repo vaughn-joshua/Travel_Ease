@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { useOngoingPlans, useTravelPlanActivities } from "../../features/travelPlans/queries";
 import LandingPage, { type MapMarker } from "../../pages/LandingPage";
 import type { Activity } from "../../types/travelPlan";
@@ -27,8 +26,6 @@ const formatBudgetRange = (range: string | null): string => {
 
 export default function OngoingPlans(): React.ReactElement {
   const navigate = useNavigate();
-  const { loading: authLoading } = useAuth();
-
   const [viewMode, setViewMode] = useState<"cards" | "detail">("cards");
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -45,15 +42,13 @@ export default function OngoingPlans(): React.ReactElement {
     }
   }, []);
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
   const {
     data,
     isLoading,
     isError,
     error,
     refetch,
-  } = useOngoingPlans(!authLoading && Boolean(token));
+  } = useOngoingPlans();
 
   const plans = data?.plans ?? [];
   const dbUnavailable = data?.dbUnavailable ?? false;

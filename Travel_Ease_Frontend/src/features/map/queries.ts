@@ -122,7 +122,7 @@ async function fetchORSAutocomplete(
     text: query,
     "boundary.country": "PH",
     "focus.point.lat": String(TAGAYTAY_CENTER.lat),
-    "focus.point.lng": String(TAGAYTAY_CENTER.lng),
+    "focus.point.lon": String(TAGAYTAY_CENTER.lng),
     "boundary.rect.min_lon": String(TAGAYTAY_RECT.minLon),
     "boundary.rect.min_lat": String(TAGAYTAY_RECT.minLat),
     "boundary.rect.max_lon": String(TAGAYTAY_RECT.maxLon),
@@ -154,7 +154,7 @@ async function fetchORSGeocode(
     text: query,
     "boundary.country": "PH",
     "focus.point.lat": String(TAGAYTAY_CENTER.lat),
-    "focus.point.lng": String(TAGAYTAY_CENTER.lng),
+    "focus.point.lon": String(TAGAYTAY_CENTER.lng),
     size: String(limit),
   });
 

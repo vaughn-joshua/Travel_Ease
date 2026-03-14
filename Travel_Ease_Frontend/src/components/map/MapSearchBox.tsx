@@ -222,7 +222,7 @@ export default function MapSearchBox({
 
   return (
     <div ref={boxRef} className="relative w-full z-[10000]">
-      <form onSubmit={handleSearch} className="relative">
+      <div role="search" className="relative">
         {/* Search input with glass effect */}
         <div className="relative group">
           <input
@@ -254,8 +254,9 @@ export default function MapSearchBox({
           
           {/* Search/Loading button */}
           <button
-            type="submit"
+            type="button"
             disabled={isLoading}
+            onClick={handleSearch}
             className="
               absolute right-2 top-1/2 -translate-y-1/2
               w-8 h-8 rounded-lg
@@ -288,7 +289,7 @@ export default function MapSearchBox({
             </span>
           </div>
         )}
-      </form>
+      </div>
 
       {/* Suggestions dropdown */}
       {showSuggestions && query.length >= 2 && suggestions.length > 0 && (

@@ -1,20 +1,16 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { usePreviousPlans } from "../../features/travelPlans/queries";
 import { formatPlanDateRange } from "../../utils/date";
 
 export default function PreviousPlans(): React.ReactElement {
   const navigate = useNavigate();
-  const { loading: authLoading } = useAuth();
-
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const {
     data,
     isError,
     error,
     refetch,
-  } = usePreviousPlans(!authLoading && Boolean(token));
+  } = usePreviousPlans();
 
   const plans = data?.plans ?? [];
   const dbUnavailable = data?.dbUnavailable ?? false;

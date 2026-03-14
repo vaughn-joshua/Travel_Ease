@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { useUpcomingPlans } from "../../features/travelPlans/queries";
 import { 
   StatusBadge, 
@@ -14,9 +13,6 @@ import {
 
 export default function UpcomingPlans(): React.ReactElement {
   const navigate = useNavigate();
-  const { loading: authLoading } = useAuth();
-
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const {
     data,
@@ -24,7 +20,7 @@ export default function UpcomingPlans(): React.ReactElement {
     isError,
     error,
     refetch,
-  } = useUpcomingPlans(!authLoading && Boolean(token));
+  } = useUpcomingPlans();
 
   const plans = data?.plans ?? [];
   const dbUnavailable = data?.dbUnavailable ?? false;

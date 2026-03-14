@@ -89,16 +89,17 @@ function groupToPlansResult(group: PlanGroupData, dbUnavailable: boolean): Plans
 // This is the base query that other hooks derive from.
 // ─────────────────────────────────────────────────────────────────────────────
 export function useGroupedPlans(enabled = true) {
-  const { user, loading: authLoading } = useAuth();
-  const isAuthenticated = !authLoading && Boolean(user);
+  // Fire immediately if a localStorage token exists — don't wait for
+  // Supabase auth.getSession() to resolve (saves 200-500ms on every load).
+  // fetch_grouped_plans already handles missing/invalid tokens gracefully.
+  const hasToken = typeof window !== "undefined" && Boolean(localStorage.getItem("token"));
 
   return useQuery<GroupedPlansResult, Error>({
     queryKey: travelPlanKeys.grouped(),
     queryFn: fetch_grouped_plans,
-    enabled: enabled && isAuthenticated,
+    enabled: enabled && hasToken,
     staleTime: 1000 * 30,
     placeholderData: (previousData) => previousData,
-    initialData: getDefaultGroupedResult,
   });
 }
 
