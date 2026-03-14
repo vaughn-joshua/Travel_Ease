@@ -7,11 +7,13 @@ import Man from "../../assets/man.png";
 import { MapMover } from "./MapMover";
 import RoutingMachine, { RouteInfo } from "./RoutingMachine";
 import type { MapMarker } from "../../pages/LandingPage";
+import type { TransportProfile } from "../../types/map";
 
 interface MapPageProps {
   search_result?: [number, number] | { lat: number; lng: number } | null;
   start?: [number, number] | null;
   end?: [number, number] | null;
+  profile?: TransportProfile;
   businessMarkers?: MapMarker[];
   mapCenter?: [number, number] | null;
   onMapClear?: () => void;
@@ -50,6 +52,7 @@ export default function Map_Page({
   search_result,
   start,
   end,
+  profile = "driving-car",
   businessMarkers = [],
   mapCenter,
   onRouteFound,
@@ -223,7 +226,7 @@ export default function Map_Page({
         ))}
 
         {start && end && (
-          <RoutingMachine start={start} end={end} onRouteFound={handleRouteFound} />
+          <RoutingMachine start={start} end={end} profile={profile} onRouteFound={handleRouteFound} />
         )}
       </MapContainer>
     </div>

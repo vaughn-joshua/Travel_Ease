@@ -1,28 +1,43 @@
 /**
  * Map Query Hooks
  *
- * TanStack Query hooks for caching external Nominatim geocoding API calls.
- * These hooks reduce redundant API calls by caching search results.
+ * TanStack Query hooks for geocoding and place search.
+ * Uses ORS (OpenRouteService) Geocode API as primary source when available,
+ * falls back to Nominatim when ORS key is not configured.
  *
- * External API: https://nominatim.openstreetmap.org
- * Rate Limit: 1 request/second (caching helps avoid hitting this limit)
+ * ORS Geocode: https://api.openrouteservice.org/geocode
+ * Nominatim:   https://nominatim.openstreetmap.org
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { mapKeys } from "../../lib/queryKeys";
-import type { NominatimPlace, NormalizedPlace } from "../../types/map";
+import type {
+  NominatimPlace,
+  NormalizedPlace,
+  ORSGeocodeResponse,
+} from "../../types/map";
 import { businessApi } from "../../services/api";
 
-// Tagaytay City viewbox bounds (west, north, east, south)
-const TAGAYTAY_VIEWBOX = "120.92,14.15,120.97,14.07";
+const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY ?? "";
+
+// Tagaytay area — matches the map's maxBounds so search covers the full visible area
+const TAGAYTAY_CENTER = { lat: 14.1154, lng: 120.962 };
+const TAGAYTAY_VIEWBOX = "120.8,14.25,121.1,14.0"; // west,north,east,south
+const TAGAYTAY_RECT = {
+  minLon: 120.8,
+  minLat: 14.0,
+  maxLon: 121.1,
+  maxLat: 14.25,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: Normalize Nominatim response to internal format
+// Normalizers
 // ─────────────────────────────────────────────────────────────────────────────
+
 function normalizeNominatimPlace(place: NominatimPlace): NormalizedPlace {
   const parts = (place.display_name || "").split(",").map((p) => p.trim());
   return {
-    id: place.place_id?.toString() || "",
+    id: `nom_${place.place_id}`,
     name: parts[0] || "",
     fullLabel: place.display_name || "",
     lat: parseFloat(place.lat),
@@ -36,9 +51,27 @@ function normalizeNominatimPlace(place: NominatimPlace): NormalizedPlace {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: Normalize database business to NormalizedPlace format
-// ─────────────────────────────────────────────────────────────────────────────
+function normalizeORSPlace(
+  feature: ORSGeocodeResponse["features"][number]
+): NormalizedPlace {
+  const p = feature.properties;
+  const [lng, lat] = feature.geometry.coordinates;
+  return {
+    id: `ors_${p.id}`,
+    name: p.name,
+    fullLabel: p.label,
+    lat,
+    lng,
+    type: p.layer,
+    address: {
+      barangay: p.neighbourhood,
+      city: p.locality,
+      province: p.region,
+      country: p.country,
+    },
+  };
+}
+
 function normalizeBusinessPlace(business: {
   business_id: number;
   name: string;
@@ -50,21 +83,21 @@ function normalizeBusinessPlace(business: {
   latitude: number | null;
   longitude: number | null;
 }): NormalizedPlace {
-  // Build full label from available address components
   const addressParts: string[] = [];
   if (business.house_number) addressParts.push(business.house_number);
   if (business.street) addressParts.push(business.street);
   if (business.brgy) addressParts.push(business.brgy);
   if (business.city) addressParts.push(business.city);
-  
-  const fullLabel = addressParts.length > 0
-    ? `${business.name}, ${addressParts.join(", ")}`
-    : business.name;
+
+  const fullLabel =
+    addressParts.length > 0
+      ? `${business.name}, ${addressParts.join(", ")}`
+      : business.name;
 
   return {
     id: `business_${business.business_id}`,
     name: business.name,
-    fullLabel: fullLabel,
+    fullLabel,
     lat: business.latitude!,
     lng: business.longitude!,
     type: "business",
@@ -76,86 +109,152 @@ function normalizeBusinessPlace(business: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: Fetch from Nominatim API
+// ORS Geocode / Autocomplete (primary)
 // ─────────────────────────────────────────────────────────────────────────────
+
+async function fetchORSAutocomplete(
+  query: string,
+  limit: number = 8,
+  signal?: AbortSignal
+): Promise<NormalizedPlace[]> {
+  const params = new URLSearchParams({
+    api_key: ORS_API_KEY,
+    text: query,
+    "boundary.country": "PH",
+    "focus.point.lat": String(TAGAYTAY_CENTER.lat),
+    "focus.point.lng": String(TAGAYTAY_CENTER.lng),
+    "boundary.rect.min_lon": String(TAGAYTAY_RECT.minLon),
+    "boundary.rect.min_lat": String(TAGAYTAY_RECT.minLat),
+    "boundary.rect.max_lon": String(TAGAYTAY_RECT.maxLon),
+    "boundary.rect.max_lat": String(TAGAYTAY_RECT.maxLat),
+    size: String(limit),
+  });
+
+  const res = await fetch(
+    `https://api.openrouteservice.org/geocode/autocomplete?${params}`,
+    { signal, headers: { Accept: "application/json" } }
+  );
+
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Rate limited — wait a moment.");
+    throw new Error("ORS autocomplete failed");
+  }
+
+  const data: ORSGeocodeResponse = await res.json();
+  return data.features.map(normalizeORSPlace);
+}
+
+async function fetchORSGeocode(
+  query: string,
+  limit: number = 1,
+  signal?: AbortSignal
+): Promise<NormalizedPlace[]> {
+  const params = new URLSearchParams({
+    api_key: ORS_API_KEY,
+    text: query,
+    "boundary.country": "PH",
+    "focus.point.lat": String(TAGAYTAY_CENTER.lat),
+    "focus.point.lng": String(TAGAYTAY_CENTER.lng),
+    size: String(limit),
+  });
+
+  const res = await fetch(
+    `https://api.openrouteservice.org/geocode/search?${params}`,
+    { signal, headers: { Accept: "application/json" } }
+  );
+
+  if (!res.ok) throw new Error("ORS geocode failed");
+  const data: ORSGeocodeResponse = await res.json();
+  return data.features.map(normalizeORSPlace);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nominatim (fallback when ORS key is missing)
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function fetchNominatimSearch(
   query: string,
   limit?: number,
   signal?: AbortSignal
 ): Promise<NormalizedPlace[]> {
   const limitParam = limit ? `&limit=${limit}` : "";
-  const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-    query
-  )},Tagaytay%20City&countrycodes=ph&bounded=1&viewbox=${TAGAYTAY_VIEWBOX}${limitParam}`;
+  const url =
+    `https://nominatim.openstreetmap.org/search?format=json` +
+    `&q=${encodeURIComponent(query)}` +
+    `&countrycodes=ph` +
+    `&viewbox=${TAGAYTAY_VIEWBOX}` +
+    limitParam;
 
-  const response = await fetch(nominatimUrl, {
+  const res = await fetch(url, {
     signal,
-    headers: {
-      Accept: "application/json",
-    },
+    headers: { Accept: "application/json" },
   });
 
-  if (!response.ok) {
-    if (response.status === 429) {
+  if (!res.ok) {
+    if (res.status === 429)
       throw new Error("Too many requests. Please wait a moment.");
-    }
     throw new Error("Failed to fetch search results");
   }
 
-  const data: NominatimPlace[] = await response.json();
+  const data: NominatimPlace[] = await res.json();
   return data.map(normalizeNominatimPlace);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// useNominatimSearch
-// Fetches and caches search suggestions from Nominatim.
-// Results are cached for 5 minutes to reduce redundant API calls.
+// Unified search: ORS when key is set, Nominatim otherwise
 // ─────────────────────────────────────────────────────────────────────────────
+
+async function fetchPlaceSearch(
+  query: string,
+  limit?: number,
+  signal?: AbortSignal
+): Promise<NormalizedPlace[]> {
+  if (ORS_API_KEY) {
+    return fetchORSAutocomplete(query, limit, signal);
+  }
+  return fetchNominatimSearch(query, limit, signal);
+}
+
+async function fetchPlaceGeocode(
+  query: string,
+  signal?: AbortSignal
+): Promise<NormalizedPlace | null> {
+  if (ORS_API_KEY) {
+    const results = await fetchORSGeocode(query, 1, signal);
+    return results[0] || null;
+  }
+  const results = await fetchNominatimSearch(query, 1, signal);
+  return results[0] || null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function useNominatimSearch(query: string) {
   return useQuery<NormalizedPlace[], Error>({
     queryKey: mapKeys.search(query),
-    queryFn: ({ signal }) => fetchNominatimSearch(query, undefined, signal),
-    // Only enable query when there's a meaningful search term
+    queryFn: ({ signal }) => fetchPlaceSearch(query, undefined, signal),
     enabled: query.length >= 2,
-    // Cache results for 5 minutes (300,000ms)
     staleTime: 1000 * 60 * 5,
-    // Keep in cache for 30 minutes even after component unmounts
     gcTime: 1000 * 60 * 30,
-    // Don't retry on error (likely rate limit or no results)
     retry: false,
-    // Don't refetch on window focus for search results
     refetchOnWindowFocus: false,
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// useNominatimGeocode
-// Fetches a single geocode result for an address.
-// Results are cached for 10 minutes.
-// ─────────────────────────────────────────────────────────────────────────────
 export function useNominatimGeocode(address: string) {
   return useQuery<NormalizedPlace | null, Error>({
     queryKey: mapKeys.geocode(address),
-    queryFn: async ({ signal }) => {
-      const results = await fetchNominatimSearch(address, 1, signal);
-      return results[0] || null;
-    },
-    // Only enable when address is provided
+    queryFn: ({ signal }) => fetchPlaceGeocode(address, signal),
     enabled: address.length >= 2,
-    // Cache results for 10 minutes
     staleTime: 1000 * 60 * 10,
-    // Keep in cache for 1 hour
     gcTime: 1000 * 60 * 60,
     retry: false,
     refetchOnWindowFocus: false,
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// useDatabaseBusinessSearch
-// Fetches and caches business search results from the database.
-// Results are cached for 10 minutes (longer than Nominatim since they change less frequently).
-// ─────────────────────────────────────────────────────────────────────────────
 export function useDatabaseBusinessSearch(query: string) {
   return useQuery<NormalizedPlace[], Error>({
     queryKey: [...mapKeys.search(query), "database"],
@@ -163,15 +262,10 @@ export function useDatabaseBusinessSearch(query: string) {
       const response = await businessApi.searchBusinesses(query, 10, signal);
       return response.data.map(normalizeBusinessPlace);
     },
-    // Only enable query when there's a meaningful search term
     enabled: query.length >= 2,
-    // Cache results for 10 minutes (longer than Nominatim since DB changes less)
     staleTime: 1000 * 60 * 10,
-    // Keep in cache for 1 hour
     gcTime: 1000 * 60 * 60,
-    // Retry once on error
     retry: 1,
-    // Don't refetch on window focus for search results
     refetchOnWindowFocus: false,
   });
 }

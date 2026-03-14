@@ -6,7 +6,7 @@ import RouteForm from "./RouteForm";
 import MapNavMenu from "./MapNavMenu";
 import SelectPlanModal from "./SelectPlanModal";
 import { useTravelSpots } from "../../features/businesses/queries";
-import type { SearchResult, RouteSubmission } from "../../types/map";
+import type { SearchResult, RouteSubmission, TransportProfile } from "../../types/map";
 import type { RouteInfo } from "./RoutingMachine";
 import type { MapMarker } from "../../pages/LandingPage";
 import { WeatherWidget } from "../blog/Weather/Weather";
@@ -51,6 +51,7 @@ export default function MainMapPage(): React.ReactElement {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [profile, setProfile] = useState<TransportProfile>("driving-car");
 
   // Sync selectedCategory with URL param
   useEffect(() => {
@@ -220,6 +221,7 @@ export default function MainMapPage(): React.ReactElement {
         search_result={getSearchPosition()}
         start={start}
         end={end}
+        profile={profile}
         businessMarkers={businessMarkers}
         mapCenter={mapCenter}
         onMapClear={handleClearMap}
@@ -440,7 +442,7 @@ export default function MainMapPage(): React.ReactElement {
 
       {/* Route Controls - Responsive positioning */}
       <div className="absolute top-28 sm:top-20 left-4 sm:left-20 z-[9997] flex flex-col gap-3 w-[calc(100%-2rem)] sm:w-auto sm:max-w-sm">
-        <RouteForm onRouteSubmit={handleRouteSubmit} />
+        <RouteForm onRouteSubmit={handleRouteSubmit} profile={profile} onProfileChange={setProfile} />
         
         {/* Route Info Card */}
         {routeInfo && start && end && (

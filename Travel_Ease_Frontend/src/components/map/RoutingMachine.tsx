@@ -3,19 +3,17 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import type { TransportProfile } from "../../types/map";
 
-// Custom ORS router for leaflet-routing-machine
-// Replaces the OSRM demo server (which has sparse Philippines road data)
-// with OpenRouteService which has accurate, up-to-date Philippines coverage.
-function createORSRouter(apiKey: string) {
+function createORSRouter(apiKey: string, profile: TransportProfile) {
   return {
     route(waypoints: any[], callback: Function, context: any) {
       if (!apiKey) {
-        callback.call(context, { status: -1, message: 'VITE_ORS_API_KEY not set in .env.local' });
+        callback.call(context, { status: -1, message: 'VITE_ORS_API_KEY not set' });
         return;
       }
       const coordinates = waypoints.map((wp: any) => [wp.latLng.lng, wp.latLng.lat]);
-      fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
+      fetch(`https://api.openrouteservice.org/v2/directions/${profile}/geojson`, {
         method: 'POST',
         headers: {
           Authorization: apiKey,
@@ -26,8 +24,12 @@ function createORSRouter(apiKey: string) {
       })
         .then(r => r.json())
         .then(data => {
+          if (data.error) {
+            callback.call(context, { status: -1, message: data.error.message ?? 'ORS error' });
+            return;
+          }
           if (!data.features?.[0]) {
-            callback.call(context, { status: -1, message: 'ORS: no route found' });
+            callback.call(context, { status: -1, message: 'No route found' });
             return;
           }
           const feature = data.features[0];
@@ -35,14 +37,14 @@ function createORSRouter(apiKey: string) {
           const coords = (feature.geometry.coordinates as [number, number][]).map(
             ([lng, lat]) => L.latLng(lat, lng)
           );
-          const steps = segments?.[0]?.steps ?? [];
-          const instructions = steps.map((step: any) => ({
+          const allSteps = (segments ?? []).flatMap((seg: any) => seg.steps ?? []);
+          const instructions = allSteps.map((step: any) => ({
             type: step.type,
             road: step.name ?? '',
             distance: step.distance,
             time: step.duration,
             index: step.way_points?.[0] ?? 0,
-            mode: 'driving',
+            mode: profile,
           }));
           callback.call(context, null, [{
             name: 'Route',
@@ -68,6 +70,7 @@ export interface RouteInfo {
 interface RoutingMachineProps {
   start?: [number, number] | null;
   end?: [number, number] | null;
+  profile?: TransportProfile;
   onRouteFound?: (routeInfo: RouteInfo) => void;
 }
 
@@ -81,27 +84,31 @@ interface RoutingEvent {
   }>;
 }
 
+const ROUTE_COLORS: Record<TransportProfile, string> = {
+  "driving-car": "#E10600",
+  "foot-walking": "#2563eb",
+  "cycling-regular": "#16a34a",
+};
+
 export default function RoutingMachine({
   start,
   end,
+  profile = "driving-car",
   onRouteFound,
 }: RoutingMachineProps): null {
   const map = useMap();
   const onRouteFoundRef = useRef(onRouteFound);
-  
-  // Keep ref updated with latest callback
+
   useEffect(() => {
     onRouteFoundRef.current = onRouteFound;
   }, [onRouteFound]);
 
   useEffect(() => {
     if (!start || !end) {
-      // Clear route info when no route
       onRouteFoundRef.current?.({ distance: 0, time: 0 });
       return;
     }
 
-    // Validate coordinates
     if (!Array.isArray(start) || start.length !== 2 || !Array.isArray(end) || end.length !== 2) {
       return;
     }
@@ -109,7 +116,7 @@ export default function RoutingMachine({
     const [startLat, startLng] = start;
     const [endLat, endLng] = end;
 
-    if (typeof startLat !== 'number' || typeof startLng !== 'number' || 
+    if (typeof startLat !== 'number' || typeof startLng !== 'number' ||
         typeof endLat !== 'number' || typeof endLng !== 'number') {
       return;
     }
@@ -119,18 +126,16 @@ export default function RoutingMachine({
     }
 
     try {
-      // Use ORS when key is set (accurate Philippines data), otherwise fall back to OSRM demo
       const orsApiKey = import.meta.env.VITE_ORS_API_KEY ?? '';
       const routerOption = orsApiKey
-        ? { router: createORSRouter(orsApiKey) }
+        ? { router: createORSRouter(orsApiKey, profile) }
         : {};
 
-      // Create routing control — uses ORS router for accurate Philippines road data
       const routingControl = L.Routing.control({
         waypoints: [L.latLng(startLat, startLng), L.latLng(endLat, endLng)],
         ...routerOption,
         lineOptions: {
-          styles: [{ color: "#E10600", weight: 5, opacity: 0.8 }],
+          styles: [{ color: ROUTE_COLORS[profile], weight: 5, opacity: 0.8 }],
           extendToWaypoints: true,
           missingRouteTolerance: 0,
         },
@@ -169,7 +174,7 @@ export default function RoutingMachine({
     } catch {
       return () => {};
     }
-  }, [map, start, end]);
+  }, [map, start, end, profile]);
 
   return null;
 }

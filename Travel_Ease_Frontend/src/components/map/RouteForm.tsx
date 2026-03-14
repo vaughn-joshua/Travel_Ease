@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import MapSearchBox from "./MapSearchBox";
-import type { SearchResult, RouteSubmission } from "../../types/map";
+import type { SearchResult, RouteSubmission, TransportProfile } from "../../types/map";
 
-// Default Location (Tagaytay City Center - fallback if geolocation fails)
 const DEFAULT_LOCATION: SearchResult = {
   lat: 14.1154,
   lng: 120.962,
@@ -10,11 +9,46 @@ const DEFAULT_LOCATION: SearchResult = {
   label: "Tagaytay City, Cavite, Philippines",
 };
 
+const TRANSPORT_MODES: { value: TransportProfile; label: string; icon: React.ReactNode }[] = [
+  {
+    value: "driving-car",
+    label: "Drive",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2-1h2m6 0h2l2 1V8a1 1 0 00-1-1h-2" />
+      </svg>
+    ),
+  },
+  {
+    value: "foot-walking",
+    label: "Walk",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14l-2 8m4-8l2 8m-6-4h4" />
+      </svg>
+    ),
+  },
+  {
+    value: "cycling-regular",
+    label: "Bike",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="5.5" cy="17.5" r="3.5" strokeWidth={2} />
+        <circle cx="18.5" cy="17.5" r="3.5" strokeWidth={2} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 6l-4 8h6l-3 3.5M5.5 17.5L9 10l3 4" />
+      </svg>
+    ),
+  },
+];
+
 interface RouteFormProps {
   onRouteSubmit: (route: RouteSubmission) => void;
+  profile: TransportProfile;
+  onProfileChange: (profile: TransportProfile) => void;
 }
 
-export default function RouteForm({ onRouteSubmit }: RouteFormProps): React.ReactElement {
+export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: RouteFormProps): React.ReactElement {
   const [startPoint, setStartPoint] = useState<SearchResult | null>(null);
   const [endPoint, setEndPoint] = useState<SearchResult | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -296,6 +330,28 @@ export default function RouteForm({ onRouteSubmit }: RouteFormProps): React.Reac
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Transport Mode */}
+          <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
+            {TRANSPORT_MODES.map((mode) => (
+              <button
+                key={mode.value}
+                type="button"
+                onClick={() => onProfileChange(mode.value)}
+                className={`
+                  flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg
+                  text-xs font-medium transition-all duration-200
+                  ${profile === mode.value
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                  }
+                `}
+              >
+                {mode.icon}
+                <span className="hidden sm:inline">{mode.label}</span>
+              </button>
+            ))}
           </div>
 
           {/* Submit Button */}

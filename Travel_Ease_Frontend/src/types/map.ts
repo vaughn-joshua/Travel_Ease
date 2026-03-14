@@ -77,6 +77,33 @@ export interface GeocodeResponse {
   place: BackendPlace;
 }
 
+// Transport profiles for ORS routing
+export type TransportProfile = "driving-car" | "foot-walking" | "cycling-regular";
+
+// ORS Geocode API response types
+export interface ORSGeocodeFeature {
+  type: "Feature";
+  geometry: { type: "Point"; coordinates: [number, number] };
+  properties: {
+    id: string;
+    name: string;
+    label: string;
+    country: string;
+    region: string;
+    locality?: string;
+    neighbourhood?: string;
+    street?: string;
+    housenumber?: string;
+    confidence: number;
+    layer: string;
+  };
+}
+
+export interface ORSGeocodeResponse {
+  type: "FeatureCollection";
+  features: ORSGeocodeFeature[];
+}
+
 // Search state machine types
 export type SearchStatus = "idle" | "loading" | "success" | "error";
 
