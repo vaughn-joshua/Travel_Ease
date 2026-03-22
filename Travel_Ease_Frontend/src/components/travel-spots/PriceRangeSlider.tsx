@@ -26,7 +26,7 @@ export default function PriceRangeSlider({
   const [localMin, setLocalMin] = useState(value[0]);
   const [localMax, setLocalMax] = useState(value[1]);
   const [isDragging, setIsDragging] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!isDragging) {
