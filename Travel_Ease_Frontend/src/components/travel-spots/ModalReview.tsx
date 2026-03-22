@@ -279,7 +279,7 @@ function ReviewCard({
                 disabled={updateMutation.isPending}
                 className="px-4 py-2 bg-primary-red text-white text-sm font-medium rounded-lg hover:bg-primary-red-dark transition-colors disabled:opacity-50"
               >
-                {updateMutation.isPending ? "Saving..." : "Save"}
+                {updateMutation.isPending ? "Saving…" : "Save"}
               </button>
               <button
                 onClick={handleCancelEdit}
@@ -308,7 +308,7 @@ function ReviewCard({
               disabled={deleteMutation.isPending}
               className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </button>
             <button
               onClick={() => setShowDeleteConfirm(false)}
@@ -513,11 +513,11 @@ export default function ModalReview({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overscroll-contain"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 overscroll-contain"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -552,7 +552,7 @@ export default function ModalReview({
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-16 px-6">
               <div className="w-10 h-10 border-4 border-gray-200 border-t-primary-red rounded-full animate-spin mb-4" />
-              <p className="text-gray-500 text-sm">Loading reviews...</p>
+              <p className="text-gray-500 text-sm">Loading reviews…</p>
             </div>
           ) : (
             <>
@@ -586,7 +586,7 @@ export default function ModalReview({
                           onChange={(e) => setNewContent(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-primary-red focus:border-primary-red outline-none"
                           rows={3}
-                          placeholder="Share your experience..."
+                          placeholder="Share your experience…"
                         />
                       </div>
                       
@@ -600,7 +600,7 @@ export default function ModalReview({
                           disabled={createMutation.isPending}
                           className="px-4 py-2 bg-primary-red text-white text-sm font-medium rounded-lg hover:bg-primary-red-dark transition-colors disabled:opacity-50"
                         >
-                          {createMutation.isPending ? "Submitting..." : "Submit Review"}
+                          {createMutation.isPending ? "Submitting…" : "Submit Review"}
                         </button>
                         <button
                           type="button"

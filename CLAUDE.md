@@ -37,9 +37,35 @@ npx prisma studio            # Open GUI database browser
 npx prisma generate          # Regenerate Prisma client
 ```
 
+### Database Seeding
+```bash
+cd Travel_Ease_Backend
+npm run db:seed                  # Main seed
+npm run db:seed-subcategories    # Seed subcategories
+npm run seed:lgu                 # Seed LGU businesses
+npm run seed:categories          # Seed categories for existing data
+```
+
 ### Linting
 ```bash
 npm run lint --workspace=Travel_Ease_Frontend  # ESLint
+```
+
+## Testing
+
+Backend uses **Vitest** with `globals: true`, `fileParallelism: false`, and 10s timeouts. Tests run against the real database (not mocked). Setup file (`tests/setup.ts`) sets `AUTH_MODE=local` so tests use local JWT auth instead of Supabase.
+
+**Test helpers** in `tests/setup.ts`:
+- `createTestUser(opts?)` — Creates a user in DB and returns `{ user, token }` with a signed JWT
+- `cleanupTestData()` — Deletes travel plans and businesses (cascades handle children)
+
+**Coverage thresholds:** 40% statements/lines, 35% branches (enforced in CI).
+
+```bash
+cd Travel_Ease_Backend
+npx vitest run tests/auth.test.ts              # Single test file
+npm run test:watch                              # Watch mode
+npm run test:coverage                           # With coverage report
 ```
 
 ## Architecture
@@ -61,6 +87,10 @@ npm run lint --workspace=Travel_Ease_Frontend  # ESLint
 - `src/middleware/roles.ts` — Role-based access control (SUPER_ADMIN, LGU_ADMIN, BUSINESS_OWNER, TRAVEL_AGENCY, USER)
 - `src/middleware/ownership.ts` — Resource ownership verification
 
+**Logging:** Pino structured logging (`src/lib/logger.ts`) with domain-specific child loggers (dbLogger, authLogger, etc.).
+
+**Auth modes:** Supabase JWT in production, local JWT in testing (`AUTH_MODE=local`). The auth middleware (`src/middleware/auth.ts`) checks Supabase first, then falls back to local JWT.
+
 **API routes** are all prefixed with `/api/`: travel_plan, business, user, map, blogs, reviews, notification, traffic, weather, health, utils (uploads).
 
 **Travel plan state machine** (`src/modules/travel-plan/utils/stateMachine.ts`): Draft → Active → Completed/Cancelled.
@@ -73,6 +103,8 @@ npm run lint --workspace=Travel_Ease_Frontend  # ESLint
 - **Auth context** in `src/context/` — Supabase auth state management
 - **Route guards** in `src/routes/` — RequireAuth, RequireSupabaseAuth, LandingRoute
 
+**TanStack Query pattern:** Query keys use a factory pattern in `src/features/*/queryKeys.ts` with `all`, `lists`, `details` levels. Query client defaults: 30s staleTime, 5m gcTime, with auth error recovery for 401/403/419.
+
 **Key frontend stack:** React 19, React Router v7, TanStack React Query, React Hook Form + Zod, Tailwind CSS 4 (CSS-first config), Leaflet maps.
 
 **Vite config** splits vendor chunks manually (react, leaflet, query, forms, supabase) for caching.
@@ -82,6 +114,8 @@ npm run lint --workspace=Travel_Ease_Frontend  # ESLint
 Prisma schema at `Travel_Ease_Backend/prisma/schema.prisma`. Key models: User, TravelPlan, Activity, Business, BusinessCategory, Blog, Review, Zone/ZoneTrafficSnapshot, Participant, Notification, MenuItem.
 
 Uses Supabase PostgreSQL with connection pooling (pgbouncer) via `DATABASE_URL` and direct connection via `DIRECT_URL` for migrations.
+
+**Note:** Prisma schema uses snake_case model names (`user`, `travel_plan`) which differs from the PascalCase convention. The backend build tolerates TypeScript errors (`noEmitOnError: false`) due to Prisma-generated naming mismatches.
 
 ### Deployment
 
