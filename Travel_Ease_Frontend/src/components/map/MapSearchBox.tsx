@@ -24,6 +24,7 @@ export default function MapSearchBox({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchOnEnter, setSearchOnEnter] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [hasSelected, setHasSelected] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -52,14 +53,14 @@ export default function MapSearchBox({
     return [...dbResults, ...nominatimResults];
   }, [dbResults, nominatimResults]);
 
-  // Update showSuggestions when suggestions change
   useEffect(() => {
+    if (hasSelected) return;
     if (query.length >= 2 && suggestions.length > 0) {
       setShowSuggestions(true);
     } else if (query.length < 2) {
       setShowSuggestions(false);
     }
-  }, [suggestions, query]);
+  }, [suggestions, query, hasSelected]);
 
   // Reset highlighted index when suggestions change
   useEffect(() => {
@@ -74,7 +75,6 @@ export default function MapSearchBox({
     error: geocodeError,
   } = useNominatimGeocode(searchOnEnter ? query : "");
 
-  // Handle geocode result when user presses Enter
   useEffect(() => {
     if (searchOnEnter && geocodeResult) {
       onSearch({
@@ -86,6 +86,7 @@ export default function MapSearchBox({
       });
       setShowSuggestions(false);
       setSearchOnEnter(false);
+      setHasSelected(true);
     }
   }, [geocodeResult, searchOnEnter, onSearch]);
 
@@ -107,6 +108,7 @@ export default function MapSearchBox({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = e.target.value;
     setQuery(value);
+    setHasSelected(false);
     setShowSuggestions(value.length >= 2 && suggestions.length > 0);
     setSearchOnEnter(false);
   };
@@ -114,6 +116,7 @@ export default function MapSearchBox({
   const handleSelect = useCallback((place: NormalizedPlace): void => {
     setQuery(place.fullLabel);
     setShowSuggestions(false);
+    setHasSelected(true);
 
     onSearch({
       lat: place.lat,

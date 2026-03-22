@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import MapSearchBox from "./MapSearchBox";
 import type { SearchResult, RouteSubmission, TransportProfile } from "../../types/map";
 
@@ -53,6 +53,18 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
   const [endPoint, setEndPoint] = useState<SearchResult | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [startResetKey, setStartResetKey] = useState(0);
+  const [endResetKey, setEndResetKey] = useState(0);
+
+  const clearStartPoint = useCallback(() => {
+    setStartPoint(null);
+    setStartResetKey((k) => k + 1);
+  }, []);
+
+  const clearEndPoint = useCallback(() => {
+    setEndPoint(null);
+    setEndResetKey((k) => k + 1);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
@@ -179,11 +191,11 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
       <div 
         id="route-form-content"
         className={`
-          overflow-hidden transition-all duration-300 ease-out
-          ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
+          transition-all duration-300 ease-out overflow-hidden
+          ${isExpanded ? 'max-h-[min(600px,70dvh)] opacity-100' : 'max-h-0 opacity-0'}
         `}
       >
-        <form onSubmit={handleSubmit} className="p-4 pt-0 space-y-4 border-t border-gray-100">
+        <form onSubmit={handleSubmit} className="p-4 pt-0 space-y-4 border-t border-gray-100 max-h-[min(560px,calc(70dvh-2.5rem))] overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           {/* From Field */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -223,7 +235,8 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
               </button>
             </div>
             <div className="relative z-[10001]">
-              <MapSearchBox 
+              <MapSearchBox
+                key={`start-${startResetKey}`}
                 onSearch={(result) => setStartPoint(result)} 
                 placeholder="Enter start location" 
               />
@@ -236,8 +249,9 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
                 <span className="text-xs text-green-700 font-medium truncate">{startPoint.name}</span>
                 <button
                   type="button"
-                  onClick={() => setStartPoint(null)}
+                  onClick={clearStartPoint}
                   className="ml-auto text-green-600 hover:text-green-800 p-0.5"
+                  aria-label="Clear starting point"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -308,7 +322,8 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
               </button>
             </div>
             <div className="relative z-[10000]">
-              <MapSearchBox 
+              <MapSearchBox
+                key={`end-${endResetKey}`}
                 onSearch={(result) => setEndPoint(result)} 
                 placeholder="Enter destination" 
               />
@@ -321,8 +336,9 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
                 <span className="text-xs text-red-700 font-medium truncate">{endPoint.name}</span>
                 <button
                   type="button"
-                  onClick={() => setEndPoint(null)}
+                  onClick={clearEndPoint}
                   className="ml-auto text-red-600 hover:text-red-800 p-0.5"
+                  aria-label="Clear destination"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

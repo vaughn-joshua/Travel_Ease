@@ -232,11 +232,11 @@ export default function MainMapPage(): React.ReactElement {
       {/* Circular Navigation Menu */}
       <MapNavMenu />
 
-      {/* Top Controls - Search Box Only */}
+      {/* Top Controls - Search + Filter */}
       <div className="absolute top-4 left-16 sm:left-20 right-4 z-[9998]">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Search Box */}
-          <div className="flex-shrink-0 w-64 sm:w-80 relative z-[9999]">
+          <div className="flex-1 min-w-0 sm:flex-none sm:w-72 md:w-80 relative z-[9999]">
             <MapSearchBox 
               onSearch={handleSearch}
               onAddToPlan={(result) => {
@@ -246,38 +246,51 @@ export default function MainMapPage(): React.ReactElement {
             />
           </div>
           
-          {/* Active filter indicator - refined glass pill */}
-          {selectedCategory && selectedCategoryData && (
-            <div className="
-              hidden sm:flex items-center gap-2 
-              px-4 py-2.5 
-              bg-white/90 backdrop-blur-xl 
-              rounded-xl 
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className={`
+              flex-shrink-0 flex items-center gap-2
+              px-3 py-3
+              bg-white/95 backdrop-blur-xl
+              border rounded-xl
               shadow-lg shadow-black/10
-              border border-white/60
-            ">
+              text-sm font-medium
+              transition-all duration-200
+              hover:shadow-xl hover:bg-white
+              focus:outline-none focus:ring-2 focus:ring-primary-red/50
+              ${showMobileFilters
+                ? 'border-primary-red/30 ring-2 ring-primary-red/50 bg-white text-primary-red'
+                : selectedCategory
+                  ? 'border-primary-red/30 text-primary-red'
+                  : 'border-white/60 text-gray-600'
+              }
+            `}
+            aria-label={showMobileFilters ? "Close filters" : "Open filters"}
+            aria-expanded={showMobileFilters}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span className="hidden sm:inline">Filter</span>
+            {selectedCategory && (
+              <span className="w-2 h-2 bg-primary-red rounded-full flex-shrink-0" />
+            )}
+          </button>
+
+          {/* Active filter indicator - large screens */}
+          {selectedCategory && selectedCategoryData && (
+            <div className="hidden lg:flex items-center gap-2 px-3 py-2.5 bg-white/90 backdrop-blur-xl rounded-xl shadow-lg shadow-black/10 border border-white/60">
               <span className="text-lg">{selectedCategoryData.icon}</span>
-              <span className="font-semibold text-sm text-gray-900">{selectedCategoryData.label}</span>
+              <span className="font-semibold text-sm text-gray-900 truncate max-w-[10rem]">{selectedCategoryData.label}</span>
               {!isLoadingSpots && (
-                <span className="
-                  px-2 py-0.5 
-                  bg-primary-red/10 text-primary-red 
-                  text-xs font-semibold 
-                  rounded-full
-                ">
+                <span className="px-2 py-0.5 bg-primary-red/10 text-primary-red text-xs font-semibold rounded-full">
                   {businessMarkers.length}
                 </span>
               )}
-              <button 
+              <button
                 onClick={() => handleCategoryClick(null)}
-                className="
-                  ml-1 p-1 
-                  rounded-full 
-                  hover:bg-gray-100 
-                  text-gray-400 hover:text-primary-red 
-                  transition-colors
-                "
-                title="Clear filter"
+                className="ml-1 p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-primary-red transition-colors"
                 aria-label="Clear category filter"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,135 +300,68 @@ export default function MainMapPage(): React.ReactElement {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Bottom Slide-Up Filter Panel */}
-      <div 
-        className={`
-          fixed bottom-0 left-0 right-0 z-[9997]
-          transition-transform duration-500 ease-out
-          ${showMobileFilters ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}
-        `}
-      >
-        {/* Glass morphism panel */}
-        <div className="bg-white/95 backdrop-blur-2xl border-t border-gray-200/50 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] rounded-t-3xl">
-          {/* Pull tab / Handle */}
-          <button
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="w-full flex flex-col items-center pt-3 pb-2 group cursor-pointer focus:outline-none"
-            aria-label={showMobileFilters ? "Close filters" : "Open filters"}
-            aria-expanded={showMobileFilters}
-          >
-            {/* Drag handle indicator */}
-            <div className="w-10 h-1 bg-gray-300 rounded-full mb-2.5 group-hover:bg-primary-red transition-colors" />
-            
-            {/* Content */}
-            <div className="flex items-center gap-2 text-gray-600 group-hover:text-primary-red transition-colors">
-              <svg 
-                className={`w-5 h-5 transition-transform duration-300 ${showMobileFilters ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-              <span className="text-sm font-semibold">
-                {showMobileFilters ? 'Close Filters' : 'Filter by Category'}
-              </span>
-              {selectedCategory && !showMobileFilters && (
-                <span className="px-2 py-0.5 bg-primary-red text-white text-xs font-semibold rounded-full">
-                  1 active
-                </span>
-              )}
-            </div>
-          </button>
-
-          {/* Filter content */}
-          <div className="px-4 sm:px-6 lg:px-8 pb-6 pt-2">
-            {/* Category Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-              {CATEGORIES.map((category, index) => {
-                const isSelected = selectedCategory === category.value;
-                const isLoading = isLoadingSpots && isSelected;
-                
-                return (
-                  <button
-                    key={category.value}
-                    type="button"
-                    onClick={() => {
-                      handleCategoryClick(isSelected ? null : category.value);
-                      if (window.innerWidth < 640) {
-                        setTimeout(() => setShowMobileFilters(false), 300);
-                      }
-                    }}
-                    disabled={isLoading}
-                    style={{ 
-                      animationDelay: showMobileFilters ? `${index * 40}ms` : '0ms',
-                    }}
-                    className={`
-                      filter-panel-btn
-                      relative flex items-center gap-2.5 px-3 py-3.5 rounded-xl text-sm font-medium
-                      transition-all duration-200 ease-out
-                      focus:outline-none focus:ring-2 focus:ring-primary-red/50 focus:ring-offset-1
-                      hover:scale-[1.02] active:scale-[0.98]
-                      ${isSelected
-                        ? "bg-primary-red text-white shadow-lg shadow-primary-red/30"
-                        : "bg-white text-gray-700 border border-gray-200 hover:border-primary-red/40 hover:text-primary-red hover:bg-red-50/50 shadow-sm hover:shadow-md"
-                      }
-                      ${isLoading ? "opacity-80" : ""}
-                    `}
-                  >
-                    <span className="text-lg flex-shrink-0">{category.icon}</span>
-                    <span className="flex-1 text-left truncate text-sm">{category.label}</span>
-                    
-                    {/* Loading indicator */}
-                    {isLoading && (
-                      <svg className="w-4 h-4 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    )}
-                    
-                    {/* Check icon when selected */}
-                    {isSelected && !isLoading && (
-                      <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Clear filter button */}
-            {selectedCategory && (
-              <div className="mt-4 flex justify-center">
+        {/* Filter Dropdown */}
+        {showMobileFilters && (
+          <div className="mt-2 bg-white/95 backdrop-blur-2xl rounded-xl shadow-2xl shadow-black/15 border border-gray-200/50 overflow-hidden animate-fade-in sm:max-w-[28rem] lg:max-w-[32rem]">
+            <div className="px-4 py-3 border-b border-gray-100/80 flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-900">Categories</span>
+              {selectedCategory && (
                 <button
-                  onClick={() => {
-                    handleCategoryClick(null);
-                    setTimeout(() => setShowMobileFilters(false), 200);
-                  }}
-                  className="
-                    px-5 py-2.5 rounded-xl text-sm font-medium 
-                    bg-gray-100 text-gray-700 
-                    border border-gray-200 
-                    hover:bg-red-50 hover:text-red-600 hover:border-red-200 
-                    transition-all duration-200 
-                    flex items-center gap-2
-                    focus:outline-none focus:ring-2 focus:ring-primary-red/30
-                  "
+                  onClick={() => { handleCategoryClick(null); setShowMobileFilters(false); }}
+                  className="text-xs font-medium text-primary-red hover:text-primary-red-dark transition-colors flex items-center gap-1"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Clear Filter
+                  Clear
                 </button>
+              )}
+            </div>
+            <div className="p-3 sm:p-4 max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CATEGORIES.map((category) => {
+                  const isSelected = selectedCategory === category.value;
+                  const isLoading = isLoadingSpots && isSelected;
+                  return (
+                    <button
+                      key={category.value}
+                      type="button"
+                      onClick={() => {
+                        handleCategoryClick(isSelected ? null : category.value);
+                        if (!isSelected) setTimeout(() => setShowMobileFilters(false), 200);
+                      }}
+                      disabled={isLoading}
+                      className={`
+                        flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
+                        transition-all duration-150
+                        focus:outline-none focus:ring-2 focus:ring-primary-red/50 focus:ring-offset-1
+                        ${isSelected
+                          ? "bg-primary-red text-white shadow-md shadow-primary-red/20"
+                          : "bg-gray-50 text-gray-700 hover:bg-primary-red/5 hover:text-primary-red"
+                        }
+                      `}
+                    >
+                      <span className="text-base flex-shrink-0">{category.icon}</span>
+                      <span className="flex-1 text-left truncate text-xs sm:text-sm">{category.label}</span>
+                      {isLoading && (
+                        <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      )}
+                      {isSelected && !isLoading && (
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            )}
-
-            {/* Results count */}
+            </div>
             {selectedCategory && (
-              <div className="mt-3 text-center">
+              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 text-center">
                 {isLoadingSpots ? (
                   <span className="text-xs text-gray-500">Loading places...</span>
                 ) : spotsError ? (
@@ -428,20 +374,20 @@ export default function MainMapPage(): React.ReactElement {
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Overlay when filter panel is open */}
+      {/* Click-outside handler for filter dropdown */}
       {showMobileFilters && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[9996] transition-opacity duration-300"
+        <div
+          className="fixed inset-0 z-[9995]"
           onClick={() => setShowMobileFilters(false)}
           aria-hidden="true"
         />
       )}
 
       {/* Route Controls - Responsive positioning */}
-      <div className="absolute top-28 sm:top-20 left-4 sm:left-20 z-[9997] flex flex-col gap-3 w-[calc(100%-2rem)] sm:w-auto sm:max-w-sm">
+      <div className="absolute top-[4.5rem] sm:top-20 left-4 sm:left-20 z-[9997] flex flex-col gap-3 w-80 sm:w-[22rem] max-w-[calc(100vw-2rem)]">
         <RouteForm onRouteSubmit={handleRouteSubmit} profile={profile} onProfileChange={setProfile} />
         
         {/* Route Info Card */}
@@ -499,7 +445,7 @@ export default function MainMapPage(): React.ReactElement {
       {/* Go to Current Location Button */}
       <button
         className="
-          absolute bottom-24 sm:bottom-28 right-4 z-[9998]
+          absolute bottom-6 right-4 z-[9998]
           w-12 h-12 rounded-2xl
           bg-white/95 backdrop-blur-xl
           shadow-lg shadow-black/15
@@ -561,7 +507,7 @@ export default function MainMapPage(): React.ReactElement {
       {search_result && !start && !end && (
         <div 
           className="
-            absolute bottom-20 sm:bottom-24 left-4 right-4 sm:right-auto z-[9998]
+            absolute bottom-6 left-4 right-[4.5rem] sm:right-auto z-[9998]
             sm:w-80 
             bg-white/95 backdrop-blur-xl
             rounded-2xl 
@@ -640,7 +586,7 @@ export default function MainMapPage(): React.ReactElement {
       {(search_result || start || end) && (
         <button
           className="
-            absolute bottom-32 sm:bottom-40 right-4 z-[9998]
+            absolute bottom-20 right-4 z-[9998]
             w-12 h-12 rounded-2xl
             bg-red-500/95 backdrop-blur-xl
             shadow-lg shadow-red-500/30
