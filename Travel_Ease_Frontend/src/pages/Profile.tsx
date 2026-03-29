@@ -1,37 +1,37 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { ProfileSidebar } from '../components/profile/ProfileSidebar';
-import { AccountDetailsTab } from '../components/profile/AccountDetailsTab';
-import { NotificationsTab } from '../components/profile/NotificationsTab';
-import { ManageBusinessTab } from '../components/profile/ManageBusinessTab';
-import { BusinessRegistrationsTab } from '../components/profile/BusinessRegistrationsTab';
-import { AdminPanelTab } from '../components/profile/AdminPanelTab';
-import { FavoritesTab } from '../components/profile/FavoritesTab';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { ProfileSidebar } from "../components/profile/ProfileSidebar";
+import { AccountDetailsTab } from "../components/profile/AccountDetailsTab";
+import { NotificationsTab } from "../components/profile/NotificationsTab";
+import { ManageBusinessTab } from "../components/profile/ManageBusinessTab";
+import { BusinessRegistrationsTab } from "../components/profile/BusinessRegistrationsTab";
+import { AdminPanelTab } from "../components/profile/AdminPanelTab";
+import { FavoritesTab } from "../components/profile/FavoritesTab";
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('account');
+  const [activeTab, setActiveTab] = useState("account");
 
   if (!loading && !user) {
-    navigate('/login');
+    navigate("/login");
     return null;
   }
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'account':
+      case "account":
         return <AccountDetailsTab />;
-      case 'notifications':
+      case "notifications":
         return <NotificationsTab />;
-      case 'manage-business':
+      case "manage-business":
         return <ManageBusinessTab />;
-      case 'business-registrations':
+      case "business-registrations":
         return <BusinessRegistrationsTab />;
-      case 'admin-panel':
+      case "admin-panel":
         return <AdminPanelTab />;
-      case 'favorites':
+      case "favorites":
         return <FavoritesTab />;
       default:
         return <AccountDetailsTab />;
@@ -48,9 +48,9 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex flex-col md:flex-row">
+      <div className="flex min-h-screen w-full flex-col md:flex-row">
         <ProfileSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-        <div className="flex-1">
+        <div className="flex-1 md:min-h-screen pb-12 md:pb-8">
           {renderTabContent()}
         </div>
       </div>

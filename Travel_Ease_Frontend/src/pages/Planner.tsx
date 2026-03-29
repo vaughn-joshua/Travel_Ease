@@ -1,8 +1,14 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTravelPlanDetail, useUserPlanRole } from "../features/travelPlans/queries";
-import { useUpdatePlan, useRequestJoin } from "../features/travelPlans/mutations";
+import {
+  useTravelPlanDetail,
+  useUserPlanRole,
+} from "../features/travelPlans/queries";
+import {
+  useUpdatePlan,
+  useRequestJoin,
+} from "../features/travelPlans/mutations";
 import { useTravelSpots } from "../features/businesses/queries";
 import Activities from "../components/dashboard/Activities";
 import EditPlan from "../components/dashboard/EditPlan";
@@ -17,7 +23,6 @@ import type { SearchResult } from "../types/map";
 import { useAuth } from "../context/AuthContext";
 import { travelPlanKeys } from "../lib/queryKeys";
 import { useTravelPlanActivities } from "../features/travelPlans/queries";
-import { StatusBadge, SlotsPill } from "../components/ui/PlanCard";
 import { formatPlanDateRange } from "../utils/date";
 import { WeatherWidget } from "../components/blog/Weather/Weather";
 
@@ -43,9 +48,13 @@ export default function Planner(): React.ReactElement {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { user, loading: authLoading, session } = useAuth();
-  
-  const [activeRightTab, setActiveRightTab] = useState<RightPanelTab>("activities");
-  const [dayScrollFade, setDayScrollFade] = useState({ left: false, right: true });
+
+  const [activeRightTab, setActiveRightTab] =
+    useState<RightPanelTab>("activities");
+  const [dayScrollFade, setDayScrollFade] = useState({
+    left: false,
+    right: true,
+  });
   const dayScrollRef = useRef<HTMLDivElement>(null);
 
   // Handle day selector scroll for gradient fades
@@ -58,10 +67,10 @@ export default function Planner(): React.ReactElement {
       right: scrollLeft < scrollWidth - clientWidth - 4,
     });
   }, []);
-  
+
   const locationState = location.state as LocationState | null;
   const [prefillActivity, setPrefillActivity] = useState<SearchResult | null>(
-    locationState?.prefillActivity || null
+    locationState?.prefillActivity || null,
   );
 
   const [tokenReady, setTokenReady] = useState(false);
@@ -88,20 +97,21 @@ export default function Planner(): React.ReactElement {
   } = useTravelPlanDetail(tokenReady && tokenChecked ? id : undefined);
 
   const { data: userRoleData, isLoading: roleLoading } = useUserPlanRole(
-    tokenReady && tokenChecked && plan ? id : undefined
+    tokenReady && tokenChecked && plan ? id : undefined,
   );
 
   const permissions = useMemo(() => {
     const isOwner = userRoleData?.isOwner || plan?.user_id === user?.id;
     const role = userRoleData?.role;
     const isParticipant = userRoleData?.isParticipant || false;
-    
+
     const canEdit = isOwner || role === "Admin" || role === "Editor";
     const canDelete = isOwner || role === "Admin";
     const canStart = isOwner || isParticipant;
-    const canInvite = isOwner || role === "Admin" || role === "Editor" || role === "Viewer";
+    const canInvite =
+      isOwner || role === "Admin" || role === "Editor" || role === "Viewer";
     const isNonParticipant = !isOwner && !isParticipant;
-    
+
     return {
       isOwner,
       role,
@@ -171,7 +181,7 @@ export default function Planner(): React.ReactElement {
       if (activity.lat && activity.lng) {
         markers.push({
           position: [activity.lat, activity.lng],
-          type: activity.is_priority ? 'priority' : 'activity',
+          type: activity.is_priority ? "priority" : "activity",
           name: activity.name || activity.location || undefined,
         });
       }
@@ -180,13 +190,40 @@ export default function Planner(): React.ReactElement {
     if (plan?.accommodation?.lat && plan?.accommodation?.lng) {
       markers.push({
         position: [plan.accommodation.lat, plan.accommodation.lng],
-        type: 'accommodation',
+        type: "accommodation",
         name: plan.accommodation.name,
       });
     }
 
     return markers;
   }, [activitiesForDay, plan?.accommodation]);
+
+  const mapRouteStart = useMemo<[number, number]>(() => {
+    if (plan?.accommodation?.lat && plan?.accommodation?.lng) {
+      return [plan.accommodation.lat, plan.accommodation.lng];
+    }
+    return itineraryRoute.start;
+  }, [plan?.accommodation?.lat, plan?.accommodation?.lng]);
+
+  const weatherCoords = useMemo<[number, number]>(() => {
+    if (clickedActivity.end) {
+      return clickedActivity.end;
+    }
+    const firstDayActivityWithCoords = activitiesForDay.find(
+      (activity) => activity.lat && activity.lng,
+    );
+    if (firstDayActivityWithCoords?.lat && firstDayActivityWithCoords?.lng) {
+      return [firstDayActivityWithCoords.lat, firstDayActivityWithCoords.lng];
+    }
+    return mapRouteStart;
+  }, [clickedActivity.end, activitiesForDay, mapRouteStart]);
+
+  const weatherDate = useMemo(() => {
+    if (!dates.start) return undefined;
+    const d = new Date(dates.start);
+    d.setDate(d.getDate() + (daySelected - 1));
+    return d.toISOString().split("T")[0];
+  }, [dates.start, daySelected]);
 
   const handle_close = (): void => {
     queryClient.invalidateQueries({
@@ -195,15 +232,26 @@ export default function Planner(): React.ReactElement {
     setActiveModal("");
   };
 
+  const handleDestinationSelect = useCallback(
+    (lat: number, lng: number): void => {
+      setClickActivity({ start: mapRouteStart, end: [lat, lng] });
+    },
+    [mapRouteStart],
+  );
+
   const handleChildData = (lat: number, long: number): void => {
-    setClickActivity({ start: null, end: [lat, long] });
+    handleDestinationSelect(lat, long);
   };
 
-  const handleBusinessSelect = (business: { lat?: number; lng?: number; longitude?: number }) => {
+  const handleBusinessSelect = (business: {
+    lat?: number;
+    lng?: number;
+    longitude?: number;
+  }) => {
     const lat = business.lat;
     const lng = business.lng || business.longitude;
     if (lat && lng) {
-      setClickActivity({ start: null, end: [lat, lng] });
+      handleDestinationSelect(lat, lng);
     }
   };
 
@@ -280,7 +328,7 @@ export default function Planner(): React.ReactElement {
           console.error("Error starting plan:", error);
           alert("Failed to start the plan. Please try again.");
         },
-      }
+      },
     );
   };
 
@@ -294,7 +342,11 @@ export default function Planner(): React.ReactElement {
             <div className="absolute inset-0 rounded-full border-4 border-primary-red border-t-transparent animate-spin" />
           </div>
           <p className="text-gray-600 font-medium">
-            {authLoading ? "Checking authentication..." : !tokenChecked ? "Verifying session..." : "Loading plan..."}
+            {authLoading
+              ? "Checking authentication..."
+              : !tokenChecked
+                ? "Verifying session..."
+                : "Loading plan..."}
           </p>
         </div>
       </div>
@@ -307,14 +359,28 @@ export default function Planner(): React.ReactElement {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <svg
+              className="w-8 h-8 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Authentication Required</h2>
-          <p className="text-gray-500 mb-6">Please log in to view this travel plan.</p>
-          <button 
-            onClick={() => navigate("/login")} 
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Authentication Required
+          </h2>
+          <p className="text-gray-500 mb-6">
+            Please log in to view this travel plan.
+          </p>
+          <button
+            onClick={() => navigate("/login")}
             className="px-6 py-2.5 bg-primary-red text-white rounded-xl font-medium hover:bg-primary-red-dark transition-colors"
           >
             Log In
@@ -330,14 +396,26 @@ export default function Planner(): React.ReactElement {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              className="w-8 h-8 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Plan</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Failed to Load Plan
+          </h2>
           <p className="text-gray-500 mb-6">{planError.message}</p>
-          <button 
-            onClick={() => refetchPlan()} 
+          <button
+            onClick={() => refetchPlan()}
             className="px-6 py-2.5 bg-primary-red text-white rounded-xl font-medium hover:bg-primary-red-dark transition-colors"
           >
             Try Again
@@ -352,14 +430,28 @@ export default function Planner(): React.ReactElement {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Plan Not Found</h2>
-          <p className="text-gray-500 mb-6">This plan may have been deleted or you don't have access.</p>
-          <button 
-            onClick={() => navigate("/plans")} 
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Plan Not Found
+          </h2>
+          <p className="text-gray-500 mb-6">
+            This plan may have been deleted or you don't have access.
+          </p>
+          <button
+            onClick={() => navigate("/plans")}
             className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
           >
             Back to Plans
@@ -375,90 +467,125 @@ export default function Planner(): React.ReactElement {
   const showRequestJoin = permissions.isNonParticipant && status === "join";
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <div className="min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] flex flex-col bg-gray-100">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 overflow-hidden max-w-[1600px] mx-auto w-full">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-5 p-4 md:p-6 overflow-hidden max-w-[1800px] mx-auto w-full">
         {/* LEFT COLUMN - Map + Plan Details */}
-        <div className="flex-1 lg:flex-[2] flex flex-col gap-6 min-w-0 min-h-[50vh] lg:min-h-0">
+        <div className="flex-1 lg:flex-[2.35] flex flex-col gap-1 min-w-0 min-h-[50vh] lg:min-h-0">
           {/* Map Container */}
           <div className="flex-1 relative rounded-[1.5rem] overflow-hidden shadow-sm border border-gray-200 min-h-[300px] bg-gray-200">
             <LandingPage
-              start={itineraryRoute.start}
+              start={clickedActivity.start ?? mapRouteStart}
               end={clickedActivity.end}
               markers={mapMarkers}
               className="w-full h-full"
               onRouteFound={handleRouteFound}
+              focusPosition={clickedActivity.end}
             />
-            
+
             {/* Plan title overlay */}
             <div className="absolute top-4 left-4 right-4 sm:right-auto sm:max-w-[70%] rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200/50 px-4 py-3 shadow-lg z-[1000] pointer-events-none">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`w-2 h-2 rounded-full ${plan.status === "Active" ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`} />
-                <span className="text-xs font-medium text-gray-500">{plan.status}</span>
+                <span
+                  className={`w-2 h-2 rounded-full ${plan.status === "Active" ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`}
+                />
+                <span className="text-xs font-medium text-gray-500">
+                  {plan.status}
+                </span>
               </div>
               <h3 className="font-bold text-gray-900">{plan.title}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{plan.location}</p>
             </div>
-            
+
+            {/* Weather overlay */}
+            <div className="absolute top-20 right-4 sm:top-4 z-[1000] rounded-xl border border-gray-200/60 bg-white/95 backdrop-blur-sm px-3 py-2 shadow-lg">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                Weather
+              </p>
+              <WeatherWidget
+                lat={weatherCoords[0]}
+                lng={weatherCoords[1]}
+                date={weatherDate}
+                compact
+              />
+            </div>
+
             {/* ETA overlay */}
             {routeInfo && clickedActivity.end && (
               <div className="absolute bottom-4 left-4 right-4 sm:right-auto rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200/50 px-4 py-3 shadow-lg z-[1000] pointer-events-none">
-                <p className="text-xs font-medium text-gray-500 mb-2">Estimated Travel</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">
+                  Estimated Travel
+                </p>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary-red/10 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-4 h-4 text-primary-red"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-gray-900">{routeInfo.time}</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {routeInfo.time}
+                      </p>
                       <p className="text-xs text-gray-500">min</p>
                     </div>
                   </div>
                   <div className="w-px h-10 bg-gray-200" />
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-primary-red/10 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-primary-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <svg
+                        className="w-4 h-4 text-primary-red"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-gray-900">{routeInfo.distance}</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {routeInfo.distance}
+                      </p>
                       <p className="text-xs text-gray-500">km</p>
                     </div>
                   </div>
-                </div>
-                {/* Weather at destination */}
-                <div className="mt-2 pt-2 border-t border-gray-100">
-                  <WeatherWidget lat={clickedActivity.end[0]} lng={clickedActivity.end[1]} compact />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Plan Details Card */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <StatusBadge status={plan.status === "Active" ? "Active" : plan.status === "Completed" ? "Completed" : "Draft"} size="md" />
-                  {permissions.role && !permissions.isOwner && (
-                    <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                      {permissions.role}
-                    </span>
-                  )}
-                  {permissions.isOwner && (
-                    <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
-                      Owner
-                    </span>
-                  )}
+          {/* Plan details row */}
+          <div className="px-1 pt-0 mb-5 mt-5">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start gap-3">
+                  <span className="mt-1 h-7 w-1.5 rounded-full bg-primary-red shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      Plan Details
+                    </p>
+                    <h1 className="text-xl font-bold text-gray-900 break-words">
+                      {plan.title}
+                    </h1>
+                  </div>
                 </div>
-                <h1 className="text-xl font-bold text-gray-900 line-clamp-1">{plan.title}</h1>
-                <p className="text-gray-500 text-sm line-clamp-2 mt-1">{plan.description}</p>
               </div>
-              
-              {/* Actions */}
+
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {showStartNow && (
                   <button
@@ -466,27 +593,56 @@ export default function Planner(): React.ReactElement {
                     onClick={handle_start}
                     disabled={updatePlanMutation.isPending}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
-                    {updatePlanMutation.isPending ? "Starting..." : "Start Trip"}
+                    {updatePlanMutation.isPending
+                      ? "Starting..."
+                      : "Start Trip"}
                   </button>
                 )}
+
                 {showEditPlan && (
                   <button
                     onClick={() => setActiveModal("plan")}
-                    className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-sm"
+                    className="px-4 py-2 border border-gray-300 bg-white text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-colors text-sm shadow-sm"
                     disabled={updatePlanMutation.isPending}
                   >
                     Edit Plan
                   </button>
                 )}
-                {showRequestJoin && (
-                  joinSuccess ? (
+
+                {showRequestJoin &&
+                  (joinSuccess ? (
                     <span className="px-4 py-2 bg-green-100 text-green-700 rounded-xl text-sm font-medium flex items-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                       Request Sent
                     </span>
@@ -500,50 +656,118 @@ export default function Planner(): React.ReactElement {
                             onSuccess: () => setJoinSuccess(true),
                             onError: (error) => {
                               console.error("Join request error:", error);
-                              alert("Failed to send join request. Please try again.");
+                              alert(
+                                "Failed to send join request. Please try again.",
+                              );
                             },
-                          }
+                          },
                         )
                       }
                       disabled={requestJoinMutation.isPending}
                     >
-                      {requestJoinMutation.isPending ? "Sending..." : "Request to Join"}
+                      {requestJoinMutation.isPending
+                        ? "Sending..."
+                        : "Request to Join"}
                     </button>
-                  )
-                )}
+                  ))}
+
                 <button
-                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors text-sm flex items-center gap-1.5"
+                  className="px-4 py-2 border border-gray-300 bg-white text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-colors text-sm flex items-center gap-1.5 shadow-sm"
                   onClick={() => setActiveModal("collaborators")}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
                   </svg>
                   Team
                 </button>
               </div>
             </div>
-            
-            {/* Plan meta */}
-            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
-              <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+
+            <div className="flex flex-wrap lg:flex-nowrap items-center gap-x-6 gap-y-2 text-sm text-gray-700">
+              <div className="inline-flex items-center gap-1.5 min-w-0">
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
                 </svg>
-                <span>{formatPlanDateRange(plan.start_date, plan.end_date)}</span>
+                <span className="truncate">{plan.location}</span>
               </div>
-              {plan.slots && (
-                <SlotsPill current={plan.approvedParticipants || 0} max={plan.slots} />
-              )}
-              {plan.accommodation ? (
-                <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span className="truncate max-w-[200px]">{plan.accommodation.name}</span>
-                </div>
-              ) : (
-                <span className="text-sm text-gray-400 italic">No accommodation</span>
-              )}
+
+              <div className="inline-flex items-center gap-1.5">
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span>
+                  {formatPlanDateRange(plan.start_date, plan.end_date)}
+                </span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5">
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span>
+                  {plan.approvedParticipants || 0}/{plan.slots || 0}{" "}
+                  participants
+                </span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 min-w-0">
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+                <span className="truncate">
+                  {plan.accommodation?.name || "No accommodation"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -561,8 +785,18 @@ export default function Planner(): React.ReactElement {
               }`}
             >
               <span className="flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
                 Activities
               </span>
@@ -579,8 +813,18 @@ export default function Planner(): React.ReactElement {
               }`}
             >
               <span className="flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
                 </svg>
                 Suggested
               </span>
@@ -594,41 +838,29 @@ export default function Planner(): React.ReactElement {
           <div className="flex-1 overflow-y-auto">
             {activeRightTab === "activities" && (
               <div className="p-4">
-                {/* Day Selector with per-day weather */}
+                {/* Day Selector */}
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="relative flex-1 min-w-0">
                     {/* Left fade */}
-                    <div 
+                    <div
                       className={`absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
-                        dayScrollFade.left ? 'opacity-100' : 'opacity-0'
-                      }`} 
+                        dayScrollFade.left ? "opacity-100" : "opacity-0"
+                      }`}
                     />
                     {/* Right fade */}
-                    <div 
+                    <div
                       className={`absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
-                        dayScrollFade.right ? 'opacity-100' : 'opacity-0'
-                      }`} 
+                        dayScrollFade.right ? "opacity-100" : "opacity-0"
+                      }`}
                     />
-                    <div 
+                    <div
                       ref={dayScrollRef}
                       onScroll={handleDayScroll}
                       className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth"
                     >
                       {Array.from({ length: days }, (_, i) => {
-                        // Compute the ISO date for this day's weather forecast
-                        const dayDate = dates.start
-                          ? (() => {
-                              const d = new Date(dates.start);
-                              d.setDate(d.getDate() + i);
-                              return d.toISOString().split('T')[0];
-                            })()
-                          : undefined;
-                        // Use accommodation or plan location coordinates
-                        const weatherLat = plan?.accommodation?.lat ?? 14.1154;
-                        const weatherLng = plan?.accommodation?.lng ?? 120.962;
-
                         return (
-                          <div key={i} className="flex flex-col items-center gap-0.5 shrink-0">
+                          <div key={i} className="shrink-0">
                             <button
                               onClick={() => click_day(i + 1)}
                               className={`px-3.5 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
@@ -639,15 +871,6 @@ export default function Planner(): React.ReactElement {
                             >
                               Day {i + 1}
                             </button>
-                            {dayDate && (
-                              <WeatherWidget
-                                lat={weatherLat}
-                                lng={weatherLng}
-                                date={dayDate}
-                                compact
-                                className="text-[10px] px-0.5"
-                              />
-                            )}
                           </div>
                         );
                       })}
@@ -658,8 +881,18 @@ export default function Planner(): React.ReactElement {
                       onClick={() => setActiveModal("activity")}
                       className="shrink-0 px-3 py-2 bg-primary-red text-white rounded-lg text-xs font-medium hover:bg-primary-red-dark transition-colors flex items-center gap-1"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
                       </svg>
                       Add
                     </button>
@@ -713,7 +946,7 @@ export default function Planner(): React.ReactElement {
       {activeModal === "collaborators" && id && (
         <Collaborators
           planId={id}
-          userRole={permissions.isOwner ? "owner" : (permissions.role || null)}
+          userRole={permissions.isOwner ? "owner" : permissions.role || null}
           canDelete={permissions.canDelete}
           canInvite={permissions.canInvite}
           canEditRoles={permissions.canEdit}

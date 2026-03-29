@@ -16,22 +16,17 @@ const CATEGORIES = [
   { id: "outdoor_gear_rental", label: "Outdoor", icon: "🎒" },
 ];
 
-// Price ranges (UI only for now)
-const PRICE_RANGES = [
-  { id: "0-100", label: "₱0-100" },
-  { id: "100-200", label: "₱100-200" },
-  { id: "200-400", label: "₱200-400" },
-  { id: "400-700", label: "₱400-700" },
-  { id: "700-1000", label: "₱700-1000" },
-  { id: "1000-1500", label: "₱1000-1500" },
-  { id: "1500+", label: "₱1500+" },
-];
+const BUSINESSES_PER_PAGE = 6;
 
 interface SuggestedBusinessesProps {
   planId: string;
   dates: TravelPlanDates;
   canEdit: boolean;
-  onBusinessSelect: (business: { lat?: number; lng?: number; longitude?: number }) => void;
+  onBusinessSelect: (business: {
+    lat?: number;
+    lng?: number;
+    longitude?: number;
+  }) => void;
   onAddToActivity: (business: SearchResult) => void;
 }
 
@@ -56,9 +51,10 @@ export default function SuggestedBusinesses({
   onAddToActivity,
 }: SuggestedBusinessesProps): React.ReactElement {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedPriceRange, setSelectedPriceRange] = useState<string | null>(null);
-  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [showPriceFilter, setShowPriceFilter] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(
+    null,
+  );
   const [scrollFade, setScrollFade] = useState({ left: false, right: true });
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +62,7 @@ export default function SuggestedBusinesses({
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    
+
     const { scrollLeft, scrollWidth, clientWidth } = el;
     setScrollFade({
       left: scrollLeft > 8,
@@ -74,19 +70,34 @@ export default function SuggestedBusinesses({
     });
   }, []);
 
-  const { data: travelSpotsData, isLoading, isError, refetch } = useTravelSpots({
+  const {
+    data: travelSpotsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useTravelSpots({
     category: selectedCategory || undefined,
   });
 
   const businesses = travelSpotsData?.data || [];
+  const totalPages = Math.max(
+    1,
+    Math.ceil(businesses.length / BUSINESSES_PER_PAGE),
+  );
+  const startIndex = (currentPage - 1) * BUSINESSES_PER_PAGE;
+  const paginatedBusinesses = businesses.slice(
+    startIndex,
+    startIndex + BUSINESSES_PER_PAGE,
+  );
 
   const handleCategoryClick = (categoryId: string | null) => {
     setSelectedCategory(categoryId);
+    setCurrentPage(1);
   };
 
   const handleBusinessClick = (business: Business) => {
     setSelectedBusiness(business);
-    
+
     if (business.latitude && business.longitude) {
       onBusinessSelect({
         lat: business.latitude,
@@ -96,9 +107,15 @@ export default function SuggestedBusinesses({
   };
 
   const handleAddToPlan = (business: Business) => {
-    const lat = business.latitude != null && !isNaN(Number(business.latitude)) ? Number(business.latitude) : 0;
-    const lng = business.longitude != null && !isNaN(Number(business.longitude)) ? Number(business.longitude) : 0;
-    
+    const lat =
+      business.latitude != null && !isNaN(Number(business.latitude))
+        ? Number(business.latitude)
+        : 0;
+    const lng =
+      business.longitude != null && !isNaN(Number(business.longitude))
+        ? Number(business.longitude)
+        : 0;
+
     const searchResult: SearchResult = {
       name: business.name,
       label: business.name,
@@ -110,103 +127,68 @@ export default function SuggestedBusinesses({
       lng,
       business_id: business.business_id,
     };
-    
+
     onAddToActivity(searchResult);
     setSelectedBusiness(null);
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Category Filter */}
-      <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-          Browse by Category
-        </h4>
-        <div className="relative">
-          {/* Left fade gradient */}
-          <div 
-            className={`absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
-              scrollFade.left ? 'opacity-100' : 'opacity-0'
-            }`} 
-          />
-          {/* Right fade gradient */}
-          <div 
-            className={`absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
-              scrollFade.right ? 'opacity-100' : 'opacity-0'
-            }`} 
-          />
-          <div 
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide scroll-smooth"
-          >
-            <button
-              onClick={() => handleCategoryClick(null)}
-              className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
-                selectedCategory === null
-                  ? "bg-primary-red text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+    <div className="h-full min-h-0 flex flex-col">
+      {/* Header */}
+      <div className="shrink-0 border-b border-gray-100 bg-gray-50/50">
+        <div className="p-4">
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Browse by Category
+          </h4>
+          <div className="relative">
+            {/* Left fade gradient */}
+            <div
+              className={`absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+                scrollFade.left ? "opacity-100" : "opacity-0"
               }`}
+            />
+            {/* Right fade gradient */}
+            <div
+              className={`absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-200 ${
+                scrollFade.right ? "opacity-100" : "opacity-0"
+              }`}
+            />
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide scroll-smooth"
             >
-              All
-            </button>
-            {CATEGORIES.map((category) => (
               <button
-                key={category.id}
-                onClick={() => handleCategoryClick(category.id)}
-                className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive flex items-center gap-1.5 ${
-                  selectedCategory === category.id
+                onClick={() => handleCategoryClick(null)}
+                className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive ${
+                  selectedCategory === null
                     ? "bg-primary-red text-white shadow-sm"
                     : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                 }`}
               >
-                <span>{category.icon}</span>
-                <span>{category.label}</span>
+                All
               </button>
-            ))}
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategoryClick(category.id)}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg whitespace-nowrap transition-all duration-200 chip-interactive flex items-center gap-1.5 ${
+                    selectedCategory === category.id
+                      ? "bg-primary-red text-white shadow-sm"
+                      : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>{category.icon}</span>
+                  <span>{category.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Price Filter (Coming Soon) */}
-      <div className="px-4 py-3 border-b border-gray-100">
-        <button
-          onClick={() => setShowPriceFilter(!showPriceFilter)}
-          className="flex items-center justify-between w-full text-sm text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-medium">Price Range</span>
-            <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">Soon</span>
-          </span>
-          <svg 
-            className={`w-4 h-4 transition-transform ${showPriceFilter ? 'rotate-180' : ''}`} 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {showPriceFilter && (
-          <div className="mt-3 flex gap-2 flex-wrap opacity-50 pointer-events-none">
-            {PRICE_RANGES.map((range) => (
-              <button
-                key={range.id}
-                disabled
-                className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Business List */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 p-4 overflow-hidden">
         {/* Loading state */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-12">
@@ -219,12 +201,25 @@ export default function SuggestedBusinesses({
         {isError && (
           <div className="text-center py-12">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                className="w-6 h-6 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
             </div>
             <p className="text-gray-600 font-medium mb-2">Failed to load</p>
-            <button onClick={() => refetch()} className="text-sm text-primary-red hover:underline">
+            <button
+              onClick={() => refetch()}
+              className="text-sm text-primary-red hover:underline"
+            >
               Try again
             </button>
           </div>
@@ -234,8 +229,18 @@ export default function SuggestedBusinesses({
         {!isLoading && !isError && businesses.length === 0 && (
           <div className="text-center py-12">
             <div className="w-14 h-14 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              <svg
+                className="w-7 h-7 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
               </svg>
             </div>
             <p className="text-gray-600 font-medium">No businesses found</p>
@@ -252,8 +257,8 @@ export default function SuggestedBusinesses({
 
         {/* Business cards */}
         {!isLoading && !isError && businesses.length > 0 && (
-          <div className="space-y-3">
-            {businesses.map((business: Business) => (
+          <div className="grid grid-rows-6 gap-2 h-full">
+            {paginatedBusinesses.map((business: Business) => (
               <div
                 key={business.business_id}
                 onClick={(e) => {
@@ -263,12 +268,12 @@ export default function SuggestedBusinesses({
                     handleBusinessClick(business);
                   }
                 }}
-                className="group bg-white rounded-xl p-3 cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-100 hover:border-gray-200"
+                className="group bg-white rounded-xl p-3 h-full cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-100 hover:border-gray-200"
                 title="Click to view, double-click to add"
               >
                 <div className="flex gap-3">
                   {/* Business Image */}
-                  <div className="w-16 h-16 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
+                  <div className="w-14 h-14 flex-shrink-0 rounded-lg bg-gray-100 overflow-hidden">
                     {business.picture ? (
                       <img
                         src={business.picture}
@@ -277,8 +282,18 @@ export default function SuggestedBusinesses({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        <svg
+                          className="w-8 h-8"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
                         </svg>
                       </div>
                     )}
@@ -287,7 +302,7 @@ export default function SuggestedBusinesses({
                   {/* Business Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-gray-900 text-sm line-clamp-1 group-hover:text-primary-red transition-colors">
+                      <h3 className="font-semibold text-gray-900 text-sm break-words group-hover:text-primary-red transition-colors">
                         {business.name}
                       </h3>
                       {canEdit && (
@@ -303,13 +318,14 @@ export default function SuggestedBusinesses({
                         </button>
                       )}
                     </div>
-                    
+
                     {business.city && (
                       <p className="text-xs text-gray-500 truncate mt-0.5">
-                        {business.brgy ? `${business.brgy}, ` : ""}{business.city}
+                        {business.brgy ? `${business.brgy}, ` : ""}
+                        {business.city}
                       </p>
                     )}
-                    
+
                     {/* Rating */}
                     {business.rating && (
                       <div className="flex items-center gap-1 mt-1.5">
@@ -334,7 +350,7 @@ export default function SuggestedBusinesses({
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Category badges */}
                     {business.categories && business.categories.length > 0 && (
                       <div className="flex gap-1 mt-2 flex-wrap">
@@ -354,6 +370,66 @@ export default function SuggestedBusinesses({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Footer Pagination */}
+      <div className="h-14 shrink-0 px-4 flex items-center justify-between border-t border-gray-100 bg-white">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1 || totalPages <= 1}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+
+        <div className="flex items-center gap-1">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              disabled={totalPages <= 1}
+              className={`w-6 h-6 rounded-md text-xs font-medium transition-colors ${
+                currentPage === page
+                  ? "bg-primary-red text-white"
+                  : "text-gray-500 hover:bg-gray-100"
+              } disabled:cursor-default`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages || totalPages <= 1}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Business Detail Modal */}

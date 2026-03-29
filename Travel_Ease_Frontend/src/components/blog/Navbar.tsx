@@ -139,11 +139,10 @@ const Navbar: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`group relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-primary-red/5 text-primary-red"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
+                className={`group relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${active
+                  ? "bg-primary-red/5 text-primary-red"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
                 aria-current={active ? "page" : undefined}
               >
                 <span
@@ -181,15 +180,6 @@ const Navbar: React.FC = () => {
           {/* Authenticated Actions */}
           {user && !loading && (
             <div className="flex items-center gap-3">
-              {/* Publish (for authenticated users with editor enabled) */}
-              {isEditorEnabled() && user && (
-                <Link to="/blogs/new">
-                  <Button variant="outline" size="sm" leftIcon={<Briefcase className="h-4 w-4" />}>
-                    Publish
-                  </Button>
-                </Link>
-              )}
-
               {/* Profile Avatar */}
               <Link
                 to="/profile"
@@ -228,9 +218,8 @@ const Navbar: React.FC = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors ${
-                  active ? "bg-primary-red/5 text-primary-red" : "text-gray-700 hover:bg-gray-50"
-                }`}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors ${active ? "bg-primary-red/5 text-primary-red" : "text-gray-700 hover:bg-gray-50"
+                  }`}
                 aria-current={active ? "page" : undefined}
               >
                 <span className={active ? "text-primary-red" : "text-gray-400"}>{item.icon}</span>

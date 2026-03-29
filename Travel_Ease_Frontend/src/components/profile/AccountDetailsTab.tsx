@@ -17,7 +17,14 @@ interface PasswordFormData {
 }
 
 export function AccountDetailsTab() {
-  const { user, updateProfile, signOut, hasPassword, signInWithGoogle, isGoogleAuth } = useAuth();
+  const {
+    user,
+    updateProfile,
+    signOut,
+    hasPassword,
+    signInWithGoogle,
+    isGoogleAuth,
+  } = useAuth();
   const deleteAccount = useDeleteAccount();
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -48,14 +55,14 @@ export function AccountDetailsTab() {
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setErrorMessage("");
     setSuccessMessage("");
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPasswordFormData(prev => ({ ...prev, [name]: value }));
+    setPasswordFormData((prev) => ({ ...prev, [name]: value }));
     setErrorMessage("");
   };
 
@@ -78,7 +85,9 @@ export function AccountDetailsTab() {
       setIsEditingProfile(false);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to update profile");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to update profile",
+      );
     }
   };
 
@@ -109,20 +118,30 @@ export function AccountDetailsTab() {
         return;
       }
 
-      setSuccessMessage(`Password ${hasPassword ? "changed" : "set"} successfully!`);
-      setPasswordFormData({ current_password: "", new_password: "", confirm_password: "" });
+      setSuccessMessage(
+        `Password ${hasPassword ? "changed" : "set"} successfully!`,
+      );
+      setPasswordFormData({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
       setIsEditingPassword(false);
-      
+
       // Refresh profile to sync any changes
       await updateProfile({
         first_name: user?.firstName || "",
         last_name: user?.lastName || "",
         contact_no: user?.contactNo || "",
       });
-      
+
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : `Failed to ${hasPassword ? "change" : "set"} password`);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : `Failed to ${hasPassword ? "change" : "set"} password`,
+      );
     }
   };
 
@@ -131,7 +150,11 @@ export function AccountDetailsTab() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to sign in with Google");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in with Google",
+      );
       setIsRedirectingToGoogle(false);
     }
   };
@@ -146,17 +169,19 @@ export function AccountDetailsTab() {
 
       await authApi.disconnectGoogle(token);
       setSuccessMessage("Google connection removed successfully");
-      
+
       // Refresh profile to sync auth_provider change
       await updateProfile({
         first_name: user?.firstName || "",
         last_name: user?.lastName || "",
         contact_no: user?.contactNo || "",
       });
-      
+
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to disconnect Google");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to disconnect Google",
+      );
     }
   };
 
@@ -172,96 +197,132 @@ export function AccountDetailsTab() {
       setSuccessMessage("Account deleted successfully. Redirecting...");
       setTimeout(() => signOut(), 2000);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to delete account");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to delete account",
+      );
       setShowDeleteConfirm(false);
     }
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-
+    <div className="flex min-h-screen flex-col p-6">
       {successMessage && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-700">
           {successMessage}
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
           {errorMessage}
         </div>
       )}
 
       {/* Profile Card */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">Account Information</h2>
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-lg overflow-hidden">
+        <div className="flex items-center justify-between bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+          <h2 className="text-xl font-semibold text-white">
+            Account Information
+          </h2>
+          {!isEditingProfile && (
+            <button
+              onClick={() => setIsEditingProfile(true)}
+              className="whitespace-nowrap rounded-lg bg-white px-4 py-2 font-medium text-primary-red transition-colors hover:bg-gray-100"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6">
           {/* Display Profile Info */}
           {!isEditingProfile ? (
             <>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <p className="text-sm text-gray-500">First Name</p>
-                  <p className="text-lg font-semibold text-gray-900">{user?.firstName || "-"}</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {user?.firstName || "-"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Last Name</p>
-                  <p className="text-lg font-semibold text-gray-900">{user?.lastName || "-"}</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {user?.lastName || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Contact Number</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    {user?.contactNo || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="text-base font-semibold text-gray-900 break-all">
+                    {user?.email || "-"}
+                  </p>
                 </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="text-lg font-semibold text-gray-900">{user?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Contact Number</p>
-                <p className="text-lg font-semibold text-gray-900">{user?.contactNo || "-"}</p>
-              </div>
-              <button
-                onClick={() => setIsEditingProfile(true)}
-                className="mt-4 px-4 py-2 bg-primary-red text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Edit Profile
-              </button>
             </>
           ) : (
             <form onSubmit={handleProfileSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                <input
-                  type="text"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleProfileChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleProfileChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-red"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleProfileChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-red"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                <input
-                  type="text"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleProfileChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="contact_no"
+                    value={formData.contact_no}
+                    onChange={handleProfileChange}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-red"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={user?.email || ""}
+                    disabled
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 cursor-not-allowed text-gray-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-                <input
-                  type="tel"
-                  name="contact_no"
-                  value={formData.contact_no}
-                  onChange={handleProfileChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red"
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <button type="submit" className="px-4 py-2 bg-primary-red text-white rounded-lg hover:bg-red-700">
+              <div className="border-t pt-4 flex gap-2">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary-red text-white rounded-lg hover:bg-red-700"
+                >
                   Save
                 </button>
                 <button
@@ -277,144 +338,166 @@ export function AccountDetailsTab() {
         </div>
       </div>
 
-      {/* Authentication Methods */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">Authentication Methods</h2>
-        </div>
-
-        <div className="p-6 space-y-4">
-          {/* Email/Password */}
-          <div className="border-b border-gray-200 pb-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-medium text-gray-900">Email & Password</p>
-                <p className="text-sm text-gray-500">{hasPassword ? "Connected" : "Not set"}</p>
-              </div>
-              <button
-                onClick={() => setIsEditingPassword(!isEditingPassword)}
-                className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-              >
-                {hasPassword ? "Change" : "Set"} Password
-              </button>
+      {!isEditingProfile && (
+        <>
+          {/* Authentication Methods */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white">
+                Authentication Methods
+              </h2>
             </div>
 
-            {isEditingPassword && (
-              <form onSubmit={handleSetPassword} className="mt-4 space-y-3">
-                {hasPassword && (
+            <div className="p-6 space-y-4">
+              {/* Email/Password */}
+              <div className="border-b border-gray-200 pb-4">
+                <div className="flex justify-between items-center">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                    <input
-                      type="password"
-                      name="current_password"
-                      value={passwordFormData.current_password}
-                      onChange={handlePasswordChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <p className="font-medium text-gray-900">
+                      Email & Password
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {hasPassword ? "Connected" : "Not set"}
+                    </p>
                   </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                  <input
-                    type="password"
-                    name="new_password"
-                    value={passwordFormData.new_password}
-                    onChange={handlePasswordChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                  <input
-                    type="password"
-                    name="confirm_password"
-                    value={passwordFormData.confirm_password}
-                    onChange={handlePasswordChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                    {hasPassword ? "Update" : "Set"} Password
-                  </button>
                   <button
-                    type="button"
-                    onClick={() => setIsEditingPassword(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+                    onClick={() => setIsEditingPassword(!isEditingPassword)}
+                    className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
                   >
-                    Cancel
+                    {hasPassword ? "Change" : "Set"} Password
                   </button>
                 </div>
-              </form>
-            )}
+
+                {isEditingPassword && (
+                  <form onSubmit={handleSetPassword} className="mt-4 space-y-3">
+                    {hasPassword && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Current Password
+                        </label>
+                        <input
+                          type="password"
+                          name="current_password"
+                          value={passwordFormData.current_password}
+                          onChange={handlePasswordChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="new_password"
+                        value={passwordFormData.new_password}
+                        onChange={handlePasswordChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Confirm Password
+                      </label>
+                      <input
+                        type="password"
+                        name="confirm_password"
+                        value={passwordFormData.confirm_password}
+                        onChange={handlePasswordChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                      >
+                        {hasPassword ? "Update" : "Set"} Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingPassword(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* Google OAuth */}
+              <div className="pt-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-gray-900">Google Account</p>
+                    <p className="text-sm text-gray-500">
+                      {isGoogleAuth ? "Connected" : "Not connected"}
+                    </p>
+                  </div>
+                  {!isGoogleAuth ? (
+                    <button
+                      onClick={handleAddGoogleAuth}
+                      disabled={isRedirectingToGoogle}
+                      className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+                    >
+                      {isRedirectingToGoogle ? "Redirecting..." : "Connect"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleDisconnectGoogle}
+                      className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Google OAuth */}
-          <div className="pt-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-medium text-gray-900">Google Account</p>
-                <p className="text-sm text-gray-500">{isGoogleAuth ? "Connected" : "Not connected"}</p>
-              </div>
-              {!isGoogleAuth ? (
-                <button
-                  onClick={handleAddGoogleAuth}
-                  disabled={isRedirectingToGoogle}
-                  className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50"
-                >
-                  {isRedirectingToGoogle ? "Redirecting..." : "Connect"}
-                </button>
-              ) : (
-                <button
-                  onClick={handleDisconnectGoogle}
-                  className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                >
-                  Disconnect
-                </button>
+          {/* Danger Zone */}
+          <div className="bg-white rounded-2xl shadow-lg border border-red-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white">Danger Zone</h2>
+            </div>
+
+            <div className="p-6">
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              >
+                Delete Account
+              </button>
+
+              {showDeleteConfirm && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-900 font-medium mb-4">
+                    Are you sure you want to delete your account? This action
+                    cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleteAccount.isPending}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleteAccount.isPending ? "Deleting..." : "Yes, Delete"}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="bg-white rounded-2xl shadow-lg border border-red-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
-          <h2 className="text-xl font-semibold text-white">Danger Zone</h2>
-        </div>
-
-        <div className="p-6">
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-          >
-            Delete Account
-          </button>
-
-          {showDeleteConfirm && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-900 font-medium mb-4">
-                Are you sure you want to delete your account? This action cannot be undone.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDeleteAccount}
-                  disabled={deleteAccount.isPending}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-                >
-                  {deleteAccount.isPending ? "Deleting..." : "Yes, Delete"}
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
