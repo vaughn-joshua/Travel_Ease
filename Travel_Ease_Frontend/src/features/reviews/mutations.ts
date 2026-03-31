@@ -156,12 +156,8 @@ export function useDeleteBusinessReview() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      reviewId,
-    }: {
-      reviewId: number;
-      businessId: number;
-    }) => reviewApi.deleteBusinessReview(reviewId),
+    mutationFn: ({ reviewId }: { reviewId: number; businessId: number }) =>
+      reviewApi.deleteBusinessReview(reviewId),
     onSuccess: (_data, variables) => {
       // Invalidate reviews for the specific business
       queryClient.invalidateQueries({
@@ -215,12 +211,8 @@ export function useDeleteTravelPlanReview() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      reviewId,
-    }: {
-      reviewId: number;
-      travelPlanId: number;
-    }) => reviewApi.deleteTravelPlanReview(reviewId),
+    mutationFn: ({ reviewId }: { reviewId: number; travelPlanId: number }) =>
+      reviewApi.deleteTravelPlanReview(reviewId),
     onSuccess: (_data, variables) => {
       // Invalidate reviews for the specific travel plan
       queryClient.invalidateQueries({

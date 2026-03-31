@@ -52,7 +52,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({
 }) => {
   const { data, isLoading, isError, error, refetch } = useRSSFeed(
     feed.url,
-    itemsPerFeed
+    itemsPerFeed,
   );
 
   if (isLoading) {
@@ -126,9 +126,11 @@ const GuestTeaser: React.FC = () => (
         >
           <div
             className={`aspect-[4/3] ${
-              ["bg-gradient-to-br from-sky-300 to-indigo-400",
-               "bg-gradient-to-br from-emerald-300 to-teal-500",
-               "bg-gradient-to-br from-amber-300 to-orange-500"][i]
+              [
+                "bg-gradient-to-br from-sky-300 to-indigo-400",
+                "bg-gradient-to-br from-emerald-300 to-teal-500",
+                "bg-gradient-to-br from-amber-300 to-orange-500",
+              ][i]
             }`}
           />
           <div className="p-5 space-y-3 bg-white">

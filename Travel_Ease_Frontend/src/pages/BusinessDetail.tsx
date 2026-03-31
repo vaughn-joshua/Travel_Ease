@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useParams,
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useBusinessDetail } from "../features/businesses/queries";
 import { useDeleteBusiness } from "../features/businesses/mutations";
 import { useCreateBusinessReview } from "../features/reviews/mutations";
@@ -66,7 +71,7 @@ export default function BusinessDetail() {
   const isReadOnlyView = searchParams.get("readonly") === "1";
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"menu" | "gallery" | "reviews">(
-    "menu"
+    "menu",
   );
 
   // Review form state
@@ -147,12 +152,19 @@ export default function BusinessDetail() {
       // Clear success message after 3 seconds
       setTimeout(() => setReviewSuccess(""), 3000);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to submit review";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to submit review";
       setReviewError(errorMessage);
     }
   };
 
-  const StarRatingInput = ({ rating, onRatingChange }: { rating: number; onRatingChange: (rating: number) => void }) => {
+  const StarRatingInput = ({
+    rating,
+    onRatingChange,
+  }: {
+    rating: number;
+    onRatingChange: (rating: number) => void;
+  }) => {
     const [hoverRating, setHoverRating] = useState(0);
 
     return (
@@ -371,9 +383,7 @@ export default function BusinessDetail() {
             {/* Description */}
             {business.description && (
               <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  About
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">About</h2>
                 <p className="text-gray-600 leading-relaxed text-lg">
                   {business.description}
                 </p>
@@ -504,7 +514,10 @@ export default function BusinessDetail() {
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">
                           Write a Review
                         </h3>
-                        <form onSubmit={handleReviewSubmit} className="space-y-4">
+                        <form
+                          onSubmit={handleReviewSubmit}
+                          className="space-y-4"
+                        >
                           {/* Star Rating Input */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -536,10 +549,14 @@ export default function BusinessDetail() {
 
                           {/* Error/Success Messages */}
                           {reviewError && (
-                            <p className="text-red-600 text-sm">{reviewError}</p>
+                            <p className="text-red-600 text-sm">
+                              {reviewError}
+                            </p>
                           )}
                           {reviewSuccess && (
-                            <p className="text-green-600 text-sm">{reviewSuccess}</p>
+                            <p className="text-green-600 text-sm">
+                              {reviewSuccess}
+                            </p>
                           )}
 
                           {/* Submit Button */}
@@ -658,7 +675,7 @@ export default function BusinessDetail() {
                       <span>
                         {isOpen
                           ? `${formatTime(hours.open)} - ${formatTime(
-                              hours.close
+                              hours.close,
                             )}`
                           : "Closed"}
                       </span>
@@ -670,9 +687,7 @@ export default function BusinessDetail() {
 
             {/* Location */}
             <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">
-                Location
-              </h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Location</h3>
               <p className="text-gray-600 text-base">
                 {business.location.address}
               </p>
@@ -704,9 +719,7 @@ export default function BusinessDetail() {
             {/* Owner Info */}
             {business.owner && (
               <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">
-                  Owner
-                </h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Owner</h3>
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center">
                     <span className="text-gray-700 font-bold text-lg">

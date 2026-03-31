@@ -1,5 +1,10 @@
 import { useEffect } from "react";
-import { CATEGORIES, PRICE_SLIDER_MIN, PRICE_SLIDER_MAX, PRICE_SLIDER_STEP } from "./constants";
+import {
+  CATEGORIES,
+  PRICE_SLIDER_MIN,
+  PRICE_SLIDER_MAX,
+  PRICE_SLIDER_STEP,
+} from "./constants";
 import PriceRangeSlider from "./PriceRangeSlider";
 
 interface FilterSidebarProps {
@@ -21,11 +26,12 @@ export default function FilterSidebar({
   onCloseMobile,
   isDesktop = false,
 }: FilterSidebarProps): React.ReactElement {
-
   useEffect(() => {
     if (!isDesktop && isOpenMobile) {
       document.body.style.overflow = "hidden";
-      return () => { document.body.style.overflow = ""; };
+      return () => {
+        document.body.style.overflow = "";
+      };
     }
   }, [isDesktop, isOpenMobile]);
 
@@ -33,7 +39,9 @@ export default function FilterSidebar({
     <div className="flex h-full flex-col gap-6">
       {/* Categories */}
       <div>
-        <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">Category</h3>
+        <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          Category
+        </h3>
         <div className="flex flex-col gap-0.5">
           <button
             type="button"
@@ -68,7 +76,9 @@ export default function FilterSidebar({
 
       {/* Price Range Slider */}
       <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Price Range</h3>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          Price Range
+        </h3>
         <PriceRangeSlider
           min={PRICE_SLIDER_MIN}
           max={PRICE_SLIDER_MAX}
@@ -115,8 +125,19 @@ export default function FilterSidebar({
             className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-red"
             aria-label="Close filters"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
