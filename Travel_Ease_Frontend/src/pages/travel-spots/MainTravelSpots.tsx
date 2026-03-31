@@ -7,11 +7,14 @@ import Pagination from "../../components/travel-spots/Pagination";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useTravelSpots } from "../../features/businesses/queries";
 import { PRICE_SLIDER_MIN, PRICE_SLIDER_MAX, type SortOption } from "../../components/travel-spots/constants";
+import { useAuth } from "../../context/AuthContext";
 
 const ITEMS_PER_PAGE = 12;
 const DEFAULT_PRICE: [number, number] = [PRICE_SLIDER_MIN, PRICE_SLIDER_MAX];
 
 export default function MainTravelSpots(): React.ReactElement {
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -115,20 +118,68 @@ export default function MainTravelSpots(): React.ReactElement {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-20 pt-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Explore Travel Spots
-          </h1>
-          <p className="mt-2 text-lg text-gray-600">
-            Find the perfect places to stay, eat, and explore for your next adventure.
-          </p>
-          <div className="mt-5 max-w-xl">
-            <SpotSearchBox onSearch={handleSearch} />
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {isLoggedIn ? (
+        <div className="border-b border-gray-200 bg-white">
+          <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Explore Travel Spots
+            </h1>
+            <p className="mt-2 text-lg text-gray-600">
+              Find the perfect places to stay, eat, and explore for your next adventure.
+            </p>
+            <div className="mt-5 w-full">
+              <SpotSearchBox onSearch={handleSearch} />
+            </div>
           </div>
         </div>
+      ) : (
+        <section className="relative h-[88vh] min-h-[680px] w-full overflow-hidden">
+          <div className="absolute inset-0">
+            <img
+              src="https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=2400&q=80"
+              alt="Tagaytay scenic sites"
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+          </div>
+
+          <div className="relative flex h-full items-center justify-center px-4 text-center sm:px-6 lg:px-8">
+            <div className="max-w-4xl space-y-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1.5 backdrop-blur-md">
+                <span className="h-2 w-2 rounded-full bg-primary-red" />
+                <span className="text-sm font-medium uppercase tracking-wide text-white">
+                  TravelEase Spots
+                </span>
+              </div>
+
+              <h1 className="text-4xl font-extrabold tracking-tight text-white drop-shadow-lg sm:text-5xl lg:text-7xl">
+                Discover Tagaytay,
+                <br className="hidden sm:block" />
+                <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  One Spot at a Time
+                </span>
+              </h1>
+
+              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-gray-200 drop-shadow-md sm:text-xl">
+                Explore top restaurants, attractions, stays, and hidden local gems curated for your next trip.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="mx-auto w-full max-w-[1800px] px-4 pt-6 sm:px-6 lg:px-8">
+        {!isLoggedIn && (
+          <div className="sticky top-16 z-30 mb-8 border-b border-gray-200 bg-gray-50/95 pb-6 pt-2 backdrop-blur">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
+              Explore Travel Spots
+            </h2>
+            <p className="mt-2 text-gray-600">
+              Browse curated places around Tagaytay using filters to find your next stop.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row lg:gap-8">
 
@@ -159,18 +210,36 @@ export default function MainTravelSpots(): React.ReactElement {
 
           {/* Main content */}
           <div className="flex-1 min-w-0 pt-6 lg:pt-0">
-            <ResultsHeader
-              totalCount={totalItems}
-              category={category}
-              onClearCategory={() => handleCategoryChange(null)}
-              priceRange={priceRange}
-              isPriceFiltered={isPriceFiltered}
-              onClearPriceRange={() => handlePriceRangeChange(DEFAULT_PRICE)}
-              sortBy={sortBy}
-              onSortChange={handleSortChange}
-              onMobileFilterClick={() => setIsMobileFilterOpen(true)}
-              onClearAll={clearAllFilters}
-            />
+            {isLoggedIn ? (
+              <ResultsHeader
+                totalCount={totalItems}
+                category={category}
+                onClearCategory={() => handleCategoryChange(null)}
+                priceRange={priceRange}
+                isPriceFiltered={isPriceFiltered}
+                onClearPriceRange={() => handlePriceRangeChange(DEFAULT_PRICE)}
+                sortBy={sortBy}
+                onSortChange={handleSortChange}
+                onMobileFilterClick={() => setIsMobileFilterOpen(true)}
+                onClearAll={clearAllFilters}
+              />
+            ) : (
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {totalItems} {totalItems === 1 ? "Spot" : "Spots"} Available
+                </h2>
+                <button
+                  onClick={() => setIsMobileFilterOpen(true)}
+                  className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-red lg:hidden"
+                  aria-label="Open filters"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  Filters
+                </button>
+              </div>
+            )}
 
             {loading ? (
               <div className="flex min-h-[400px] flex-col items-center justify-center">
@@ -209,7 +278,7 @@ export default function MainTravelSpots(): React.ReactElement {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-6 min-[480px]:grid-cols-2 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-10 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {currentBusinesses.map((business) => (
                     <SpotCard key={business.business_id} business={business} />
                   ))}

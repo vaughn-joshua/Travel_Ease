@@ -47,7 +47,7 @@ export default function ResultsHeader({
           </button>
 
           <h2 className="text-xl font-bold text-gray-900">
-            {totalCount} {totalCount === 1 ? "Spot" : "Spots"} Found
+            {totalCount} {totalCount === 1 ? "Spot" : "Spots"} Available
           </h2>
         </div>
 

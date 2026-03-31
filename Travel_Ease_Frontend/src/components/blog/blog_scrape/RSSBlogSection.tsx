@@ -42,9 +42,14 @@ const SkeletonCard: React.FC = () => (
 interface FeedPanelProps {
   feed: FeedConfig;
   itemsPerFeed: number;
+  isLoggedIn: boolean;
 }
 
-const FeedPanel: React.FC<FeedPanelProps> = ({ feed, itemsPerFeed }) => {
+const FeedPanel: React.FC<FeedPanelProps> = ({
+  feed,
+  itemsPerFeed,
+  isLoggedIn,
+}) => {
   const { data, isLoading, isError, error, refetch } = useRSSFeed(
     feed.url,
     itemsPerFeed
@@ -98,7 +103,11 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ feed, itemsPerFeed }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {items.map((item, idx) => (
-        <ScrapedCard key={`${item.link}-${idx}`} item={item} isLoggedIn={true} />
+        <ScrapedCard
+          key={`${item.link}-${idx}`}
+          item={item}
+          isLoggedIn={isLoggedIn}
+        />
       ))}
     </div>
   );
@@ -233,7 +242,11 @@ const RSSBlogSection: React.FC<RSSBlogSectionProps> = ({
 
         {/* Content: auth-gated */}
         {isLoggedIn ? (
-          <FeedPanel feed={activeFeed} itemsPerFeed={itemsPerFeed} />
+          <FeedPanel
+            feed={activeFeed}
+            itemsPerFeed={itemsPerFeed}
+            isLoggedIn={isLoggedIn}
+          />
         ) : (
           <GuestTeaser />
         )}

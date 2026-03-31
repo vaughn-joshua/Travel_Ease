@@ -4,10 +4,11 @@ import { ExternalLink, Calendar, User, Lock, Globe } from "lucide-react";
 import Card from "../../ui/Card";
 import Badge from "../../ui/Badge";
 import type { RSSFeedItem } from "../../../types/blog";
+import { useAuth } from "../../../context/AuthContext";
 
 interface ScrapedCardProps {
   item: RSSFeedItem;
-  isLoggedIn: boolean;
+  isLoggedIn?: boolean;
   className?: string;
 }
 
@@ -43,6 +44,14 @@ const ScrapedCard: React.FC<ScrapedCardProps> = ({
   isLoggedIn,
   className = "",
 }) => {
+  const { user } = useAuth();
+  const hasLocalToken =
+    typeof window !== "undefined" && Boolean(localStorage.getItem("token"));
+  const isAuthenticated =
+    typeof isLoggedIn === "boolean"
+      ? isLoggedIn
+      : Boolean(user) || hasLocalToken;
+
   const gradient = getGradient(item.title);
 
   const cardContent = (
@@ -88,7 +97,7 @@ const ScrapedCard: React.FC<ScrapedCardProps> = ({
         {/* External / Lock indicator */}
         <div className="absolute top-4 right-4 z-10">
           <div className="flex items-center justify-center w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm">
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <ExternalLink className="w-3.5 h-3.5 text-white" />
             ) : (
               <Lock className="w-3.5 h-3.5 text-white" />
@@ -124,7 +133,7 @@ const ScrapedCard: React.FC<ScrapedCardProps> = ({
           </div>
 
           {/* CTA */}
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <span className="flex items-center gap-1 text-sm font-semibold text-primary-red group-hover:translate-x-1 transition-transform">
               Read Article
               <ExternalLink className="w-3.5 h-3.5" />
@@ -140,7 +149,7 @@ const ScrapedCard: React.FC<ScrapedCardProps> = ({
     </Card>
   );
 
-  if (isLoggedIn) {
+  if (isAuthenticated) {
     return (
       <a
         href={item.link}

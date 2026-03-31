@@ -74,8 +74,9 @@ export const businessKeys = {
   lists: () => [...businessKeys.all, "list"] as const,
   list: (params?: BusinessListParams) =>
     [...businessKeys.lists(), params] as const,
+  travelSpotsAll: () => [...businessKeys.all, "travel-spots"] as const,
   travelSpots: (params?: { search?: string; city?: string; category?: string; limit?: number }) =>
-    [...businessKeys.all, "travel-spots", params] as const,
+    [...businessKeys.travelSpotsAll(), params] as const,
   categories: () => [...businessKeys.all, "categories"] as const,
   details: () => [...businessKeys.all, "detail"] as const,
   detail: (id: number | string) => [...businessKeys.details(), id] as const,

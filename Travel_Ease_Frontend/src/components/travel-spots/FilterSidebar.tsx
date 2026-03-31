@@ -82,7 +82,7 @@ export default function FilterSidebar({
 
   if (isDesktop) {
     return (
-      <aside className="w-full overflow-y-auto overflow-x-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm max-h-[calc(100vh-6rem)]">
+      <aside className="w-full overflow-y-auto overflow-x-hidden p-1 max-h-[calc(100vh-6rem)]">
         <h2 className="mb-5 text-base font-bold text-gray-900">Filters</h2>
         {content}
       </aside>

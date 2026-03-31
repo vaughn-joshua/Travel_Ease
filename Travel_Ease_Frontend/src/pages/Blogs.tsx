@@ -436,6 +436,7 @@ export default function Blogs() {
                       <ScrapedCard
                         key={`web-${entry.item.link}`}
                         item={entry.item}
+                        isLoggedIn={isLoggedIn}
                       />
                     ),
                   )}

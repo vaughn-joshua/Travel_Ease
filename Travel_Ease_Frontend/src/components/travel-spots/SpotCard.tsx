@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ModalReview from "./ModalReview";
 import type { TravelSpotBusiness, BusinessReview } from "../../types/business";
 import { useBusinessReviews } from "../../features/reviews/queries";
@@ -8,6 +9,7 @@ interface SpotCardProps {
 }
 
 export default function SpotCard({ business }: SpotCardProps): React.ReactElement {
+  const navigate = useNavigate();
   const [showReviews, setShowReviews] = useState<boolean>(false);
 
   const reviewCount = business.reviewCount || 0;
@@ -69,9 +71,24 @@ export default function SpotCard({ business }: SpotCardProps): React.ReactElemen
   const imageUrl = getImageUrl();
   const formattedRating = business.rating ? Number(business.rating).toFixed(1) : null;
 
+  const openBusinessDetails = (): void => {
+    navigate(`/businesses/${business.business_id}?readonly=1`);
+  };
+
   return (
     <>
-      <div className="group flex flex-col gap-3 min-w-0">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={openBusinessDetails}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openBusinessDetails();
+          }
+        }}
+        className="group flex min-w-0 cursor-pointer flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+      >
         {/* Image Container - Aspect 4/3 makes image the hero */}
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-lg,16px)] bg-gray-100 shrink-0">
           <img
@@ -119,7 +136,10 @@ export default function SpotCard({ business }: SpotCardProps): React.ReactElemen
                 : ""}
             </span>
             <button
-              onClick={() => setShowReviews(true)}
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowReviews(true);
+              }}
               className="text-sm font-medium text-primary-red underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-red rounded shrink-0"
               aria-label={`View ${reviewCount} reviews for ${business.name}`}
             >

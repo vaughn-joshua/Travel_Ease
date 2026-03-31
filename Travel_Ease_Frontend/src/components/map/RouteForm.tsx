@@ -125,7 +125,7 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
     endPoint.lat !== undefined && endPoint.lng !== undefined;
 
   return (
-    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/10 border border-white/60 overflow-hidden relative z-[9996]">
+    <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/10 border border-white/60 overflow-visible relative z-[9996]">
       {/* Collapsed Header / Toggle Button */}
       <button
         type="button"
@@ -191,11 +191,11 @@ export default function RouteForm({ onRouteSubmit, profile, onProfileChange }: R
       <div 
         id="route-form-content"
         className={`
-          transition-all duration-300 ease-out overflow-hidden
-          ${isExpanded ? 'max-h-[min(600px,70dvh)] opacity-100' : 'max-h-0 opacity-0'}
+          transition-all duration-300 ease-out
+          ${isExpanded ? 'max-h-[min(600px,70dvh)] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'}
         `}
       >
-        <form onSubmit={handleSubmit} className="p-4 pt-0 space-y-4 border-t border-gray-100 max-h-[min(560px,calc(70dvh-2.5rem))] overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        <form onSubmit={handleSubmit} className="p-4 pt-0 space-y-4 border-t border-gray-100 max-h-[min(560px,calc(70dvh-2.5rem))] overflow-visible overscroll-contain scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
           {/* From Field */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

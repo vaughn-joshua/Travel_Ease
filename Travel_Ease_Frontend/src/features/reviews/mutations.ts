@@ -17,6 +17,42 @@ interface CreateReviewPayload {
   content?: string;
 }
 
+function adjustTravelSpotsReviewCount(
+  queryClient: ReturnType<typeof useQueryClient>,
+  businessId: number,
+  delta: number,
+) {
+  queryClient.setQueriesData(
+    { queryKey: businessKeys.travelSpotsAll() },
+    (oldData: unknown) => {
+      if (
+        !oldData ||
+        typeof oldData !== "object" ||
+        !("data" in oldData) ||
+        !Array.isArray((oldData as { data: unknown }).data)
+      ) {
+        return oldData;
+      }
+
+      const typed = oldData as {
+        data: Array<{ business_id: number; reviewCount: number }>;
+      };
+
+      return {
+        ...typed,
+        data: typed.data.map((business) =>
+          business.business_id === businessId
+            ? {
+                ...business,
+                reviewCount: Math.max(0, (business.reviewCount ?? 0) + delta),
+              }
+            : business,
+        ),
+      };
+    },
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // useCreateBusinessReview
 // Creates a new review for a business.
@@ -44,8 +80,9 @@ export function useCreateBusinessReview() {
       });
       // Invalidate travel spots as ratings are shown there
       queryClient.invalidateQueries({
-        queryKey: businessKeys.travelSpots(),
+        queryKey: businessKeys.travelSpotsAll(),
       });
+      adjustTravelSpotsReviewCount(queryClient, variables.businessId, 1);
     },
   });
 }
@@ -104,7 +141,7 @@ export function useUpdateBusinessReview() {
       });
       // Invalidate travel spots as ratings are shown there
       queryClient.invalidateQueries({
-        queryKey: businessKeys.travelSpots(),
+        queryKey: businessKeys.travelSpotsAll(),
       });
     },
   });
@@ -136,8 +173,9 @@ export function useDeleteBusinessReview() {
       });
       // Invalidate travel spots as ratings are shown there
       queryClient.invalidateQueries({
-        queryKey: businessKeys.travelSpots(),
+        queryKey: businessKeys.travelSpotsAll(),
       });
+      adjustTravelSpotsReviewCount(queryClient, variables.businessId, -1);
     },
   });
 }

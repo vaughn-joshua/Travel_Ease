@@ -6,9 +6,7 @@ import { RefreshCw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 export function AdminPanelTab() {
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Panel</h2>
-
-            <div className="space-y-8">
+            <div className="space-y-6">
                 <TrafficManagement />
                 <UserManagement />
             </div>
@@ -35,13 +33,13 @@ function TrafficManagement() {
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900">System Operations</h3>
                     <p className="text-sm text-gray-500 mt-1">Manage core system data and external integrations.</p>
                 </div>
             </div>
-            <div className="p-6">
+            <div className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <div>
                         <h4 className="font-medium text-gray-900">Zone Traffic Snapshots</h4>
@@ -85,7 +83,7 @@ function UserManagement() {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
-    const limit = 10;
+    const limit = 5;
 
     // Fetch paginated users
     const { data, isLoading, isError } = useQuery({
@@ -128,16 +126,16 @@ function UserManagement() {
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900">User Role Management</h3>
                     <p className="text-sm text-gray-500 mt-1">Manage roles and permissions for all registered accounts.</p>
                 </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-5">
                 {/* Search Bar */}
-                <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-6">
+                <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-4">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
@@ -188,7 +186,7 @@ function UserManagement() {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
                                             <div className="flex justify-center items-center gap-2">
                                                 <RefreshCw className="animate-spin text-primary-red" />
                                                 Loading users...
@@ -197,14 +195,14 @@ function UserManagement() {
                                     </tr>
                                 ) : users.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
                                             No users found.
                                         </td>
                                     </tr>
                                 ) : (
                                     users.map((u: any) => (
                                         <tr key={u.user_id}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-6 py-3 whitespace-nowrap">
                                                 <div className="flex items-center">
                                                     <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold">
                                                         {u.first_name ? u.first_name.charAt(0).toUpperCase() : '?'}
@@ -217,10 +215,10 @@ function UserManagement() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                                                 {u.contact_no || <span className="text-gray-400 italic">Not provided</span>}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-6 py-3 whitespace-nowrap">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                           ${u.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-800' : ''}
                           ${u.role === 'LGU_ADMIN' ? 'bg-blue-100 text-blue-800' : ''}
@@ -231,7 +229,7 @@ function UserManagement() {
                                                     {u.role}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                                                 <select
                                                     value={u.role}
                                                     onChange={(e) => handleChangeRole(u.user_id, e.target.value)}

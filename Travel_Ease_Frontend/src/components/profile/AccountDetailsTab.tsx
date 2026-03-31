@@ -341,7 +341,7 @@ export function AccountDetailsTab() {
       {!isEditingProfile && (
         <>
           {/* Authentication Methods */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="mt-6 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
               <h2 className="text-xl font-semibold text-white">
                 Authentication Methods
@@ -458,7 +458,7 @@ export function AccountDetailsTab() {
           </div>
 
           {/* Danger Zone */}
-          <div className="bg-white rounded-2xl shadow-lg border border-red-200 overflow-hidden">
+          <div className="mt-6 bg-white rounded-2xl shadow-lg border border-red-200 overflow-hidden">
             <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
               <h2 className="text-xl font-semibold text-white">Danger Zone</h2>
             </div>
