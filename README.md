@@ -65,7 +65,7 @@ The platform combines public-facing travel features with administrative tooling 
 | Backend | Node.js, Express, TypeScript, Zod, Pino |
 | Data | PostgreSQL, Prisma ORM, Supabase |
 | Auth | Supabase Auth with local JWT fallback for tests |
-| Caching / Infra | Redis (optional), Vercel, Railway |
+| Caching / Infra | Redis, Vercel, Railway |
 | Testing | Vitest, Testing Library, Supertest |
 
 ---
