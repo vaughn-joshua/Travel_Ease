@@ -1,680 +1,392 @@
-# TravelEase - Full Stack Travel Planning Application
+<p align="center">
+  <img src="[PLACEHOLDER: Add logo asset path, e.g. docs/assets/travelease-logo.png]" alt="TravelEase logo" width="140" />
+</p>
 
-A comprehensive travel planning and discovery platform built with the PERN stack (PostgreSQL, Express, React, Node.js) and Prisma ORM.
+<h1 align="center">TravelEase</h1>
 
-## Features
+<p align="center">
+  <strong>Travel planning, business discovery, and LGU-assisted destination management in one full-stack web platform.</strong>
+</p>
 
-### Core Functionality
-- **Travel Planning**: Create, manage, and collaborate on travel plans with activities and itineraries
-- **Business Directory**: Browse and register travel-related businesses (restaurants, hotels, attractions)
-- **Interactive Maps**: Search locations, plan routes, and visualize travel spots using Leaflet and OpenStreetMap
-- **Blog System**: Share travel stories and experiences with rich content management
-- **Reviews**: Rate and review businesses and travel plans
-- **User Management**: Registration, login, and favorites system
+<p align="center">
+  <img alt="Build Status" src="https://img.shields.io/badge/build-%5BPLACEHOLDER%5D-lightgrey" />
+  <img alt="Version" src="https://img.shields.io/badge/version-%5BPLACEHOLDER%5D-lightgrey" />
+  <img alt="License" src="https://img.shields.io/badge/license-%5BPLACEHOLDER%5D-lightgrey" />
+</p>
 
-### Technical Stack
-- **Frontend**: React 19 with TypeScript, Tailwind CSS 4 (CSS-first config), React Router
-- **Backend**: Express.js with unified API architecture
-- **Database**: PostgreSQL with Prisma ORM (Supabase)
-- **Authentication**: Supabase Auth (Google OAuth + Email/Password)
-- **Image Storage**: Supabase Storage (public bucket)
-- **Maps**: Leaflet, React Leaflet, Leaflet Routing Machine
-- **Geocoding**: OpenStreetMap Nominatim API
-- **Monorepo**: npm workspaces with single lockfile
+<p align="center">
+  <a href="https://travelease.app"><strong>Live Website: https://travelease.app</strong></a>
+</p>
 
-## Quick Start
+---
+
+<a id="table-of-contents"></a>
+## 📚 Table of Contents
+
+- [About the Project](#about-the-project)
+- [Live Demo](#live-demo)
+- [Getting Started](#getting-started)
+- [Test Credentials / Access Roles](#test-credentials--access-roles)
+- [User Roles & Permissions](#user-roles--permissions)
+- [Usage Guide](#usage-guide)
+- [API Documentation](#api-documentation)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+- [Contact & Support](#contact--support)
+
+---
+
+<a id="about-the-project"></a>
+## 📖 About the Project
+
+TravelEase is a full-stack travel management web application built for trip planning, destination discovery, business registration, and administrative coordination. It is designed for developers maintaining the platform, QA teams validating behavior, LGU administrators reviewing business activity, and evaluators assessing system readiness.
+
+### Overview
+
+The platform combines public-facing travel features with administrative tooling in a single PERN-based monorepo. Travelers can explore destinations, manage plans, and interact with travel-related content, while administrators can review business registrations, oversee user access, and support operational workflows.
+
+### Key Features
+
+- Multi-role authentication and access control for platform users and administrators
+- Travel plan creation, itinerary management, and participant collaboration
+- Business directory with registration and approval workflows
+- Interactive map-based discovery with routing and location services
+- Travel blog publishing and content management
+- Reviews, favorites, and user profile management
+- Traffic- and route-aware system utilities for destination planning
+- Monorepo architecture with separate frontend and backend workspaces
+
+### Tech Stack
+
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, React Router v7, TanStack Query, React Hook Form, Tailwind CSS 4, Leaflet |
+| Backend | Node.js, Express, TypeScript, Zod, Pino |
+| Data | PostgreSQL, Prisma ORM, Supabase |
+| Auth | Supabase Auth with local JWT fallback for tests |
+| Caching / Infra | Redis (optional), Vercel, Railway |
+| Testing | Vitest, Testing Library, Supertest |
+
+---
+
+<a id="live-demo"></a>
+## 🚀 Live Demo
+
+| Environment | URL | Purpose | Notes |
+| --- | --- | --- | --- |
+| Production | [https://travelease.app](https://travelease.app) | Public live environment | Frontend is deployed on Vercel and the backend API is hosted on Railway |
+| Staging | [PLACEHOLDER: Add staging URL] | Pre-release QA / UAT | [PLACEHOLDER: Add staging deployment notes] |
+
+---
+
+<a id="getting-started"></a>
+## 🛠️ Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL 12+ (running locally or via Supabase)
-- Supabase account (for auth and image storage)
+- Node.js `18.18+`
+- npm `9+`
+- PostgreSQL database or Supabase project
+- Supabase project for authentication and storage
+- Redis instance for caching and rate limiting if enabled
 - Git
 
-### Setup
+### Installation
 
-1. **Clone and install dependencies**:
-
-   ```bash
-   git clone <repository-url>
-   cd Travel_Ease
-   npm install   # Installs all dependencies for both frontend and backend via workspaces
-   ```
-
-2. **Configure Backend Environment**:
-
-   Create `.env` file in `Travel_Ease_Backend/`:
-
-   ```env
-   # Database (Supabase)
-   DATABASE_URL="postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres"
-
-   # Server
-   PORT=3001
-
-   # Supabase
-   SUPABASE_URL="https://[PROJECT].supabase.co"
-   SUPABASE_ANON_KEY="your-anon-key"
-   SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-   SUPABASE_STORAGE_BUCKET="images"
-
-   # Environment
-   NODE_ENV=development
-   ```
-
-   > **Note**: Create a public bucket named "images" in Supabase Storage for image uploads.
-
-3. **Initialize Database**:
-
-   ```bash
-   cd Travel_Ease_Backend
-   npx prisma generate
-   npx prisma db push
-   ```
-
-4. **Start Development Servers**:
-
-   **From the root directory:**
-   ```bash
-   # Terminal 1 - Backend:
-   npm run dev:backend
-
-   # Terminal 2 - Frontend:
-   npm run dev:frontend
-   ```
-
-   **Or from individual directories:**
-   ```bash
-   # Backend
-   cd Travel_Ease_Backend && npm run dev
-
-   # Frontend
-   cd Travel_Ease_Frontend && npm run dev
-   ```
-
-The application will be available at:
-
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-
-## Project Structure
-
-```
-Travel_Ease/
-├── Travel_Ease_Backend/        # Express API server (Port 3001)
-│   ├── server.js              # Unified server entry point
-│   ├── prisma/                # Prisma schema and migrations
-│   │   └── schema.prisma      # Database schema definition
-│   ├── routes/                # API route handlers
-│   │   ├── business_routes.js
-│   │   ├── travel_plan_routes.js
-│   │   ├── user_routes.js
-│   │   ├── map_routes.js
-│   │   └── utils_routes.js
-│   ├── business/              # Business controller logic
-│   ├── travel_plan/           # Travel plan controller logic
-│   ├── user/                  # User controller logic
-│   ├── utils/                 # Utilities (image upload)
-│   ├── src/
-│   │   ├── routes/            # Blog routes
-│   │   ├── middleware/        # Auth and error handling
-│   │   ├── schemas/           # Zod validation schemas
-│   │   └── lib/
-│   │       └── prisma.js      # Prisma client singleton
-│   └── package.json
-├── Travel_Ease_Frontend/      # React application (Port 5173)
-│   ├── src/
-│   │   ├── config/
-│   │   │   └── api.js         # Centralized API configuration
-│   │   ├── component/         # Feature components
-│   │   │   ├── main_page/    # Travel plan components
-│   │   │   ├── business/     # Business registration/edit
-│   │   │   ├── blog/         # Blog components
-│   │   │   └── map_components/ # Map and routing
-│   │   ├── pages/            # Page components
-│   │   ├── utils/            # API utility functions
-│   │   │   ├── travel_plan/
-│   │   │   └── business/
-│   │   ├── services/         # API client
-│   │   └── types/            # TypeScript type definitions
-│   └── package.json
-```
-
-## API Endpoints
-
-### Travel Plan Endpoints
-- `GET /api/travel_plan/ongoing_plan` - Get active travel plans
-- `GET /api/travel_plan/plans` - Get draft plans
-- `GET /api/travel_plan/previous_plans` - Get completed plans
-- `GET /api/travel_plan/public_plans` - Get public plans
-- `GET /api/travel_plan/plans/:id` - Get specific plan
-- `GET /api/travel_plan/activities/:id` - Get activities for a plan
-- `POST /api/travel_plan/create_plan` - Create new travel plan
-- `POST /api/travel_plan/create_activity` - Add activity to plan
-- `POST /api/travel_plan/quick_join` - Find matching public plans
-- `PUT /api/travel_plan/edit_plan/:id` - Update travel plan
-- `PUT /api/travel_plan/activity_edit/:id` - Update activity
-- `PUT /api/travel_plan/update_activity/:id` - Update activity dates
-- `DELETE /api/travel_plan/delete_activity/:id` - Delete activity
-
-### Business Endpoints
-- `GET /api/business/businesses` - List all businesses
-- `GET /api/business/fetch_business/:id` - Get business details
-- `GET /api/business/fetch_categories/:id` - Get business categories
-- `GET /api/business/travel_spots` - Get travel spots (businesses)
-- `GET /api/business/travel_spots/reviews/:id` - Get business reviews
-- `POST /api/business/create_business` - Register new business
-- `POST /api/business/price_range` - Add price ranges
-- `PUT /api/business/edit_business/:id` - Update business
-
-### User Endpoints
-- `POST /api/user/register` - User registration
-- `POST /api/user/login` - User login
-- `POST /api/user/favorite` - Add to favorites
-- `GET /api/user/favorite/:id` - Get user favorites
-- `GET /api/user/user/:id` - Get user details
-
-### Map Endpoints
-- `GET /api/suggestions?query=<location>` - Location autocomplete
-- `GET /api/search?query=<location>` - Search locations (bounded)
-- `GET /api/geocode?query=<address>` - Geocode address
-- `POST /api/search` - Address search with POST
-
-### Blog Endpoints
-- `GET /api/blogs` - List blogs with pagination and filtering
-- `GET /api/blogs/featured` - Get featured blogs
-- `GET /api/blogs/:slug` - Get single blog by slug
-- `POST /api/blogs` - Create new blog
-- `PUT /api/blogs/:id` - Update blog
-- `DELETE /api/blogs/:id` - Delete blog
-
-### Utility Endpoints
-- `POST /api/utils/upload` - Upload single image to Cloudinary
-- `POST /api/utils/upload_images` - Upload multiple images
-- `GET /api/health` - Health check
-
-### Review Endpoints
-- `POST /api/reviews/business` 🔒 - Create business review
-- `POST /api/reviews/travel_plan` 🔒 - Create travel plan review
-- `GET /api/reviews/travel_plan/:id` - Get travel plan reviews
-
-**Legend:** 🔒 = Requires authentication
-
-## Authentication
-
-Travel_Ease supports two authentication modes:
-
-### Supabase Auth (Recommended for Production)
-
-**Setup:**
-1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Get credentials from Dashboard > Settings > API
-3. Add to `.env`:
-```env
-AUTH_MODE="supabase"
-SUPABASE_URL="https://your-project.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-```
-
-**User Registration (Supabase):**
-```bash
-curl -X POST http://localhost:3001/api/user/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "first_name": "John",
-    "last_name": "Doe",
-    "email": "john@example.com",
-    "password": "secure123",
-    "contact_no": "1234567890"
-  }'
-```
-
-**User Login (Supabase):**
-```bash
-curl -X POST http://localhost:3001/api/user/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "secure123"
-  }'
-```
-
-Response includes Supabase session token.
-
-### Local JWT Mode (Development/Testing)
-
-**Setup:**
-```env
-AUTH_MODE="local"
-JWT_SECRET="your-secret-key"
-```
-
-Registration and login work the same, but uses bcrypt + JWT instead of Supabase.
-
-### Making Authenticated Requests
-
-Include the token in the Authorization header:
+1. Clone the repository.
 
 ```bash
-TOKEN="your-jwt-token-here"
-
-curl -X POST http://localhost:3001/api/travel_plan/create_plan \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "title": "Beach Trip",
-    "location": "Boracay",
-    "start_date": "2025-07-01",
-    "end_date": "2025-07-07"
-  }'
+git clone [PLACEHOLDER: Add repository URL]
+cd Travel_Ease
 ```
 
-### Protected Routes
+2. Install all workspace dependencies from the monorepo root.
 
-Routes marked with 🔒 require authentication:
-- All travel plan create/edit/delete operations
-- Business create/edit operations
-- Adding favorites and reviews
-- Blog create/update/delete
+```bash
+npm install
+```
 
-### Role-Based Access Control
+3. Copy the example environment files.
 
-**Travel Plans:**
-- **Owner** or **Admin participants**: Can edit plan, activities, participants
-- **Editor participants**: Can edit activities
-- **Viewer participants**: Read-only access
+```bash
+cp Travel_Ease_Backend/env.example Travel_Ease_Backend/.env
+cp Travel_Ease_Frontend/env.example Travel_Ease_Frontend/.env.local
+```
 
-**Businesses:**
-- **Owner only**: Can edit business details
+4. Update the copied files with your local or hosted service credentials.
 
-See `SUPABASE_INTEGRATION.md` for detailed auth setup.
-
-## Database Schema
-
-The application uses Prisma ORM with the following models:
-
-- **User**: User accounts and authentication
-- **Blog**: Travel blog posts with rich content
-- **Business**: Travel-related businesses and venues
-- **BusinessCategory**: Business categorization (many-to-many)
-- **BusinessHours**: Operating hours for businesses
-- **PriceRange**: Price ranges for business categories
-- **TravelPlan**: User-created travel plans
-- **Activity**: Activities within travel plans
-- **Participant**: Collaborators on travel plans
-- **BusinessReview**: Reviews and ratings for businesses
-- **TravelPlanReview**: Reviews for travel plans
-- **BusinessFavorite**: User's favorite businesses
-- **TravelPlanFavorite**: User's favorite travel plans
-
-## Development
-
-### Backend Development
+5. Generate the Prisma client and push the schema.
 
 ```bash
 cd Travel_Ease_Backend
-npm run dev              # Start with nodemon (watches for changes)
-npm start                # Start production server
-npm run db:push          # Push schema changes to database
-npm run db:migrate       # Create and run migrations
-npm run db:studio        # Open Prisma Studio (database GUI)
-```
-
-### Frontend Development
-
-```bash
-cd Travel_Ease_Frontend
-npm run dev              # Start Vite dev server
-npm run build            # Build for production
-npm run preview          # Preview production build
-npm run test             # Run tests
-npm run test:ui          # Run tests with UI
-```
-
-### Authentication UI
-
-- `/login` and `/signup` handle email/password flows against `/api/user/register` and `/api/user/login` (Supabase-backed in production).
-- Google OAuth uses Supabase (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` required) and returns to `/auth/callback`; tokens are stored in `localStorage` for API calls.
-
-### Testing & QA
-
-- Backend auth flow: `npm run test --workspace=Travel_Ease_Backend -- tests/auth-flow.test.js`
-- Frontend auth components: `npm run test --workspace=Travel_Ease_Frontend -- --run src/pages/__tests__/AuthPages.test.tsx`
-- Frontend linting: `npm run lint --workspace=Travel_Ease_Frontend`
-
-### Database Management
-
-The database schema is managed with Prisma. Key commands:
-
-```bash
-# Generate Prisma Client after schema changes
 npx prisma generate
-
-# Push schema changes to database (development)
 npx prisma db push
-
-# Create a migration (production)
-npx prisma migrate dev --name migration_name
-
-# Open Prisma Studio to browse/edit data
-npx prisma studio
+cd ..
 ```
 
-## Environment Variables
-
-### Backend (.env)
-
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/travelease_db"
-
-# Server
-PORT=3001
-
-# Cloudinary (for image uploads)
-CLOUDINARY_CLOUD_NAME="your-cloud-name"
-CLOUDINARY_API_KEY="your-api-key"
-CLOUDINARY_API_SECRET="your-api-secret"
-
-# Environment
-NODE_ENV=development
-```
-
-### Frontend (.env.local)
-
-```env
-VITE_API_BASE_URL=/api
-```
-
-## Key Features Explained
-
-### Travel Planning
-Create comprehensive travel plans with:
-- Start and end dates
-- Activities and itineraries
-- Collaborators with different roles (Admin, Editor, Viewer)
-- Budget ranges
-- Public/private visibility
-- Quick join for finding compatible plans
-
-### Business Directory
-- Register and manage travel-related businesses
-- Categorize by type (food, accommodation, activities, etc.)
-- Operating hours management
-- Image uploads via Cloudinary
-- Price range information
-- User reviews and ratings
-
-### Interactive Maps
-- Search and autocomplete using OpenStreetMap Nominatim
-- Visualize travel spots on interactive maps
-- Route planning between locations
-- Geocoding for addresses
-
-### Blog System
-- Rich text content with HTML support
-- Featured posts
-- Categories and tags
-- Reading time estimation
-- Pagination and search
-
-## Architecture Decisions
-
-### Unified Backend Server
-All API routes are consolidated into a single Express server running on port 3001, providing:
-- Consistent API base URL
-- Shared middleware (CORS, error handling)
-- Centralized Prisma client
-- Better resource management
-
-### Prisma ORM
-Migrated from raw SQL queries to Prisma for:
-- Type-safe database queries
-- Automatic migrations
-- Better relation handling
-- Improved developer experience
-
-### Centralized API Configuration
-Frontend uses a single API configuration file (`src/config/api.ts`) that:
-- Eliminates hardcoded URLs
-- Works with Vite proxy in development
-- Easy to update for production
-- Type-safe endpoint builders
-
-## Deployment
-
-This monorepo is designed for deployment to:
-- **Frontend**: Vercel (Vite SPA)
-- **Backend**: Railway (Express/Prisma/Redis)
-
-### Prerequisites
-
-- Supabase project with:
-  - PostgreSQL database
-  - Auth configured (Google OAuth optional)
-  - Storage bucket named "images" (public)
-- Redis instance (optional, for caching)
-
-### Frontend Deployment (Vercel)
-
-1. **Connect Repository**:
-   - Go to [vercel.com](https://vercel.com) and import your GitHub repo
-   - Set **Root Directory** to `Travel_Ease_Frontend`
-
-2. **Build Settings** (auto-detected from `vercel.json`):
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-   - Framework: Vite
-
-3. **Environment Variables** (set in Vercel Dashboard > Settings > Environment Variables):
-   ```env
-   VITE_API_BASE_URL=/api
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key
-   VITE_ENABLE_EDITOR=false
-   BACKEND_URL=https://your-backend.up.railway.app
-   ```
-
-   > **Critical**: `BACKEND_URL` must be the Railway root URL **without** `/api`. The edge function at `api/[...path].ts` appends the request path automatically. If `BACKEND_URL` is missing, all `/api/*` requests will return 502.
-
-4. **Deploy**: Push to main branch or trigger manual deployment
-
-### Backend Deployment (Railway)
-
-1. **Connect Repository**:
-   - Go to [railway.app](https://railway.app) and create new project from GitHub
-   - Set **Root Directory** to `Travel_Ease_Backend`
-
-2. **Add Services**:
-   - **PostgreSQL**: Add from Railway's database options, or use Supabase connection string
-   - **Redis** (optional): Add Railway Redis addon for caching
-
-3. **Environment Variables** (set in Railway Dashboard > Variables):
-   ```env
-   # Database (Required)
-   DATABASE_URL=postgresql://postgres:password@host:5432/postgres
-   
-   # Server (NODE_ENV=production is critical for security and CORS)
-   PORT=3001
-   NODE_ENV=production
-   
-   # Supabase (Required)
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   SUPABASE_STORAGE_BUCKET=images
-   
-   # JWT (for local auth fallback)
-   JWT_SECRET=your-secure-random-string
-   
-   # CORS (your Vercel frontend URL, no trailing slash)
-   ALLOWED_ORIGINS=https://your-app.vercel.app
-   FRONTEND_URL=https://your-app.vercel.app
-   
-   # Redis (optional - auto-detected if set)
-   REDIS_URL=redis://default:password@host:port
-   
-   # Map Services
-   MAP_PROVIDER=nominatim
-   NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
-   OSRM_BASE_URL=https://router.project-osrm.org
-   ```
-
-   > **Critical**: `NODE_ENV=production` must be set. Without it, the server runs in dev mode, which changes CORS behavior and leaks stack traces in error responses.
-
-4. **Procfile** handles startup:
-   - `release`: Runs `npx prisma migrate deploy` on each deployment
-   - `web`: Runs `npm run start` to start the Express server
-
-5. **Deploy**: Push to main branch or trigger manual deployment
-
-### Monorepo Build Commands
-
-From the root directory:
+6. Start the backend and frontend in separate terminals.
 
 ```bash
-# Install all dependencies (both workspaces)
-npm install
-
-# Build frontend only
-npm run build --workspace=Travel_Ease_Frontend
-
-# Build backend only
-npm run build --workspace=Travel_Ease_Backend
-
-# Run all tests
-npm run test
-
-# Development (run in separate terminals)
 npm run dev:backend
 npm run dev:frontend
 ```
 
-### Environment Files
+7. Open the local applications.
 
-- `env.example` - Root reference for all variables
-- `Travel_Ease_Frontend/env.example` - Frontend-specific variables
-- `Travel_Ease_Backend/env.example` - Backend-specific variables (comprehensive)
+- Frontend: [http://localhost:5173](http://localhost:5173)
+- Backend API: [http://localhost:3001/api/health](http://localhost:3001/api/health)
 
-### Post-Deployment Checklist
-
-- [ ] Frontend loads at Vercel URL
-- [ ] API health check works: `curl https://your-backend.railway.app/api/health`
-- [ ] Frontend can reach backend: Check Network tab for `/api/*` requests
-- [ ] Authentication works (login/signup)
-- [ ] Image uploads work (requires Supabase Storage bucket)
-- [ ] No CORS errors in browser console
-
-### Troubleshooting Deployment
-
-**CORS Errors**:
-- Ensure `ALLOWED_ORIGINS` on Railway includes your Vercel frontend URL (exact match, no trailing slash)
-- Set `FRONTEND_URL` on Railway for automatic www/non-www handling
-- Ensure `NODE_ENV=production` is set on Railway
-
-**API Calls Failing / Network Error**:
-- Verify `BACKEND_URL` is set in Vercel (Railway root URL, no `/api` suffix)
-- Test: `curl https://your-frontend.vercel.app/api/health` should return backend health JSON
-- If it returns HTML or 502, `BACKEND_URL` is missing or wrong
-- Ensure `VITE_API_BASE_URL=/api` in Vercel (not a direct Railway URL)
-- Check Railway logs for backend errors
-- Ensure `DATABASE_URL` is correctly set
-
-**Database Migrations**:
-- Railway's `release` phase runs migrations automatically
-- For manual migrations: `npx prisma migrate deploy`
-
-**Redis Connection Errors**:
-- Redis is optional; app works without it
-- If `REDIS_URL` is set but invalid, check connection string format
-
-**TypeScript Build Warnings (Backend)**:
-- The backend has known TypeScript errors related to Prisma naming conventions
-- Build continues despite errors (`noEmitOnError: false` in tsconfig)
-- These are type-level issues; runtime behavior is unaffected
-- To fix: Update code to use snake_case Prisma model names (e.g., `travel_plan` instead of `travelPlan`)
-
-## Troubleshooting
-
-### Common Issues and Solutions
-
-#### Backend won't start
-
-**Issue**: `Cannot find module` errors
-- **Solution**: Run `npm install` in the backend directory to ensure all dependencies are installed
-- **Solution**: Run `npx prisma generate` to generate the Prisma client
-
-**Issue**: Database connection errors
-- **Solution**: Verify your `DATABASE_URL` in `.env` is correct
-- **Solution**: Ensure PostgreSQL is running
-- **Solution**: Check database credentials and that the database exists
-
-#### Frontend won't start
-
-**Issue**: Dependency conflicts or peer dependency warnings
-- **Solution**: We use React 19 which requires compatible versions:
-  - `@testing-library/react@^16.0.1` (not 14.x)
-  - `@typescript-eslint/eslint-plugin@^8.0.0` and `@typescript-eslint/parser@^8.0.0` (not 7.x)
-- **Solution**: Delete `node_modules` and `package-lock.json`, then run `npm install`
-
-**Issue**: API calls fail from frontend
-- **Solution**: Ensure backend is running on port 3001
-- **Solution**: Check Vite proxy configuration in `vite.config.js` points to `http://localhost:3001`
-- **Solution**: Verify API calls use `/api` prefix to utilize the proxy
-
-#### Node Version Warnings
-
-**Issue**: `EBADENGINE` warnings about Node.js version
-- **Note**: The project specifies Node.js 18-24, but works fine with Node.js 25
-- **Solution**: You can safely ignore this warning, or adjust `engines` in `package.json` if needed
-
-#### Image Upload Issues
-
-**Issue**: Image uploads fail
-- **Solution**: Verify Cloudinary credentials in `.env` are correct
-- **Solution**: Check that the backend has `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` set
-
-#### Port Conflicts
-
-**Issue**: "Port already in use" errors
-- **Backend**: Kill processes using port 3001: `lsof -ti:3001 | xargs kill -9`
-- **Frontend**: Kill processes using port 5173: `lsof -ti:5173 | xargs kill -9`
-
-### Resetting the Environment
-
-If you encounter persistent issues, try a complete reset:
+### Helpful Commands
 
 ```bash
-# From the root directory
-pkill -f nodemon  # Stop any running servers
-pkill -f vite     # Stop any running frontend servers
-rm -rf node_modules package-lock.json
-rm -rf Travel_Ease_Backend/node_modules Travel_Ease_Frontend/node_modules
-npm install
-cd Travel_Ease_Backend && npx prisma generate && cd ..
-npm run dev:backend   # In one terminal
-npm run dev:frontend  # In another terminal
+# Root workspace commands
+npm run dev:backend
+npm run dev:frontend
+npm run build
+npm test
+
+# Backend-specific commands
+npm run build --workspace=Travel_Ease_Backend
+npm run test --workspace=Travel_Ease_Backend
+npx vitest run tests/auth.test.ts --workspace=Travel_Ease_Backend
+
+# Frontend-specific commands
+npm run lint --workspace=Travel_Ease_Frontend
+npm run test --workspace=Travel_Ease_Frontend
 ```
 
-### Verification Checklist
+### Environment Variables
 
-After setup, verify everything works:
+Use the root [`env.example`](./env.example) as the master reference, then configure the frontend and backend workspace files separately.
 
-- [ ] Backend starts without errors on port 3001
-- [ ] Frontend starts without errors on port 5173
-- [ ] Health check returns OK: `curl http://localhost:3001/api/health`
-- [ ] Frontend can access backend via proxy: `curl http://localhost:5173/api/health`
-- [ ] No CORS errors in browser console
-- [ ] Database connection works (no Prisma errors in backend logs)
+#### `Travel_Ease_Backend/.env`
 
-## Contributing
+```env
+DATABASE_URL=postgresql://[USERNAME]:[PASSWORD]@[HOST]:5432/[DATABASE]
+DIRECT_URL=postgresql://[USERNAME]:[PASSWORD]@[HOST]:5432/[DATABASE]
+PORT=3001
+NODE_ENV=development
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+SUPABASE_URL=https://[PROJECT-REF].supabase.co
+SUPABASE_ANON_KEY=[PLACEHOLDER]
+SUPABASE_SERVICE_ROLE_KEY=[PLACEHOLDER]
+SUPABASE_STORAGE_BUCKET=images
 
-## License
+JWT_SECRET=[PLACEHOLDER]
+ALLOWED_ORIGINS=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
 
-ISC
+REDIS_ENABLED=false
+REDIS_URL=redis://localhost:6379/0
+
+MAP_PROVIDER=nominatim
+NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
+OSRM_BASE_URL=https://router.project-osrm.org
+```
+
+#### `Travel_Ease_Frontend/.env.local`
+
+```env
+VITE_API_BASE_URL=/api
+VITE_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+VITE_SUPABASE_ANON_KEY=[PLACEHOLDER]
+VITE_ORS_API_KEY=[PLACEHOLDER]
+VITE_ENABLE_EDITOR=false
+
+# Vercel server-side environment variable for production only
+BACKEND_URL=https://[PLACEHOLDER-BACKEND-URL]
+```
+
+> **Note:** Do not commit real environment files or service credentials to version control.
+
+---
+
+<a id="test-credentials--access-roles"></a>
+## 🔐 Test Credentials / Access Roles
+
+> [!WARNING]
+> **⚠️ SECURITY WARNING:** The accounts below are for testing, QA, demonstration, and evaluation only. Rotate these credentials immediately in any real deployment, never reuse them in production, and restrict access to authorized reviewers.
+
+| Role | Name | Email | Password | Access Level |
+| --- | --- | --- | --- | --- |
+| SUPER ADMIN | Vaughn Joshua | `stonks.vaughn@gmail.com` | `pass123` | Full system access |
+| LGU ADMIN | [PLACEHOLDER: Add LGU admin display name] | `travelease759@gmail.com` | `pass123` | Local Government Unit administrative access |
+
+### Role-Based Access Notes
+
+- `SUPER_ADMIN` can access global administrative tools, including user role management and system-level operations.
+- `LGU_ADMIN` can access LGU-oriented moderation workflows such as pending business registration review.
+- Default or demo passwords must be changed before any production use.
+- Limit distribution of demo credentials to approved testers and evaluators only.
+
+---
+
+<a id="user-roles--permissions"></a>
+## 👥 User Roles & Permissions
+
+TravelEase supports multiple application roles internally. The matrix below focuses on the two administrative demo roles documented in this README.
+
+| Capability | SUPER ADMIN | LGU ADMIN | Notes |
+| --- | --- | --- | --- |
+| Sign in to the platform | ✅ | ✅ | Standard authenticated access |
+| Access account details, notifications, favorites, and profile tools | ✅ | ✅ | Shared authenticated features |
+| Access business management features | ✅ | ✅ | Includes business-related management screens available to the user |
+| View pending business registrations | ✅ | ✅ | Restricted to admin roles |
+| Approve or reject pending business registrations | ✅ | ✅ | Used for LGU review workflows |
+| Access business registration moderation tab | ✅ | ✅ | Available in the profile area |
+| View all registered users | ✅ | ❌ | `SUPER_ADMIN` only |
+| Change user roles | ✅ | ❌ | `SUPER_ADMIN` only |
+| Access the admin panel | ✅ | ❌ | `SUPER_ADMIN` only |
+| Run system operations such as traffic snapshot generation | ✅ | ❌ | `SUPER_ADMIN` only |
+
+### Administrative Distinctions
+
+- `SUPER_ADMIN` is the highest privileged role and is intended for platform-wide governance.
+- `LGU_ADMIN` is intended for operational oversight within LGU workflows without access to global user administration.
+
+---
+
+<a id="usage-guide"></a>
+## 🧭 Usage Guide
+
+### How to Log In
+
+1. Open [https://travelease.app](https://travelease.app).
+2. Navigate to the login page.
+3. Enter one of the test credentials listed above.
+4. Submit the form and wait for the role-specific dashboard and profile tools to load.
+
+### Basic Workflow: `SUPER_ADMIN`
+
+1. Sign in with the `SUPER_ADMIN` account.
+2. Open the profile area and access the `Business Registrations` tab to review pending submissions.
+3. Use the `Admin Panel` to inspect users and update account roles when required.
+4. Trigger system operations such as traffic snapshot generation when operational data needs recalculation.
+5. Validate user-facing changes, notifications, and approval outcomes before signing out.
+
+### Basic Workflow: `LGU_ADMIN`
+
+1. Sign in with the `LGU_ADMIN` account.
+2. Open the profile area and access `Business Registrations`.
+3. Review each pending business submission and either approve or reject it.
+4. Use standard account and business-management tools to verify changes.
+5. Confirm the updated registration state and sign out after review.
+
+### Screenshots
+
+- [PLACEHOLDER: Add login screen screenshot]
+- [PLACEHOLDER: Add SUPER_ADMIN dashboard screenshot]
+- [PLACEHOLDER: Add LGU_ADMIN business registration review screenshot]
+- [PLACEHOLDER: Add public-facing travel planner or map screenshot]
+
+---
+
+<a id="api-documentation"></a>
+## 🔌 API Documentation
+
+All backend routes are exposed under the `/api` prefix.
+
+### Base URL
+
+- Production: `https://travelease.app/api`
+- Local: `http://localhost:3001/api`
+
+### Authentication
+
+- Production authentication uses Supabase JWTs.
+- Automated backend tests use local JWT fallback with `AUTH_MODE=local`.
+- Protected endpoints require an `Authorization: Bearer <token>` header.
+
+### Route Groups
+
+| Route Group | Description |
+| --- | --- |
+| `/api/user` | Authentication, profile management, favorites, admin user operations |
+| `/api/business` | Business directory, registrations, approvals, moderation |
+| `/api/travel_plan` | Travel plan creation, editing, participant collaboration |
+| `/api/blogs` | Travel blog listing, publishing, and updates |
+| `/api/reviews` | Business and travel plan reviews |
+| `/api/map` | Location search, geocoding, and routing-related utilities |
+| `/api/notification` | Notification retrieval and updates |
+| `/api/traffic` | Traffic snapshots and alternative route suggestions |
+| `/api/weather` | Weather-related services |
+| `/api/utils` | Utility endpoints such as uploads |
+
+### Reference Materials
+
+- API reference document: [PLACEHOLDER: Add OpenAPI, Swagger, or Postman collection link]
+- Endpoint coverage details: [PLACEHOLDER: Add detailed API documentation location]
+
+---
+
+<a id="contributing"></a>
+## 🤝 Contributing
+
+Contributions should follow the project’s review and testing expectations before merge.
+
+### Contribution Workflow
+
+1. Create a feature branch from the main integration branch.
+2. Make focused changes in the appropriate workspace.
+3. Run relevant tests and lint checks locally.
+4. Open a pull request with a clear summary, screenshots if UI-related, and testing notes.
+
+### Branch Naming Convention
+
+Use descriptive branch names such as:
+
+- `feature/short-description`
+- `fix/issue-summary`
+- `docs/readme-update`
+- `chore/dependency-maintenance`
+
+### Project Policies
+
+- Contribution guide: [PLACEHOLDER: Add `CONTRIBUTING.md` link]
+- Code of Conduct: [PLACEHOLDER: Add `CODE_OF_CONDUCT.md` link]
+
+---
+
+<a id="security"></a>
+## 🛡️ Security
+
+Security is a shared responsibility across development, QA, deployment, and administrative operations.
+
+### Reporting Vulnerabilities
+
+- Report security concerns privately to: `[PLACEHOLDER: Add security contact email]`
+- Do not disclose sensitive vulnerabilities in public issues or pull requests.
+
+### Credential Handling Best Practices
+
+- Rotate all demo and seeded credentials before production rollout.
+- Never commit `.env`, `.env.local`, service role keys, or database secrets.
+- Limit access to administrative accounts using least-privilege principles.
+- Store production secrets in managed environment variable platforms such as Vercel and Railway.
+- Review access logs and administrative activity regularly.
+
+### Test Credential Disclaimer
+
+> The credentials listed in this README are intended only for controlled testing and evaluation environments. They must not remain active in production or publicly exposed administrative deployments.
+
+---
+
+<a id="license"></a>
+## 📄 License
+
+`[PLACEHOLDER: Specify license type, e.g. MIT, Apache-2.0, or Proprietary]`
+
+---
+
+<a id="contact--support"></a>
+## 📬 Contact & Support
+
+| Topic | Details |
+| --- | --- |
+| Maintainer | `[PLACEHOLDER: Add maintainer or team name]` |
+| Support Email | `[PLACEHOLDER: Add support email]` |
+| Security Contact | `[PLACEHOLDER: Add security email]` |
+| Issue Tracker | `[PLACEHOLDER: Add repository issue tracker URL]` |
+
+For operational questions, bug reports, or deployment support, use the issue tracker and support contacts above once they are finalized.
