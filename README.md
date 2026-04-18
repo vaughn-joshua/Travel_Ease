@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <img alt="Build Status" src="https://img.shields.io/badge/build-%5BPLACEHOLDER%5D-lightgrey" />
-  <img alt="Version" src="https://img.shields.io/badge/version-%5BPLACEHOLDER%5D-lightgrey" />
-  <img alt="License" src="https://img.shields.io/badge/license-%5BPLACEHOLDER%5D-lightgrey" />
+  <img alt="Build Status" src="https://img.shields.io/badge/build-manual-lightgrey" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-E10600" />
+  <img alt="License" src="https://img.shields.io/badge/license-proprietary-8B0000" />
 </p>
 
 <p align="center">
@@ -76,7 +76,8 @@ The platform combines public-facing travel features with administrative tooling 
 | Environment | URL | Purpose | Notes |
 | --- | --- | --- | --- |
 | Production | [https://travelease.app](https://travelease.app) | Public live environment | Frontend is deployed on Vercel and the backend API is hosted on Railway |
-| Staging | [PLACEHOLDER: Add staging URL] | Pre-release QA / UAT | [PLACEHOLDER: Add staging deployment notes] |
+
+> A public staging environment is not currently published.
 
 ---
 
@@ -97,7 +98,7 @@ The platform combines public-facing travel features with administrative tooling 
 1. Clone the repository.
 
 ```bash
-git clone [PLACEHOLDER: Add repository URL]
+git clone https://github.com/Edamuza/Travel_Ease.git
 cd Travel_Ease
 ```
 
@@ -163,17 +164,17 @@ Use the root [`env.example`](./env.example) as the master reference, then config
 #### `Travel_Ease_Backend/.env`
 
 ```env
-DATABASE_URL=postgresql://[USERNAME]:[PASSWORD]@[HOST]:5432/[DATABASE]
-DIRECT_URL=postgresql://[USERNAME]:[PASSWORD]@[HOST]:5432/[DATABASE]
+DATABASE_URL=postgresql://username:password@localhost:5432/travelease_db
+DIRECT_URL=postgresql://username:password@localhost:5432/travelease_db
 PORT=3001
 NODE_ENV=development
 
-SUPABASE_URL=https://[PROJECT-REF].supabase.co
-SUPABASE_ANON_KEY=[PLACEHOLDER]
-SUPABASE_SERVICE_ROLE_KEY=[PLACEHOLDER]
+SUPABASE_URL=https://fdrbqgoeldzocifluxcw.supabase.co
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_STORAGE_BUCKET=images
 
-JWT_SECRET=[PLACEHOLDER]
+JWT_SECRET=
 ALLOWED_ORIGINS=http://localhost:5173
 FRONTEND_URL=http://localhost:5173
 
@@ -189,13 +190,13 @@ OSRM_BASE_URL=https://router.project-osrm.org
 
 ```env
 VITE_API_BASE_URL=/api
-VITE_SUPABASE_URL=https://[PROJECT-REF].supabase.co
-VITE_SUPABASE_ANON_KEY=[PLACEHOLDER]
-VITE_ORS_API_KEY=[PLACEHOLDER]
+VITE_SUPABASE_URL=https://fdrbqgoeldzocifluxcw.supabase.co
+VITE_SUPABASE_ANON_KEY=
+VITE_ORS_API_KEY=
 VITE_ENABLE_EDITOR=false
 
 # Vercel server-side environment variable for production only
-BACKEND_URL=https://[PLACEHOLDER-BACKEND-URL]
+BACKEND_URL=https://travel-ease-backend-production-d047.up.railway.app
 ```
 
 > **Note:** Do not commit real environment files or service credentials to version control.
@@ -211,7 +212,7 @@ BACKEND_URL=https://[PLACEHOLDER-BACKEND-URL]
 | Role | Name | Email | Password | Access Level |
 | --- | --- | --- | --- | --- |
 | SUPER ADMIN | Vaughn Joshua | `stonks.vaughn@gmail.com` | `pass123` | Full system access |
-| LGU ADMIN | [PLACEHOLDER: Add LGU admin display name] | `travelease759@gmail.com` | `pass123` | Local Government Unit administrative access |
+| LGU ADMIN | TravelEase LGU Admin | `travelease759@gmail.com` | `pass123` | Local Government Unit administrative access |
 
 ### Role-Based Access Notes
 
@@ -275,10 +276,7 @@ TravelEase supports multiple application roles internally. The matrix below focu
 
 ### Screenshots
 
-- [PLACEHOLDER: Add login screen screenshot]
-- [PLACEHOLDER: Add SUPER_ADMIN dashboard screenshot]
-- [PLACEHOLDER: Add LGU_ADMIN business registration review screenshot]
-- [PLACEHOLDER: Add public-facing travel planner or map screenshot]
+Product screenshots are not currently embedded in this README. Recommended captures for future updates are the login screen, the `SUPER_ADMIN` dashboard, the `LGU_ADMIN` business registration review view, and the public travel planner or map experience.
 
 ---
 
@@ -315,8 +313,8 @@ All backend routes are exposed under the `/api` prefix.
 
 ### Reference Materials
 
-- API reference document: [PLACEHOLDER: Add OpenAPI, Swagger, or Postman collection link]
-- Endpoint coverage details: [PLACEHOLDER: Add detailed API documentation location]
+- API reference document: [docs/api-endpoints.md](./docs/api-endpoints.md)
+- Architecture and implementation notes: [docs/architecture-baseline.md](./docs/architecture-baseline.md)
 
 ---
 
@@ -343,8 +341,7 @@ Use descriptive branch names such as:
 
 ### Project Policies
 
-- Contribution guide: [PLACEHOLDER: Add `CONTRIBUTING.md` link]
-- Code of Conduct: [PLACEHOLDER: Add `CODE_OF_CONDUCT.md` link]
+Dedicated `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` files are not currently published in this repository. Until they are added, follow the branch naming convention above, keep changes scoped, and include testing notes in every pull request.
 
 ---
 
@@ -355,7 +352,7 @@ Security is a shared responsibility across development, QA, deployment, and admi
 
 ### Reporting Vulnerabilities
 
-- Report security concerns privately to: `[PLACEHOLDER: Add security contact email]`
+- Report security concerns privately to: `support@travelease.com`
 - Do not disclose sensitive vulnerabilities in public issues or pull requests.
 
 ### Credential Handling Best Practices
@@ -375,7 +372,7 @@ Security is a shared responsibility across development, QA, deployment, and admi
 <a id="license"></a>
 ## 📄 License
 
-`[PLACEHOLDER: Specify license type, e.g. MIT, Apache-2.0, or Proprietary]`
+This repository does not currently publish a separate open-source license file. Treat the codebase as proprietary until a license is explicitly added by the project owners.
 
 ---
 
@@ -384,9 +381,9 @@ Security is a shared responsibility across development, QA, deployment, and admi
 
 | Topic | Details |
 | --- | --- |
-| Maintainer | `[PLACEHOLDER: Add maintainer or team name]` |
-| Support Email | `[PLACEHOLDER: Add support email]` |
-| Security Contact | `[PLACEHOLDER: Add security email]` |
-| Issue Tracker | `[PLACEHOLDER: Add repository issue tracker URL]` |
+| Maintainer | `TravelEase Team` |
+| Support Email | `support@travelease.com` |
+| Security Contact | `support@travelease.com` |
+| Issue Tracker | [GitHub Issues](https://github.com/Edamuza/Travel_Ease/issues) |
 
 For operational questions, bug reports, or deployment support, use the issue tracker and support contacts above once they are finalized.
