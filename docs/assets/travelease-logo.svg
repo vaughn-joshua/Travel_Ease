@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TravelEase logo</title>
+  <desc id="desc">A red location pin with a globe inside, designed in a red and white travel theme.</desc>
+  <defs>
+    <linearGradient id="pinFill" x1="168" y1="96" x2="348" y2="404" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF3B30"/>
+      <stop offset="1" stop-color="#C40018"/>
+    </linearGradient>
+    <filter id="pinShadow" x="72" y="60" width="368" height="408" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="16"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.788235 0 0 0 0 0 0 0 0 0 0.0941176 0 0 0 0.22 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+    <clipPath id="globeClip">
+      <circle cx="256" cy="224" r="80"/>
+    </clipPath>
+  </defs>
+
+  <g filter="url(#pinShadow)">
+    <path d="M256 72C175.366 72 110 137.366 110 218C110 334.99 233.197 431.111 248.974 442.814C253.208 445.955 258.792 445.955 263.026 442.814C278.803 431.111 402 334.99 402 218C402 137.366 336.634 72 256 72Z" fill="url(#pinFill)"/>
+    <path d="M256 100C190.562 100 137.5 153.062 137.5 218.5C137.5 315.217 237.16 397.475 256 411.489C274.84 397.475 374.5 315.217 374.5 218.5C374.5 153.062 321.438 100 256 100Z" fill="#E10600" fill-opacity="0.26"/>
+
+    <circle cx="256" cy="224" r="88" fill="white"/>
+    <circle cx="256" cy="224" r="80" fill="#FFF5F5"/>
+
+    <g clip-path="url(#globeClip)" stroke="#E10600" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="256" cy="224" rx="48" ry="80"/>
+      <ellipse cx="256" cy="224" rx="22" ry="80"/>
+      <path d="M176 224H336"/>
+      <path d="M188 194C204 203.333 226.667 208 256 208C285.333 208 308 203.333 324 194"/>
+      <path d="M188 254C204 244.667 226.667 240 256 240C285.333 240 308 244.667 324 254"/>
+      <path d="M198 278C214 269.333 233.333 265 256 265C278.667 265 298 269.333 314 278"/>
+      <path d="M198 170C214 178.667 233.333 183 256 183C278.667 183 298 178.667 314 170"/>
+    </g>
+
+    <circle cx="256" cy="224" r="80" stroke="#E10600" stroke-width="12"/>
+    <path d="M256 276C268.15 276 278 266.15 278 254C278 241.85 268.15 232 256 232C243.85 232 234 241.85 234 254C234 266.15 243.85 276 256 276Z" fill="#E10600" fill-opacity="0.1"/>
+    <path d="M184 126C202 110 225 100.5 256 98" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.65"/>
+    <path d="M171 146C177 140.667 182.333 136.667 187 134" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.5"/>
+  </g>
+</svg>

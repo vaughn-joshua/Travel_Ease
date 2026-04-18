@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="[PLACEHOLDER: Add logo asset path, e.g. docs/assets/travelease-logo.png]" alt="TravelEase logo" width="140" />
+  <img src="docs/assets/travelease-logo.svg" alt="TravelEase logo" width="140" />
 </p>
 
 <h1 align="center">TravelEase</h1>
